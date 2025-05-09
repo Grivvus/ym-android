@@ -1,0 +1,1 @@
+package sstu.grivvus.yamusic.profile

@@ -13,7 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 
 @Composable
 fun YaMusicNavGraph(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed),
