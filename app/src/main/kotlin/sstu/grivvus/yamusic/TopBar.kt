@@ -19,10 +19,10 @@ import androidx.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CenterAlignedTopAppBarExample(
-    openDrawer: () -> Unit
+fun AppTopBar(
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+    val openDrawer: () -> Unit = {}
 
     CenterAlignedTopAppBar(
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -31,21 +31,25 @@ fun CenterAlignedTopAppBarExample(
         ),
         title = {
             Text(
-                "Centered Top App Bar",
+                "",
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         },
         navigationIcon = {
-            IconButton(onClick = { openDrawer }) {
+            IconButton(
+                onClick = {
+                    openDrawer()
+                    TODO("должен открываться Navigation Drawer")
+                }
+            ) {
                 Icon(
                     imageVector = Icons.Filled.Menu,
-                    contentDescription = "Localized description"
+                    contentDescription = "Navigation Menu"
                 )
             }
 
         },
-        actions = {},
         scrollBehavior = scrollBehavior,
     )
 }

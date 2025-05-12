@@ -1,11 +1,10 @@
-package sstu.grivvus.yamusic.profile
+package sstu.grivvus.yamusic.register
 
 import androidx.lifecycle.ViewModel
 import sstu.grivvus.yamusic.data.UserRepository
 import javax.inject.Inject
 
-class ProfileViewModel @Inject constructor(
+class RegisterViewModel @Inject constructor(
     private val userRepository: UserRepository
 ): ViewModel() {
-
 }

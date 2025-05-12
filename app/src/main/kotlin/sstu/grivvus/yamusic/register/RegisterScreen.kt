@@ -1,4 +1,6 @@
-package sstu.grivvus.yamusic.login
+package sstu.grivvus.yamusic.register
+
+import sstu.grivvus.yamusic.login.LoginViewModel
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,20 +30,21 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 import sstu.grivvus.yamusic.ui.theme.appIcons
-import kotlin.math.log
+import sstu.grivvus.yamusic.login.LoginFormField
 
 @Composable
-fun LoginScreen(
+fun RegisterScreen(
     modifier: Modifier = Modifier,
-    viewModel: LoginViewModel = hiltViewModel()
+    viewModel: RegisterViewModel = hiltViewModel()
 ) {
-    LoginScreenUI()
+    RegisterScreenUI()
 }
 
 @Composable
-fun LoginScreenUI(modifier: Modifier = Modifier) {
+fun RegisterScreenUI(modifier: Modifier = Modifier) {
     var loginInput = remember { mutableStateOf("") }
     var passwordInput = remember { mutableStateOf("") }
+    var checkPasswordInput = remember { mutableStateOf("") }
 
     YaMusicTheme {
         Box(modifier.fillMaxSize()) {
@@ -56,10 +59,14 @@ fun LoginScreenUI(modifier: Modifier = Modifier) {
                 Row(modifier.fillMaxWidth()) {
                     LoginFormField(appIcons.StarHalf, passwordInput, placeholderText = "Password")
                 }
+                Spacer(modifier.height(5.dp))
+                Row(modifier.fillMaxWidth()) {
+                    LoginFormField(appIcons.StarHalf, checkPasswordInput, placeholderText = "Confirm password")
+                }
                 Spacer(modifier.height(25.dp))
                 Row(modifier = modifier.fillMaxWidth().padding(end = 15.dp), horizontalArrangement = Arrangement.End){
-                    Text("Sign Up", modifier.clickable(enabled = true, onClick = {
-                        TODO("go to register screen")
+                    Text("Sign In", modifier.clickable(enabled = true, onClick = {
+                        TODO("go to login screen")
                     }))
                 }
                 Spacer(modifier.height(15.dp))
@@ -70,34 +77,14 @@ fun LoginScreenUI(modifier: Modifier = Modifier) {
                     Button({}) { Text("Proceed") }
                     Button({}) { Text("Cancel")}
                 }
-                
+
             }
         }
     }
 }
 
-@Composable
-inline fun LoginFormField(
-    leadingIcon: ImageVector,
-    textState: MutableState<String>,
-    modifier: Modifier = Modifier,
-    placeholderText: String = "",
-) {
-
-    TextField(textState.value, { textState.value = it },
-        placeholder = {
-            Text(placeholderText)
-        },
-        leadingIcon = {
-            leadingIcon
-        },
-        shape = RoundedCornerShape(26.dp),
-        modifier = modifier.fillMaxWidth()
-    )
-}
-
 @Preview(showBackground = true)
 @Composable
 fun PreviewLoginScreen() {
-    LoginScreenUI()
+    RegisterScreenUI()
 }
