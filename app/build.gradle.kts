@@ -58,6 +58,9 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 
+    // HttpOk
+    implementation(libs.okhttp)
+
     // Jetpack Compose
     val composeBom = platform(libs.androidx.compose.bom)
 

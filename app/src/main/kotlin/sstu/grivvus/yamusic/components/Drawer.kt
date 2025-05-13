@@ -1,4 +1,4 @@
-package sstu.grivvus.yamusic
+package sstu.grivvus.yamusic.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,6 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import sstu.grivvus.yamusic.NavigationActions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
