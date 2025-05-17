@@ -47,17 +47,21 @@ import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 import java.time.Instant
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.OutlinedTextField
+import sstu.grivvus.yamusic.NavigationActions
+import sstu.grivvus.yamusic.components.BottomBar
 
 @Composable
 fun ProfileScreen(
+    navigationActions: NavigationActions,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
-
+    ProfileScreenUI(navigationActions)
 }
 
 @Composable
 fun ProfileScreenUI(
+    navigationActions: NavigationActions,
     modifier: Modifier = Modifier
 ) {
     var userLoginState = remember { mutableStateOf("user login 123") }
@@ -69,7 +73,8 @@ fun ProfileScreenUI(
 
     YaMusicTheme {
         Scaffold(
-            topBar = {AppTopBar()}
+            topBar = {AppTopBar()},
+            bottomBar = { BottomBar() }
         ) { innerPadding ->
             Column(modifier = modifier.padding(innerPadding)) {
                 Spacer(modifier.height(15.dp))
@@ -208,8 +213,8 @@ fun DatePickerDocked(dateState: MutableState<Long>) {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewProfileScreen(){
-    ProfileScreenUI()
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun PreviewProfileScreen(){
+//    ProfileScreenUI()
+//}

@@ -28,20 +28,24 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import sstu.grivvus.yamusic.NavigationActions
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 import sstu.grivvus.yamusic.ui.theme.appIcons
 import sstu.grivvus.yamusic.login.LoginFormField
 
 @Composable
 fun RegisterScreen(
+    navigationActions: NavigationActions,
     modifier: Modifier = Modifier,
     viewModel: RegisterViewModel = hiltViewModel()
 ) {
-    RegisterScreenUI()
+    RegisterScreenUI(navigationActions)
 }
 
 @Composable
-fun RegisterScreenUI(modifier: Modifier = Modifier) {
+fun RegisterScreenUI(
+    navigationActions: NavigationActions, modifier: Modifier = Modifier
+) {
     var loginInput = remember { mutableStateOf("") }
     var passwordInput = remember { mutableStateOf("") }
     var checkPasswordInput = remember { mutableStateOf("") }
@@ -49,7 +53,9 @@ fun RegisterScreenUI(modifier: Modifier = Modifier) {
     YaMusicTheme {
         Box(modifier.fillMaxSize()) {
             Column(
-                modifier.padding(top = 100.dp, bottom = 100.dp, start = 50.dp, end = 50.dp).fillMaxSize(),
+                modifier
+                    .padding(top = 100.dp, bottom = 100.dp, start = 50.dp, end = 50.dp)
+                    .fillMaxSize(),
                 verticalArrangement = Arrangement.Center
             ) {
                 Row(modifier.fillMaxWidth()){
@@ -66,7 +72,7 @@ fun RegisterScreenUI(modifier: Modifier = Modifier) {
                 Spacer(modifier.height(25.dp))
                 Row(modifier = modifier.fillMaxWidth().padding(end = 15.dp), horizontalArrangement = Arrangement.End){
                     Text("Sign In", modifier.clickable(enabled = true, onClick = {
-                        TODO("go to login screen")
+                        navigationActions.navigateToLogin()
                     }))
                 }
                 Spacer(modifier.height(15.dp))
@@ -74,8 +80,12 @@ fun RegisterScreenUI(modifier: Modifier = Modifier) {
                     modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceAround,
                 ) {
-                    Button({}) { Text("Proceed") }
-                    Button({}) { Text("Cancel")}
+                    Button({
+                        TODO("Proceed login realization")
+                    }) { Text("Proceed") }
+                    Button({
+                        TODO("Clear form")
+                    }) { Text("Cancel")}
                 }
 
             }
@@ -83,8 +93,8 @@ fun RegisterScreenUI(modifier: Modifier = Modifier) {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewLoginScreen() {
-    RegisterScreenUI()
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun PreviewLoginScreen() {
+//    RegisterScreenUI()
+//}

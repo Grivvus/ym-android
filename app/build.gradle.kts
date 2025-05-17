@@ -61,6 +61,13 @@ dependencies {
     // HttpOk
     implementation(libs.okhttp)
 
+    // Coil - to load images from internet
+    implementation("io.coil-kt.coil3:coil-compose:3.2.0")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.2.0")
+
+    // dotenv-kotlin
+    implementation("io.github.cdimascio:dotenv-kotlin:6.5.1")
+
     // Jetpack Compose
     val composeBom = platform(libs.androidx.compose.bom)
 

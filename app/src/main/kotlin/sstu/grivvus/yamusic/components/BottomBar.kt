@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.automirrored.sharp.AddToHomeScreen
@@ -34,16 +35,19 @@ fun BottomBar(
                         TODO("Go to music page")
                     }
                 )
+                .fillMaxHeight()
         ) { appIcons.Note }
         Column(
             modifier.clickable(enabled = true, onClick = {
                 TODO("Go to upload page")
             })
+                .fillMaxHeight()
         ) { appIcons.InsertDriveFile }
         Column(
             modifier.clickable(enabled = true, onClick = {
                 TODO("Go to profile page")
             })
+                .fillMaxHeight()
         ) {
             appIcons.AddToHomeScreen
         }

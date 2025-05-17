@@ -8,8 +8,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.CoroutineScope
+import androidx.compose.runtime.getValue
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import sstu.grivvus.yamusic.login.LoginScreen
+import sstu.grivvus.yamusic.register.RegisterScreen
+import sstu.grivvus.yamusic.profile.ProfileScreen
 
 @Composable
 fun YaMusicNavGraph(
@@ -17,10 +24,27 @@ fun YaMusicNavGraph(
     navController: NavHostController = rememberNavController(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed),
-    startDestination: String = "...",
+    startDestination: String = AppDestinations.LOGIN_ROUTE,
     navActions: NavigationActions = remember(navController){
         NavigationActions(navController)
     }
 ) {
+    val currentNavBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentNavBackStackEntry?.destination?.route ?: startDestination
 
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        modifier = modifier
+    ) {
+        composable(AppDestinations.LOGIN_ROUTE) {
+            LoginScreen(navActions)
+        }
+        composable(AppDestinations.REGISTRATION_ROUTE) {
+            RegisterScreen()
+        }
+        composable(AppDestinations.PROFILE_ROUTE) {
+            ProfileScreen()
+        }
+    }
 }

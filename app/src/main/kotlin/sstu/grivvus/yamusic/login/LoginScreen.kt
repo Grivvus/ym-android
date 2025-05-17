@@ -23,23 +23,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import sstu.grivvus.yamusic.NavigationActions
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 import sstu.grivvus.yamusic.ui.theme.appIcons
-import kotlin.math.log
 
 @Composable
 fun LoginScreen(
+    navigationActions: NavigationActions,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
-    LoginScreenUI()
+    LoginScreenUI(navigationActions)
 }
 
 @Composable
-fun LoginScreenUI(modifier: Modifier = Modifier) {
+fun LoginScreenUI(navigationActions: NavigationActions, modifier: Modifier = Modifier) {
     var loginInput = remember { mutableStateOf("") }
     var passwordInput = remember { mutableStateOf("") }
 
@@ -59,7 +62,7 @@ fun LoginScreenUI(modifier: Modifier = Modifier) {
                 Spacer(modifier.height(25.dp))
                 Row(modifier = modifier.fillMaxWidth().padding(end = 15.dp), horizontalArrangement = Arrangement.End){
                     Text("Sign Up", modifier.clickable(enabled = true, onClick = {
-                        TODO("go to register screen")
+                        navigationActions.navigateToRegistration()
                     }))
                 }
                 Spacer(modifier.height(15.dp))
@@ -82,8 +85,10 @@ inline fun LoginFormField(
     textState: MutableState<String>,
     modifier: Modifier = Modifier,
     placeholderText: String = "",
+    isPasswordField: Boolean = false,
 ) {
-
+    val visualTransformation: VisualTransformation = if (isPasswordField)
+        PasswordVisualTransformation() else VisualTransformation.None
     TextField(textState.value, { textState.value = it },
         placeholder = {
             Text(placeholderText)
@@ -92,12 +97,13 @@ inline fun LoginFormField(
             leadingIcon
         },
         shape = RoundedCornerShape(26.dp),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth(),
+        visualTransformation = visualTransformation
     )
 }
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewLoginScreen() {
-    LoginScreenUI()
-}
+//@Preview(showBackground = true)
+//@Composable
+//fun PreviewLoginScreen() {
+//    LoginScreenUI()
+//}
