@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -39,7 +40,6 @@ android {
 }
 
 dependencies {
-
     // App dependencies
     implementation(libs.androidx.annotation)
     implementation(libs.kotlinx.coroutines.android)
@@ -60,13 +60,16 @@ dependencies {
 
     // HttpOk
     implementation(libs.okhttp)
+    
+    // dotenv-kotlin
+    implementation("io.github.cdimascio:dotenv-kotlin")
 
     // Coil - to load images from internet
-    implementation("io.coil-kt.coil3:coil-compose:3.2.0")
-    implementation("io.coil-kt.coil3:coil-network-okhttp:3.2.0")
+    implementation("io.coil-kt.coil3:coil-compose")
+    implementation("io.coil-kt.coil3:coil-network-okhttp")
 
-    // dotenv-kotlin
-    implementation("io.github.cdimascio:dotenv-kotlin:6.5.1")
+    // JSON-serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
 
     // Jetpack Compose
     val composeBom = platform(libs.androidx.compose.bom)

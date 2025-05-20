@@ -37,32 +37,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
-import androidx.hilt.navigation.compose.hiltViewModel
 import sstu.grivvus.yamusic.components.AppTopBar
 import sstu.grivvus.yamusic.R
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 import java.time.Instant
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.OutlinedTextField
-import sstu.grivvus.yamusic.NavigationActions
 import sstu.grivvus.yamusic.components.BottomBar
 
 @Composable
 fun ProfileScreen(
-    navigationActions: NavigationActions,
+    onProfileSaveClick: () -> Unit,
+    onChangePasswordClick: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ProfileViewModel = hiltViewModel()
-) {
-    ProfileScreenUI(navigationActions)
-}
-
-@Composable
-fun ProfileScreenUI(
-    navigationActions: NavigationActions,
-    modifier: Modifier = Modifier
 ) {
     var userLoginState = remember { mutableStateOf("user login 123") }
     var userFirstNameState = remember { mutableStateOf("user first name") }
@@ -125,14 +114,16 @@ fun ProfileScreenUI(
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
                     Button(
-                        onClick = {TODO("Edit profile button implementation")},
+                        onClick = {
+                            onProfileSaveClick()
+                        },
                         modifier.width(180.dp)
                     ) {
                         Text("Save")
                     }
                     Button(
                         onClick = {
-                            TODO("Change password button implementation")
+                            onChangePasswordClick()
                         },
                         modifier.width(180.dp)
                     ) {

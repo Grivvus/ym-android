@@ -2,11 +2,14 @@ package sstu.grivvus.yamusic.data.local
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 
-@Entity(tableName = "user")
+@Entity(
+    tableName = "user",
+    primaryKeys = ["username"],
+    )
 data class LocalUser(
-    @PrimaryKey(autoGenerate = false) val id: Int,
-    @ColumnInfo(name = "email") val email: String,
     @ColumnInfo(name = "username") val username: String,
+    @ColumnInfo(name = "email") val email: String?,
+    @ColumnInfo(name = "token") val token: String?,
+    @ColumnInfo(name = "password") val password: String,
 )

@@ -1,14 +1,25 @@
 package sstu.grivvus.yamusic.data.network
 
+import kotlinx.serialization.Serializable
 import java.util.Date
 
-data class NetworkUser (
-    val id: Int,
-    val email: String,
+abstract class NetworkUser
+
+@Serializable
+class NetworkUserCreate (
+    val username: String,
+    val email: String?,
+    val password: String,
+): NetworkUser()
+
+@Serializable
+class NetworkUserLogin(
     val username: String,
     val password: String,
+): NetworkUser()
 
-    // эти данные будут приходить из ручки, хотя тут они мне не нужны
-//    val createdAt: Date,
-//    val updatedAt: Date,
+@Serializable
+data class TokenResponse(
+    val tokenType: String,
+    val accessToken: String,
 )

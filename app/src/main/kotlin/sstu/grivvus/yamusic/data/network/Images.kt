@@ -1,14 +1,16 @@
-package sstu.grivvus.yamusic.service
+package sstu.grivvus.yamusic.data.network
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Environment
-import androidx.compose.foundation.Image
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.asImageBitmap
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import sstu.grivvus.yamusic.Settings
 import java.io.File
 import java.io.FileOutputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 fun getLocalProfilePicture(
     context: Context,
@@ -39,6 +41,21 @@ fun storeImageLocally(context: Context, bitmap: Bitmap, imageName: String) {
         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
     }
 }
-fun loadImageFromExternal(): Bitmap {
-
+suspend fun loadImageFromExternal(username: String): Bitmap? {
+    val client = OkHttpClient()
+    val urlString = "${Settings.apiHost}:${Settings.apiPort}/getProfilePicture/$username"
+    TODO("possible missing jwt token in header request")
+    val request = Request.Builder()
+        .url(urlString)
+        .build()
+    return withContext(Dispatchers.IO) {
+        client.newCall(request).execute().use { response ->
+            if (response.isSuccessful) {
+                val inputStream = response.body?.byteStream()
+                BitmapFactory.decodeStream(inputStream)
+            } else {
+                null
+            }
+        }
+    }
 }

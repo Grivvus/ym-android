@@ -1,7 +1,5 @@
 package sstu.grivvus.yamusic.register
 
-import sstu.grivvus.yamusic.login.LoginViewModel
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,22 +27,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import sstu.grivvus.yamusic.NavigationActions
+import sstu.grivvus.yamusic.data.UserRepository
+import sstu.grivvus.yamusic.data.network.NetworkUserCreate
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 import sstu.grivvus.yamusic.ui.theme.appIcons
 import sstu.grivvus.yamusic.login.LoginFormField
 
 @Composable
 fun RegisterScreen(
-    navigationActions: NavigationActions,
+    onSignInClick: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: RegisterViewModel = hiltViewModel()
-) {
-    RegisterScreenUI(navigationActions)
-}
-
-@Composable
-fun RegisterScreenUI(
-    navigationActions: NavigationActions, modifier: Modifier = Modifier
+    viewModel: RegisterViewModel = hiltViewModel(),
 ) {
     var loginInput = remember { mutableStateOf("") }
     var passwordInput = remember { mutableStateOf("") }
@@ -72,7 +65,7 @@ fun RegisterScreenUI(
                 Spacer(modifier.height(25.dp))
                 Row(modifier = modifier.fillMaxWidth().padding(end = 15.dp), horizontalArrangement = Arrangement.End){
                     Text("Sign In", modifier.clickable(enabled = true, onClick = {
-                        navigationActions.navigateToLogin()
+                        onSignInClick()
                     }))
                 }
                 Spacer(modifier.height(15.dp))
@@ -81,16 +74,29 @@ fun RegisterScreenUI(
                     horizontalArrangement = Arrangement.SpaceAround,
                 ) {
                     Button({
-                        TODO("Proceed login realization")
+                        viewModel.proceedRegistration(
+                            loginInput.value, passwordInput.value,
+                            checkPasswordInput.value
+                        )
                     }) { Text("Proceed") }
                     Button({
-                        TODO("Clear form")
+                        loginInput.value = ""
+                        passwordInput.value = ""
+                        checkPasswordInput.value = ""
                     }) { Text("Cancel")}
                 }
 
             }
         }
     }
+}
+
+@Composable
+fun RegisterScreenUI(
+    onSignInClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+
 }
 
 //@Preview(showBackground = true)

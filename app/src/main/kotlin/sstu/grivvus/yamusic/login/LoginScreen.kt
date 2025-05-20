@@ -34,15 +34,17 @@ import sstu.grivvus.yamusic.ui.theme.appIcons
 
 @Composable
 fun LoginScreen(
-    navigationActions: NavigationActions,
+    onSignUpClick: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: LoginViewModel = hiltViewModel()
 ) {
-    LoginScreenUI(navigationActions)
+    LoginScreenUI(onSignUpClick)
 }
 
 @Composable
-fun LoginScreenUI(navigationActions: NavigationActions, modifier: Modifier = Modifier) {
+fun LoginScreenUI(
+    onSignUpClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     var loginInput = remember { mutableStateOf("") }
     var passwordInput = remember { mutableStateOf("") }
 
@@ -62,7 +64,7 @@ fun LoginScreenUI(navigationActions: NavigationActions, modifier: Modifier = Mod
                 Spacer(modifier.height(25.dp))
                 Row(modifier = modifier.fillMaxWidth().padding(end = 15.dp), horizontalArrangement = Arrangement.End){
                     Text("Sign Up", modifier.clickable(enabled = true, onClick = {
-                        navigationActions.navigateToRegistration()
+                        onSignUpClick()
                     }))
                 }
                 Spacer(modifier.height(15.dp))
