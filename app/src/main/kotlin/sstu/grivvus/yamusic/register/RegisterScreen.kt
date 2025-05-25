@@ -10,38 +10,31 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.automirrored.sharp.Login
 import androidx.compose.material.icons.automirrored.sharp.StarHalf
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import sstu.grivvus.yamusic.NavigationActions
-import sstu.grivvus.yamusic.data.UserRepository
-import sstu.grivvus.yamusic.data.network.NetworkUserCreate
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import sstu.grivvus.yamusic.components.ErrorSnackbar
+import sstu.grivvus.yamusic.components.ErrorTooltip
+import sstu.grivvus.yamusic.components.LoginFormField
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 import sstu.grivvus.yamusic.ui.theme.appIcons
-import sstu.grivvus.yamusic.login.LoginFormField
 
 @Composable
-fun RegisterScreen(
+fun RegistrationScreen(
     onSignInClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: RegisterViewModel = hiltViewModel(),
 ) {
-    var loginInput = remember { mutableStateOf("") }
-    var passwordInput = remember { mutableStateOf("") }
-    var checkPasswordInput = remember { mutableStateOf("") }
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     YaMusicTheme {
         Box(modifier.fillMaxSize()) {
@@ -51,22 +44,47 @@ fun RegisterScreen(
                     .fillMaxSize(),
                 verticalArrangement = Arrangement.Center
             ) {
-                Row(modifier.fillMaxWidth()){
-                    LoginFormField(appIcons.Login, loginInput, placeholderText = "Login")
+                Row(
+                    modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ){
+                    LoginFormField(
+                        appIcons.Login, uiState.username,
+                        { viewModel.updateUsername(it) }, "Login"
+                    )
                 }
                 Spacer(modifier.height(5.dp))
-                Row(modifier.fillMaxWidth()) {
-                    LoginFormField(appIcons.StarHalf, passwordInput, placeholderText = "Password")
+                Row(
+                    modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    LoginFormField(
+                        appIcons.StarHalf, uiState.password,
+                        {viewModel.updatePassword(it)},
+                        "Password", true
+                    )
                 }
                 Spacer(modifier.height(5.dp))
-                Row(modifier.fillMaxWidth()) {
-                    LoginFormField(appIcons.StarHalf, checkPasswordInput, placeholderText = "Confirm password")
+                Row(
+                    modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+               ) {
+                    LoginFormField(
+                        appIcons.StarHalf, uiState.passwordCheck,
+                        {viewModel.updatePasswordCheck(it)},
+                        "Confirm Password", true
+                    )
                 }
                 Spacer(modifier.height(25.dp))
-                Row(modifier = modifier.fillMaxWidth().padding(end = 15.dp), horizontalArrangement = Arrangement.End){
-                    Text("Sign In", modifier.clickable(enabled = true, onClick = {
-                        onSignInClick()
-                    }))
+                Row(
+                    modifier = modifier.fillMaxWidth().padding(end = 15.dp),
+                    horizontalArrangement = Arrangement.End,
+                ){
+                    Text("Sign In", modifier.clickable(
+                        enabled = true, onClick = {
+                            onSignInClick()
+                        })
+                    )
                 }
                 Spacer(modifier.height(15.dp))
                 Row(
@@ -74,33 +92,20 @@ fun RegisterScreen(
                     horizontalArrangement = Arrangement.SpaceAround,
                 ) {
                     Button({
-                        viewModel.proceedRegistration(
-                            loginInput.value, passwordInput.value,
-                            checkPasswordInput.value
-                        )
+                        viewModel.proceedRegistration()
                     }) { Text("Proceed") }
-                    Button({
-                        loginInput.value = ""
-                        passwordInput.value = ""
-                        checkPasswordInput.value = ""
-                    }) { Text("Cancel")}
+                    Button({viewModel.clearForm()}) { Text("Clear")}
                 }
-
+            }
+            if (uiState.showError) {
+                ErrorTooltip(
+                    errorMessage = uiState.errorMessage,
+                    onDismiss = { viewModel.dismissErrorMessage() },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 56.dp)
+                )
             }
         }
     }
 }
-
-@Composable
-fun RegisterScreenUI(
-    onSignInClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-
-}
-
-//@Preview(showBackground = true)
-//@Composable
-//fun PreviewLoginScreen() {
-//    RegisterScreenUI()
-//}

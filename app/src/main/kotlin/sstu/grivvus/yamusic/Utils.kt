@@ -2,6 +2,11 @@ package sstu.grivvus.yamusic
 
 import io.github.cdimascio.dotenv.dotenv
 
+import kotlinx.coroutines.flow.SharingStarted
+
+private const val StopTimeoutMillis: Long = 5000
+val WhileUiSubscribed: SharingStarted = SharingStarted.WhileSubscribed(StopTimeoutMillis)
+
 
 object Settings {
     private val dotenv = dotenv{

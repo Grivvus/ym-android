@@ -70,14 +70,6 @@ fun AppDrawer(
                             closeDrawer()
                         }
                     )
-                    NavigationDrawerItem(
-                        label = { Text("Weather") },
-                        selected = false,
-                        onClick = {
-                            navigationActions.navigateToWeather()
-                            closeDrawer()
-                        }
-                    )
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 

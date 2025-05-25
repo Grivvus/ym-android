@@ -15,16 +15,14 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import sstu.grivvus.yamusic.login.LoginScreen
-import sstu.grivvus.yamusic.register.RegisterScreen
-import sstu.grivvus.yamusic.profile.ProfileScreen
+import sstu.grivvus.yamusic.register.RegistrationScreen
 
 @Composable
 fun YaMusicNavGraph(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
-    drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed),
-    startDestination: String = AppDestinations.LOGIN_ROUTE,
+    startDestination: String = AppDestinations.REGISTRATION_ROUTE,
     navActions: NavigationActions = remember(navController){
         NavigationActions(navController)
     }
@@ -38,13 +36,13 @@ fun YaMusicNavGraph(
         modifier = modifier
     ) {
         composable(AppDestinations.LOGIN_ROUTE) {
-            LoginScreen(navActions)
+            LoginScreen({navActions.navigateToRegistration()})
         }
         composable(AppDestinations.REGISTRATION_ROUTE) {
-            RegisterScreen()
+            RegistrationScreen({ navActions.navigateToLogin() })
         }
         composable(AppDestinations.PROFILE_ROUTE) {
-            ProfileScreen()
+            // ProfileScreen()
         }
     }
 }

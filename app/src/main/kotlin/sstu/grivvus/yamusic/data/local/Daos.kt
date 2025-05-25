@@ -21,8 +21,8 @@ interface UserDao {
     fun delete(user: LocalUser)
 
     @Query("select * from user where username=:username limit 1")
-    fun getUser(username: String)
+    fun getUser(username: String): LocalUser
 
     @Query("select token from user where username=:username limit 1")
-    fun getUserToken(username: String)
+    fun getUserToken(username: String): String
 }
