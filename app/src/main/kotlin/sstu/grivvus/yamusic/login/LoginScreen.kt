@@ -22,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import sstu.grivvus.yamusic.components.ErrorTooltip
 import sstu.grivvus.yamusic.components.LoginFormField
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 import sstu.grivvus.yamusic.ui.theme.appIcons
@@ -37,6 +38,10 @@ fun LoginScreen(
 
     YaMusicTheme {
         Box(modifier.fillMaxSize()) {
+            ErrorTooltip(
+                uiState.errorMessage?:"", uiState.showError,
+                onTimeout = {viewModel.dismissErrorMessage()}
+            )
             Column(
                 modifier
                     .padding(top = 100.dp, bottom = 100.dp, start = 50.dp, end = 50.dp)

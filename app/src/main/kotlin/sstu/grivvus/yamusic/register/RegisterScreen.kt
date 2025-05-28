@@ -38,6 +38,10 @@ fun RegistrationScreen(
 
     YaMusicTheme {
         Box(modifier.fillMaxSize()) {
+            ErrorTooltip(
+                uiState.errorMessage ?: "", uiState.showError,
+                onTimeout = { viewModel.dismissErrorMessage() }
+            )
             Column(
                 modifier
                     .padding(top = 100.dp, bottom = 100.dp, start = 50.dp, end = 50.dp)
@@ -75,7 +79,7 @@ fun RegistrationScreen(
                         "Confirm Password", true
                     )
                 }
-                Spacer(modifier.height(25.dp))
+               Spacer(modifier.height(25.dp))
                 Row(
                     modifier = modifier.fillMaxWidth().padding(end = 15.dp),
                     horizontalArrangement = Arrangement.End,
@@ -96,15 +100,6 @@ fun RegistrationScreen(
                     }) { Text("Proceed") }
                     Button({viewModel.clearForm()}) { Text("Clear")}
                 }
-            }
-            if (uiState.showError) {
-                ErrorTooltip(
-                    errorMessage = uiState.errorMessage,
-                    onDismiss = { viewModel.dismissErrorMessage() },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 56.dp)
-                )
             }
         }
     }
