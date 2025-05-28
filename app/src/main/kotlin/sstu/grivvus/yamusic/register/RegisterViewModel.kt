@@ -8,13 +8,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.WhileUiSubscribed
-import sstu.grivvus.yamusic.data.network.NetworkUser
+import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.NetworkUserCreate
 import javax.inject.Inject
 
-data class RegisterUiState (
+data class RegisterUiState(
     val username: String = "",
     val password: String = "",
     val passwordCheck: String = "",
@@ -23,64 +22,71 @@ data class RegisterUiState (
 )
 
 @HiltViewModel
-class RegisterViewModel @Inject constructor(
-    private val userRepository: UserRepository
-):  ViewModel() {
-    private val _username: MutableStateFlow<String> = MutableStateFlow("")
-    private val _password: MutableStateFlow<String> = MutableStateFlow("")
-    private val _passwordCheck: MutableStateFlow<String> = MutableStateFlow("")
-    private val _showError: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    private val _errorMessage: MutableStateFlow<String?> = MutableStateFlow(null)
+class RegisterViewModel
+    @Inject
+    constructor(
+        private val userRepository: UserRepository,
+    ) : ViewModel() {
+        private val _username: MutableStateFlow<String> = MutableStateFlow("")
+        private val _password: MutableStateFlow<String> = MutableStateFlow("")
+        private val _passwordCheck: MutableStateFlow<String> = MutableStateFlow("")
+        private val _showError: MutableStateFlow<Boolean> = MutableStateFlow(false)
+        private val _errorMessage: MutableStateFlow<String?> = MutableStateFlow(null)
 
-    val uiState: StateFlow<RegisterUiState> = combine(
-        _username, _password, _passwordCheck, _showError, _errorMessage
-    ) {
-    // not quite understand what happens here
-        username, password, passwordCheck, showError, errorMessage ->
-        RegisterUiState(username, password, passwordCheck, showError, errorMessage)
-    }
-        .stateIn(viewModelScope, WhileUiSubscribed, RegisterUiState())
-
-    fun proceedRegistration() = viewModelScope.launch {
-        if (
-            _username.value == ""
-            || _password.value.length < 6
-            || _password.value != _passwordCheck.value
+        val uiState: StateFlow<RegisterUiState> =
+            combine(
+                _username,
+                _password,
+                _passwordCheck,
+                _showError,
+                _errorMessage,
             ) {
-            _showError.value = true
-            if (_username.value == "") {
-                _errorMessage.value = "username shouldn't be empty"
-            } else if (_password.value.length < 6) {
-                _errorMessage.value = "password's length should be 6 symbols or more"
-            } else if (_password.value != _passwordCheck.value) {
-                _errorMessage.value = "passwords should be equal"
+                // not quite understand what happens here
+                username, password, passwordCheck, showError, errorMessage ->
+                RegisterUiState(username, password, passwordCheck, showError, errorMessage)
+            }.stateIn(viewModelScope, WhileUiSubscribed, RegisterUiState())
+
+        fun proceedRegistration() =
+            viewModelScope.launch {
+                if (
+                    _username.value == "" ||
+                    _password.value.length < 6 ||
+                    _password.value != _passwordCheck.value
+                ) {
+                    _showError.value = true
+                    if (_username.value == "") {
+                        _errorMessage.value = "username shouldn't be empty"
+                    } else if (_password.value.length < 6) {
+                        _errorMessage.value = "password's length should be 6 symbols or more"
+                    } else if (_password.value != _passwordCheck.value) {
+                        _errorMessage.value = "passwords should be equal"
+                    }
+                } else {
+                    userRepository.register(NetworkUserCreate(_username.value, null, _password.value))
+                }
             }
-        } else {
-            userRepository.register(NetworkUserCreate(_username.value, null, _password.value))
+
+        fun dismissErrorMessage() {
+            _showError.value = false
+            _errorMessage.value = null
+        }
+
+        fun updateUsername(value: String) {
+            _username.value = value
+        }
+
+        fun updatePassword(value: String) {
+            _password.value = value
+        }
+
+        fun updatePasswordCheck(value: String) {
+            _passwordCheck.value = value
+        }
+
+        fun clearForm() {
+            _username.value = ""
+            _password.value = ""
+            _passwordCheck.value = ""
+            _showError.value = false
         }
     }
-
-    fun dismissErrorMessage(){
-        _showError.value = false
-        _errorMessage.value = null
-    }
-
-    fun updateUsername(value: String) {
-        _username.value = value
-    }
-
-    fun updatePassword(value: String) {
-        _password.value = value
-    }
-
-    fun updatePasswordCheck(value: String) {
-        _passwordCheck.value = value
-    }
-
-    fun clearForm() {
-        _username.value = ""
-        _password.value = ""
-        _passwordCheck.value = ""
-        _showError.value = false
-    }
-}

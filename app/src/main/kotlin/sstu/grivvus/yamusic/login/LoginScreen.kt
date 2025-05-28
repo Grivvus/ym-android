@@ -15,10 +15,8 @@ import androidx.compose.material.icons.automirrored.sharp.StarHalf
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,14 +31,14 @@ fun LoginScreen(
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
-
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     YaMusicTheme {
         Box(modifier.fillMaxSize()) {
             ErrorTooltip(
-                uiState.errorMessage?:"", uiState.showError,
-                onTimeout = {viewModel.dismissErrorMessage()}
+                uiState.errorMessage ?: "",
+                uiState.showError,
+                onTimeout = { viewModel.dismissErrorMessage() },
             )
             Column(
                 modifier
@@ -50,33 +48,38 @@ fun LoginScreen(
             ) {
                 Row(
                     modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ){
+                    horizontalArrangement = Arrangement.Center,
+                ) {
                     LoginFormField(
-                        appIcons.Login, uiState.username,
-                        { viewModel.updateUsername(it) }, "Login"
+                        appIcons.Login,
+                        uiState.username,
+                        { viewModel.updateUsername(it) },
+                        "Login",
                     )
                 }
                 Spacer(modifier.height(5.dp))
                 Row(
                     modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
+                    horizontalArrangement = Arrangement.Center,
                 ) {
                     LoginFormField(
-                        appIcons.StarHalf, uiState.password,
-                        {viewModel.updatePassword(it)},
-                        "Password", true
+                        appIcons.StarHalf,
+                        uiState.password,
+                        { viewModel.updatePassword(it) },
+                        "Password",
+                        true,
                     )
                 }
                 Spacer(modifier.height(25.dp))
                 Row(
                     modifier = modifier.fillMaxWidth().padding(end = 15.dp),
-                    horizontalArrangement = Arrangement.End
-                ){
-                    Text("Sign Up", modifier.clickable(
-                        enabled = true, onClick = {
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    Text(
+                        "Sign Up",
+                        modifier.clickable(enabled = true, onClick = {
                             onSignUpClick()
-                        })
+                        }),
                     )
                 }
                 Spacer(modifier.height(15.dp))
@@ -87,9 +90,8 @@ fun LoginScreen(
                     Button({
                         viewModel.proceedLogin()
                     }) { Text("Proceed") }
-                    Button({viewModel.clearForm()}) { Text("Clear")}
+                    Button({ viewModel.clearForm() }) { Text("Clear") }
                 }
-
             }
         }
     }

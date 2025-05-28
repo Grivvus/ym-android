@@ -8,12 +8,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.WhileUiSubscribed
+import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.NetworkUserLogin
 import javax.inject.Inject
 
-data class LoginUiState (
+data class LoginUiState(
     val username: String = "",
     val password: String = "",
     val showError: Boolean = false,
@@ -21,55 +21,61 @@ data class LoginUiState (
 )
 
 @HiltViewModel
-class LoginViewModel @Inject constructor(
-    private val userRepository: UserRepository
-):  ViewModel() {
-    private val _username: MutableStateFlow<String> = MutableStateFlow("")
-    private val _password: MutableStateFlow<String> = MutableStateFlow("")
-    private val _showError: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    private val _errorMessage: MutableStateFlow<String?> = MutableStateFlow(null)
+class LoginViewModel
+    @Inject
+    constructor(
+        private val userRepository: UserRepository,
+    ) : ViewModel() {
+        private val _username: MutableStateFlow<String> = MutableStateFlow("")
+        private val _password: MutableStateFlow<String> = MutableStateFlow("")
+        private val _showError: MutableStateFlow<Boolean> = MutableStateFlow(false)
+        private val _errorMessage: MutableStateFlow<String?> = MutableStateFlow(null)
 
-    val uiState: StateFlow<LoginUiState> = combine(
-        _username, _password, _showError, _errorMessage
-    ) {
-        // not quite understand what happens here
-            username, password, showError, errorMessage ->
-        LoginUiState(username, password, showError, errorMessage)
-    }
-        .stateIn(viewModelScope, WhileUiSubscribed, LoginUiState())
+        val uiState: StateFlow<LoginUiState> =
+            combine(
+                _username,
+                _password,
+                _showError,
+                _errorMessage,
+            ) {
+                // not quite understand what happens here
+                username, password, showError, errorMessage ->
+                LoginUiState(username, password, showError, errorMessage)
+            }.stateIn(viewModelScope, WhileUiSubscribed, LoginUiState())
 
-    fun proceedLogin() = viewModelScope.launch {
-        if (
-            _username.value == ""
-            || _password.value.length < 6
-        ) {
-            _showError.value = true
-            if (_username.value == "") {
-                _errorMessage.value = "username shouldn't be empty"
-            } else if (_password.value.length < 6) {
-                _errorMessage.value = "password's length couldn't be less than 6 symbols"
-            } else {
-                userRepository.login(NetworkUserLogin(_username.value, _password.value))
+        fun proceedLogin() =
+            viewModelScope.launch {
+                if (
+                    _username.value == "" ||
+                    _password.value.length < 6
+                ) {
+                    _showError.value = true
+                    if (_username.value == "") {
+                        _errorMessage.value = "username shouldn't be empty"
+                    } else if (_password.value.length < 6) {
+                        _errorMessage.value = "password's length couldn't be less than 6 symbols"
+                    } else {
+                        userRepository.login(NetworkUserLogin(_username.value, _password.value))
+                    }
+                }
             }
+
+        fun dismissErrorMessage() {
+            _showError.value = false
+            _errorMessage.value = null
+        }
+
+        fun updateUsername(value: String) {
+            _username.value = value
+        }
+
+        fun updatePassword(value: String) {
+            _password.value = value
+        }
+
+        fun clearForm() {
+            _username.value = ""
+            _password.value = ""
+            _showError.value = false
         }
     }
-
-    fun dismissErrorMessage(){
-        _showError.value = false
-        _errorMessage.value = null
-    }
-
-    fun updateUsername(value: String) {
-        _username.value = value
-    }
-
-    fun updatePassword(value: String) {
-        _password.value = value
-    }
-
-    fun clearForm() {
-        _username.value = ""
-        _password.value = ""
-        _showError.value = false
-    }
-}

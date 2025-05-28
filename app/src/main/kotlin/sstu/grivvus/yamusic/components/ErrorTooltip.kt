@@ -35,29 +35,30 @@ fun ErrorTooltip(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.BottomCenter
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+        contentAlignment = Alignment.BottomCenter,
     ) {
         AnimatedVisibility(
             visible = visible,
             enter = fadeIn(animationSpec = tween(300)),
-            exit = fadeOut(animationSpec = tween(300))
+            exit = fadeOut(animationSpec = tween(300)),
         ) {
             Box(
-                modifier = Modifier
-                    .background(
-                        color = Color(0xFF333333).copy(alpha = 0.9f),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .background(
+                            color = Color(0xFF333333).copy(alpha = 0.9f),
+                            shape = RoundedCornerShape(8.dp),
+                        ).padding(horizontal = 24.dp, vertical = 12.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = message,
                     color = Color.White,
-                    fontSize = 16.sp
+                    fontSize = 16.sp,
                 )
             }
         }

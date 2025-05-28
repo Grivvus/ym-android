@@ -16,12 +16,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import sstu.grivvus.yamusic.components.ErrorSnackbar
 import sstu.grivvus.yamusic.components.ErrorTooltip
 import sstu.grivvus.yamusic.components.LoginFormField
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
@@ -33,28 +31,30 @@ fun RegistrationScreen(
     modifier: Modifier = Modifier,
     viewModel: RegisterViewModel = hiltViewModel(),
 ) {
-
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     YaMusicTheme {
         Box(modifier.fillMaxSize()) {
             ErrorTooltip(
-                uiState.errorMessage ?: "", uiState.showError,
-                onTimeout = { viewModel.dismissErrorMessage() }
+                uiState.errorMessage ?: "",
+                uiState.showError,
+                onTimeout = { viewModel.dismissErrorMessage() },
             )
             Column(
                 modifier
                     .padding(top = 100.dp, bottom = 100.dp, start = 50.dp, end = 50.dp)
                     .fillMaxSize(),
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Center,
             ) {
                 Row(
                     modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
-                ){
+                ) {
                     LoginFormField(
-                        appIcons.Login, uiState.username,
-                        { viewModel.updateUsername(it) }, "Login"
+                        appIcons.Login,
+                        uiState.username,
+                        { viewModel.updateUsername(it) },
+                        "Login",
                     )
                 }
                 Spacer(modifier.height(5.dp))
@@ -63,31 +63,36 @@ fun RegistrationScreen(
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     LoginFormField(
-                        appIcons.StarHalf, uiState.password,
-                        {viewModel.updatePassword(it)},
-                        "Password", true
+                        appIcons.StarHalf,
+                        uiState.password,
+                        { viewModel.updatePassword(it) },
+                        "Password",
+                        true,
                     )
                 }
                 Spacer(modifier.height(5.dp))
                 Row(
                     modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
-               ) {
+                ) {
                     LoginFormField(
-                        appIcons.StarHalf, uiState.passwordCheck,
-                        {viewModel.updatePasswordCheck(it)},
-                        "Confirm Password", true
+                        appIcons.StarHalf,
+                        uiState.passwordCheck,
+                        { viewModel.updatePasswordCheck(it) },
+                        "Confirm Password",
+                        true,
                     )
                 }
-               Spacer(modifier.height(25.dp))
+                Spacer(modifier.height(25.dp))
                 Row(
                     modifier = modifier.fillMaxWidth().padding(end = 15.dp),
                     horizontalArrangement = Arrangement.End,
-                ){
-                    Text("Sign In", modifier.clickable(
-                        enabled = true, onClick = {
+                ) {
+                    Text(
+                        "Sign In",
+                        modifier.clickable(enabled = true, onClick = {
                             onSignInClick()
-                        })
+                        }),
                     )
                 }
                 Spacer(modifier.height(15.dp))
@@ -98,7 +103,7 @@ fun RegistrationScreen(
                     Button({
                         viewModel.proceedRegistration()
                     }) { Text("Proceed") }
-                    Button({viewModel.clearForm()}) { Text("Clear")}
+                    Button({ viewModel.clearForm() }) { Text("Clear") }
                 }
             }
         }
