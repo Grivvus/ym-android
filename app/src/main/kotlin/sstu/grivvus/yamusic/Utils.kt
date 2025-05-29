@@ -11,7 +11,7 @@ val WhileUiSubscribed: SharingStarted = SharingStarted.WhileSubscribed(StopTimeo
 object Settings {
     private val dotenv = dotenv{
         directory = "/assets"
-        filename = ".env"
+        filename = "env"
     }
 
     val apiHost = dotenv["API_HOST"] ?: "0.0.0.0"

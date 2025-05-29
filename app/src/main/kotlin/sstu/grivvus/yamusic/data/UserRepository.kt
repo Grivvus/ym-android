@@ -15,14 +15,14 @@ class UserRepository @Inject constructor(
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     suspend fun register(user: NetworkUserCreate) {
-        val token = registerOrLoginUser(user, "register")
+        val token = registerUser(user)
         localDataSource.insert(LocalUser(
             user.username, user.email, token.accessToken, user.password
         ))
     }
 
     suspend fun login(user: NetworkUserLogin) {
-        val token = registerOrLoginUser(user, "login")
+        val token = loginUser(user)
         localDataSource.updateToken(user.username, token.accessToken)
     }
 }
