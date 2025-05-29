@@ -72,7 +72,7 @@ suspend fun loginUser(user: NetworkUserLogin): TokenResponse =
 
         val client = OkHttpClient()
         val url = "http://${Settings.apiHost}:${Settings.apiPort}/auth/login/"
-        Timber.tag("Request").i("url: $url")
+        Log.i("Reqeust", "url: $url")
         val body = Json.encodeToString(user)
             .toRequestBody("application/json; charset=utf-8".toMediaType())
         val request = Request.Builder()
@@ -80,7 +80,7 @@ suspend fun loginUser(user: NetworkUserLogin): TokenResponse =
             .post(body)
             .build()
 
-        Timber.tag("Request").i("Request $request is sent")
+        Log.i("Request", "Request $request is sent")
 
         val call = client.newCall(request)
 

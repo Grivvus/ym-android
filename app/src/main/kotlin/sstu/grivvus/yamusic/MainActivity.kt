@@ -1,10 +1,12 @@
 package sstu.grivvus.yamusic
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import dagger.hilt.android.AndroidEntryPoint
+import sstu.grivvus.yamusic.data.local.DatabaseProvider
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 
 @AndroidEntryPoint

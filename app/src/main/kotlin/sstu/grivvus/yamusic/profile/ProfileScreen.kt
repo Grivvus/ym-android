@@ -1,206 +1,168 @@
 package sstu.grivvus.yamusic.profile
 
-import androidx.compose.foundation.Image
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.automirrored.sharp.Logout
+import androidx.compose.material.icons.sharp.AddAPhoto
+import androidx.compose.material.icons.sharp.Loop
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import sstu.grivvus.yamusic.components.AppTopBar
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import sstu.grivvus.yamusic.R
-import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
-import java.time.Instant
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.OutlinedTextField
 import sstu.grivvus.yamusic.components.BottomBar
+import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
+import sstu.grivvus.yamusic.ui.theme.appIcons
+import sstu.grivvus.yamusic.ui.theme.appIconsMirrored
 
 @Composable
 fun ProfileScreen(
-    onProfileSaveClick: () -> Unit,
-    onChangePasswordClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    navigateToMusic: () -> Unit,
+    navigateToLibrary: () -> Unit,
+    navigateToProfile: () -> Unit,
+    onLogOut: () -> Unit,
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    var userLoginState = remember { mutableStateOf("user login 123") }
-    var userFirstNameState = remember { mutableStateOf("user first name") }
-    var userSecondNameState = remember { mutableStateOf("user second name") }
-    var userBirthdayDateState = remember {
-        mutableStateOf(Instant.now().toEpochMilli())
-    }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            uri?.let { viewModel.uploadAvatar(it) }
+        }
+    )
 
     YaMusicTheme {
         Scaffold(
-            topBar = {AppTopBar()},
-            bottomBar = { BottomBar() }
-        ) { innerPadding ->
-            Column(modifier = modifier.padding(innerPadding)) {
-                Spacer(modifier.height(15.dp))
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = modifier.fillMaxWidth(),
+            bottomBar = {BottomBar(navigateToMusic, navigateToLibrary, navigateToProfile)}
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    contentAlignment = Alignment.BottomEnd
                 ) {
-                    Image(
-                        painter = painterResource(
-                            id = R.drawable.test_profile_image
-                        ),
-                        contentDescription = "Profile Image",
-                        contentScale = ContentScale.Crop,
-                        modifier = modifier.size(100.dp).clip(CircleShape)
-                    )
-                }
-                Spacer(modifier.height(15.dp))
-                Row(
-                    modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ){
-                    ProfileField(userLoginState, "login")
-                }
-                Spacer(modifier.height(15.dp))
-                Row(
-                    modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    ProfileField(userFirstNameState, "first name")
-                }
-                Spacer(modifier.height(15.dp))
-                Row(
-                    modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    ProfileField(userSecondNameState, "second name")
-                }
-                Spacer(modifier.height(15.dp))
-                Row(
-                    modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    DatePickerDocked(userBirthdayDateState)
-                }
-                Spacer(modifier.height(35.dp))
-                Row(
-                    modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    Button(
-                        onClick = {
-                            onProfileSaveClick()
-                        },
-                        modifier.width(180.dp)
-                    ) {
-                        Text("Save")
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(120.dp))
+                    } else {
+                        AsyncImage(
+                            model = uiState.avatarFileName ?: R.drawable.ic_placeholder_avatar,
+                            contentDescription = "User Avatar",
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(CircleShape)
+                                .border(1.dp, Color.LightGray, CircleShape),
+                            contentScale = ContentScale.Crop,
+                            error = painterResource(id = R.drawable.ic_placeholder_avatar)
+                        )
                     }
-                    Button(
-                        onClick = {
-                            onChangePasswordClick()
-                        },
-                        modifier.width(180.dp)
+
+                    IconButton(
+                        onClick = { imagePicker.launch("image/*") },
+                        modifier = Modifier
+                            .background(Color.White, CircleShape)
+                            .size(36.dp)
                     ) {
-                        Text("Change password")
+                        Icon(
+                            imageVector = appIcons.AddAPhoto,
+                            contentDescription = "Upload avatar"
+                        )
                     }
+                }
+
+                Spacer(Modifier.height(32.dp))
+
+                UserInfoItem(
+                    label = "Username",
+                    value = uiState.username
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                UserInfoItem(
+                    label = "Email",
+                    value = uiState.email ?: ""
+                )
+
+                Spacer(Modifier.height(32.dp))
+
+                Button(
+                    onClick = { viewModel.changePassword() },
+                    enabled = !uiState.isLoading,
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(48.dp)
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color.White
+                        )
+                    } else {
+                        Text("Change Password")
+                    }
+                }
+                Spacer(Modifier.height(32.dp))
+                IconButton(onLogOut) {
+                    Icon(appIconsMirrored.Logout, "Logout button")
                 }
             }
         }
     }
+
 }
 
 @Composable
-fun ProfileField(
-    textState: MutableState<String>,
-    placeholderText: String = "",
-) {
-    TextField(
-        textState.value, {textState.value = it},
-        placeholder = {
-            Text(placeholderText)
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DatePickerDocked(dateState: MutableState<Long>) {
-    var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = dateState.value)
-    val selectedDate = datePickerState.selectedDateMillis?.let {
-        convertMillisToDate(it)
-    } ?: ""
-
-    Box(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        OutlinedTextField(
-            value = "Birth date is $selectedDate",
-            onValueChange = { },
-            label = { Text("") },
-            readOnly = true,
-            trailingIcon = {
-                IconButton(onClick = { showDatePicker = !showDatePicker }) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = "Выберите дату"
-                    )
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
+fun UserInfoItem(label: String, value: String) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-
-        if (showDatePicker) {
-            Popup(
-                onDismissRequest = {
-                    dateState.value = datePickerState.selectedDateMillis ?: 0
-                    showDatePicker = false
-                },
-                alignment = Alignment.TopStart
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(y = 64.dp)
-                        .shadow(elevation = 4.dp)
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(16.dp)
-                ) {
-                    DatePicker(
-                        state = datePickerState,
-                        showModeToggle = false
-                    )
-                }
-            }
-        }
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+        Modifier.padding(top = 8.dp)
+        HorizontalDivider(
+            Modifier.padding(top = 8.dp), 1.dp,
+            MaterialTheme.colorScheme.surfaceVariant,
+        )
     }
 }
 

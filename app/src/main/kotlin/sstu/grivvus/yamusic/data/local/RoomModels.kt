@@ -11,5 +11,4 @@ data class LocalUser(
     @ColumnInfo(name = "username") val username: String,
     @ColumnInfo(name = "email") val email: String?,
     @ColumnInfo(name = "token") val token: String?,
-    @ColumnInfo(name = "password") val password: String,
 )

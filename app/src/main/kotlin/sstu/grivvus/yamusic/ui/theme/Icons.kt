@@ -2,4 +2,5 @@ package sstu.grivvus.yamusic.ui.theme
 
 import androidx.compose.material.icons.Icons
 
-val appIcons = Icons.AutoMirrored.Sharp
+val appIconsMirrored = Icons.AutoMirrored.Sharp
+val appIcons = Icons.Sharp

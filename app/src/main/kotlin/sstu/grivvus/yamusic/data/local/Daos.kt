@@ -5,11 +5,15 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 
 @Dao
 interface UserDao {
     @Insert
     suspend fun insert(user: LocalUser)
+
+    @Upsert
+    suspend fun upsert(user: LocalUser)
 
     @Query("UPDATE user SET token = :newToken WHERE username=:username")
     suspend fun updateToken(username: String, newToken: String)

@@ -13,15 +13,16 @@ import androidx.compose.material.icons.automirrored.sharp.InsertDriveFile
 import androidx.compose.material.icons.automirrored.sharp.Note
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import sstu.grivvus.yamusic.ui.theme.appIcons
 import sstu.grivvus.yamusic.ui.theme.Purple80
+import sstu.grivvus.yamusic.ui.theme.appIconsMirrored
 
 
-@Preview(showBackground = true)
 @Composable
 fun BottomBar(
+    onMusicClick: () -> Unit,
+    onLibraryClick: () -> Unit,
+    onProfileClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -32,24 +33,24 @@ fun BottomBar(
             modifier
                 .clickable(
                     enabled = true, onClick = {
-                        TODO("Go to music page")
+                        onMusicClick()
                     }
                 )
                 .fillMaxHeight()
-        ) { appIcons.Note }
+        ) { appIconsMirrored.Note }
         Column(
             modifier.clickable(enabled = true, onClick = {
-                TODO("Go to upload page")
+                onLibraryClick()
             })
                 .fillMaxHeight()
-        ) { appIcons.InsertDriveFile }
+        ) { appIconsMirrored.InsertDriveFile }
         Column(
             modifier.clickable(enabled = true, onClick = {
-                TODO("Go to profile page")
+                onProfileClick()
             })
                 .fillMaxHeight()
         ) {
-            appIcons.AddToHomeScreen
+            appIconsMirrored.AddToHomeScreen
         }
     }
 }

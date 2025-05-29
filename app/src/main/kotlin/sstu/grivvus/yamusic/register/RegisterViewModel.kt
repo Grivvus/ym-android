@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import sstu.grivvus.yamusic.NavigationActions
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.NetworkUserCreate
@@ -46,7 +47,7 @@ class RegisterViewModel
             RegisterUiState(username, password, passwordCheck, showError, errorMessage)
         }.stateIn(viewModelScope, WhileUiSubscribed, RegisterUiState())
 
-    fun proceedRegistration() =
+    fun proceedRegistration(onSuccess: () -> Unit) =
         viewModelScope.launch {
             if (
                 _username.value == "" ||
@@ -64,10 +65,12 @@ class RegisterViewModel
             } else {
                 try {
                     userRepository.register(NetworkUserCreate(_username.value, null, _password.value))
+                    onSuccess()
                 } catch (e: Exception) {
                     Timber.tag("NetworkError").e(e)
                     _showError.value = true
                     _errorMessage.value = "Can't proceed registration due to server error"
+                    throw e
                 }
             }
         }

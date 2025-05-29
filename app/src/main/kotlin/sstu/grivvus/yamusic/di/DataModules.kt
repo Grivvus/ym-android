@@ -13,6 +13,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import sstu.grivvus.yamusic.data.local.DatabaseProvider
 import javax.inject.Singleton
 
 @Module
@@ -22,11 +23,7 @@ object DatabaseModule {
     @Singleton
     @Provides
     fun provideDataBase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(
-            context.applicationContext,
-            AppDatabase::class.java,
-            "app.db"
-        ).build()
+        return DatabaseProvider.getDB(context)
     }
 
     @Provides

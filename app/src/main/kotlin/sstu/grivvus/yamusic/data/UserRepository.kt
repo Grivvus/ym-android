@@ -17,12 +17,12 @@ class UserRepository @Inject constructor(
     suspend fun register(user: NetworkUserCreate) {
         val token = registerUser(user)
         localDataSource.insert(LocalUser(
-            user.username, user.email, token.accessToken, user.password
+            user.username, user.email, token.accessToken
         ))
     }
 
     suspend fun login(user: NetworkUserLogin) {
         val token = loginUser(user)
-        localDataSource.updateToken(user.username, token.accessToken)
+        localDataSource.upsert(LocalUser(user.username, null, token.accessToken))
     }
 }

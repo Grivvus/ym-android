@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.NetworkUserLogin
+import timber.log.Timber
 import javax.inject.Inject
 
 data class LoginUiState(
@@ -43,7 +44,7 @@ class LoginViewModel
                 LoginUiState(username, password, showError, errorMessage)
             }.stateIn(viewModelScope, WhileUiSubscribed, LoginUiState())
 
-        fun proceedLogin() =
+        fun proceedLogin(onSuccess: () -> Unit) =
             viewModelScope.launch {
                 if (
                     _username.value == "" ||
@@ -54,8 +55,16 @@ class LoginViewModel
                         _errorMessage.value = "username shouldn't be empty"
                     } else if (_password.value.length < 6) {
                         _errorMessage.value = "password's length couldn't be less than 6 symbols"
-                    } else {
+                    }
+                } else {
+                    try {
                         userRepository.login(NetworkUserLogin(_username.value, _password.value))
+                        onSuccess()
+                    } catch(e: Exception) {
+                        Timber.tag("NetworkError").e(e)
+                        _showError.value = true
+                        _errorMessage.value = "Can't proceed login due to server error"
+                        throw e
                     }
                 }
             }

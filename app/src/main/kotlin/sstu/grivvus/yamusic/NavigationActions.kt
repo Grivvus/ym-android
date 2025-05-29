@@ -1,6 +1,7 @@
 package sstu.grivvus.yamusic
 
 import androidx.navigation.NavController
+import sstu.grivvus.yamusic.AppScreens.LIBRARY_SCREEN
 import sstu.grivvus.yamusic.AppScreens.LOGIN_SCREEN
 import sstu.grivvus.yamusic.AppScreens.MUSIC_SCREEN
 import sstu.grivvus.yamusic.AppScreens.PROFILE_SCREEN
@@ -11,6 +12,7 @@ object AppScreens {
     const val REGISTRATION_SCREEN = "registration"
     const val PROFILE_SCREEN = "profile"
     const val MUSIC_SCREEN = "music"
+    const val LIBRARY_SCREEN = "library"
 }
 
 object AppDestinations {
@@ -18,6 +20,7 @@ object AppDestinations {
     const val LOGIN_ROUTE = LOGIN_SCREEN
     const val REGISTRATION_ROUTE = REGISTRATION_SCREEN;
     const val MUSIC_ROUTE = MUSIC_SCREEN
+    const val LIBRARY_ROUTE = LIBRARY_SCREEN
 }
 
 class NavigationActions(val navController: NavController) {
@@ -35,5 +38,9 @@ class NavigationActions(val navController: NavController) {
 
     fun navigateToMusic() {
         navController.navigate(AppDestinations.MUSIC_ROUTE)
+    }
+
+    fun navigateToLibrary() {
+        navController.navigate(AppDestinations.LIBRARY_ROUTE)
     }
 }
