@@ -24,8 +24,11 @@ interface UserDao {
     @Delete
     suspend fun delete(user: LocalUser)
 
-    @Query("select * from user where username=:username limit 1")
-    suspend fun getUser(username: String): LocalUser
+    @Query("delete from user")
+    suspend fun clearTable()
+
+    @Query("select * from user limit 1")
+    suspend fun getActiveUser(): LocalUser
 
     @Query("select token from user where username=:username limit 1")
     suspend fun getUserToken(username: String): String

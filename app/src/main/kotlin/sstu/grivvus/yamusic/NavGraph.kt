@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import sstu.grivvus.yamusic.components.BlankScreen
 import sstu.grivvus.yamusic.login.LoginScreen
+import sstu.grivvus.yamusic.passwordChange.PasswordChangeDialog
 import sstu.grivvus.yamusic.profile.ProfileScreen
 import sstu.grivvus.yamusic.register.RegistrationScreen
 
@@ -51,11 +52,11 @@ fun YaMusicNavGraph(
                 { navActions.navigateToMusic() },
                 { navActions.navigateToLibrary() },
                 { navActions.navigateToProfile() },
-                { navActions.navigateToLogin() }
+                { navActions.navigateToLogin() },
             )
         }
 
-        composable(AppDestinations.LIBRARY_ROUTE) {
+         composable(AppDestinations.LIBRARY_ROUTE) {
             BlankScreen(navActions)
         }
 

@@ -12,6 +12,7 @@ import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.NetworkUserLogin
 import timber.log.Timber
+import java.io.IOException
 import javax.inject.Inject
 
 data class LoginUiState(
@@ -60,6 +61,9 @@ class LoginViewModel
                     try {
                         userRepository.login(NetworkUserLogin(_username.value, _password.value))
                         onSuccess()
+                    } catch (e: IOException){
+                        _showError.value = true
+                        _errorMessage.value = "Wrong username or password"
                     } catch(e: Exception) {
                         Timber.tag("NetworkError").e(e)
                         _showError.value = true

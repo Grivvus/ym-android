@@ -18,6 +18,15 @@ data class NetworkUserLogin(
 )
 
 @Serializable
+data class ChangePasswordDto(
+    val username: String,
+    @SerialName("current_password")
+    val currentPassword: String,
+    @SerialName("new_password")
+    val newPassword: String,
+)
+
+@Serializable
 data class TokenResponse(
     @SerialName("token_type")
     val tokenType: String,

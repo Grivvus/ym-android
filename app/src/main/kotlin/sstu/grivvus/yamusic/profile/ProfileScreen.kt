@@ -5,8 +5,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.sharp.Logout
 import androidx.compose.material.icons.sharp.AddAPhoto
-import androidx.compose.material.icons.sharp.Loop
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -25,8 +26,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import sstu.grivvus.yamusic.R
 import sstu.grivvus.yamusic.components.BottomBar
+import sstu.grivvus.yamusic.passwordChange.PasswordChangeDialog
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 import sstu.grivvus.yamusic.ui.theme.appIcons
 import sstu.grivvus.yamusic.ui.theme.appIconsMirrored
@@ -52,6 +58,7 @@ fun ProfileScreen(
     onLogOut: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
+    var showPasswordDialog by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -72,6 +79,14 @@ fun ProfileScreen(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
+                if (showPasswordDialog) {
+                    PasswordChangeDialog(
+                        onDismiss = { showPasswordDialog = false }
+                    )
+                }
+
+                Spacer(Modifier.height(50.dp))
                 Box(
                     contentAlignment = Alignment.BottomEnd
                 ) {
@@ -107,20 +122,22 @@ fun ProfileScreen(
 
                 UserInfoItem(
                     label = "Username",
-                    value = uiState.username
+                    value = uiState.username,
+                    { viewModel.changeUsername(it) },
                 )
 
                 Spacer(Modifier.height(16.dp))
 
                 UserInfoItem(
                     label = "Email",
-                    value = uiState.email ?: ""
+                    value = uiState.email ?: "",
+                    { viewModel.changeEmail(it) },
                 )
 
                 Spacer(Modifier.height(32.dp))
 
                 Button(
-                    onClick = { viewModel.changePassword() },
+                    onClick = { showPasswordDialog = true },
                     enabled = !uiState.isLoading,
                     modifier = Modifier
                         .fillMaxWidth(0.8f)
@@ -136,8 +153,17 @@ fun ProfileScreen(
                     }
                 }
                 Spacer(Modifier.height(32.dp))
-                IconButton(onLogOut) {
-                    Icon(appIconsMirrored.Logout, "Logout button")
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround){
+                    Column() {
+                        Button(onClick = { viewModel.tryToSaveChanges() }) {
+                            Text("Save changes")
+                        }
+                    }
+                    Column() {
+                        IconButton({ viewModel.logOut(); onLogOut() }) {
+                            Icon(appIconsMirrored.Logout, "Logout button")
+                        }
+                    }
                 }
             }
         }
@@ -146,16 +172,17 @@ fun ProfileScreen(
 }
 
 @Composable
-fun UserInfoItem(label: String, value: String) {
+fun UserInfoItem(label: String, value: String, onValueChange: (String) -> Unit) {
     Column(Modifier.fillMaxWidth()) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            textStyle = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(top = 4.dp)
         )
         Modifier.padding(top = 8.dp)

@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.automirrored.sharp.Login
 import androidx.compose.material.icons.sharp.Lock
+import androidx.compose.material.icons.sharp.LockReset
+import androidx.compose.material.icons.sharp.Password
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -66,7 +68,7 @@ fun RegistrationScreen(
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     LoginFormField(
-                        appIcons.Lock,
+                        appIcons.Password,
                         uiState.password,
                         { viewModel.updatePassword(it) },
                         "Password",
@@ -79,7 +81,7 @@ fun RegistrationScreen(
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     LoginFormField(
-                        appIcons.Lock,
+                        appIcons.LockReset,
                         uiState.passwordCheck,
                         { viewModel.updatePasswordCheck(it) },
                         "Confirm Password",

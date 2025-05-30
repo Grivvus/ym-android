@@ -13,6 +13,7 @@ import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.NetworkUserCreate
 import timber.log.Timber
+import java.io.IOException
 import javax.inject.Inject
 
 data class RegisterUiState(
@@ -66,6 +67,9 @@ class RegisterViewModel
                 try {
                     userRepository.register(NetworkUserCreate(_username.value, null, _password.value))
                     onSuccess()
+                } catch (e: IOException) {
+                    _showError.value = true
+                    _errorMessage.value = "This username is already used"
                 } catch (e: Exception) {
                     Timber.tag("NetworkError").e(e)
                     _showError.value = true
