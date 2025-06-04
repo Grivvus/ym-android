@@ -154,3 +154,41 @@ suspend fun changeUserPassword(data: ChangePasswordDto): Unit =
             }
         })
     }
+
+suspend fun changeUser(data: ChangeUserDto): Unit =
+    suspendCancellableCoroutine { continuation ->
+
+        val client = OkHttpClient()
+        val url = "http://${Settings.apiHost}:${Settings.apiPort}/user/change/"
+        Log.i("Reqeust", "url: $url")
+        val body = Json.encodeToString(data)
+            .toRequestBody("application/json; charset=utf-8".toMediaType())
+        val request = Request.Builder()
+            .url(url)
+            .patch(body)
+            .build()
+
+        Log.i("Request", "Request $request is sent")
+
+        val call = client.newCall(request)
+
+        continuation.invokeOnCancellation {
+            call.cancel()
+        }
+
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                if (continuation.isCancelled) return
+                continuation.resumeWithException(e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (!response.isSuccessful) {
+                        continuation.resumeWithException(IOException("Unexpected code $response"))
+                        return
+                    }
+                }
+            }
+        })
+    }

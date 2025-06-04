@@ -17,3 +17,7 @@ object Settings {
     val apiHost = dotenv["API_HOST"] ?: "0.0.0.0"
     val apiPort = dotenv["API_PORT"] ?: "8000"
 }
+
+fun getAvatarUrl(username: String): String {
+    return "http://${Settings.apiHost}:${Settings.apiPort}/user/avatar/$username"
+}

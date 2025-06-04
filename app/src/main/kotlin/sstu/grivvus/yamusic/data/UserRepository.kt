@@ -45,4 +45,16 @@ class UserRepository @Inject constructor(
         val currentUser = localDataSource.getActiveUser()
         return currentUser
     }
+
+    suspend fun applyChanges(user: ChangeUserDto) {
+        changeUser(user)
+        val localUser = localDataSource.getActiveUser()
+        localDataSource.clearTable()
+        val newUserData = LocalUser(
+            user.newUsername ?: user.username,
+            user.newEmail ?: localUser.email,
+            localUser.token,
+        )
+        localDataSource.insert(newUserData)
+    }
 }

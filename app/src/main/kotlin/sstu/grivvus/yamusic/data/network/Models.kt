@@ -27,6 +27,15 @@ data class ChangePasswordDto(
 )
 
 @Serializable
+data class ChangeUserDto(
+    val username: String,
+    @SerialName("new_username")
+    val newUsername: String?,
+    @SerialName("new_email")
+    val newEmail: String?
+)
+
+@Serializable
 data class TokenResponse(
     @SerialName("token_type")
     val tokenType: String,

@@ -3,7 +3,9 @@ package sstu.grivvus.yamusic.data.network
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.http.NetworkException
 import android.os.Environment
+import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import sstu.grivvus.yamusic.Settings
@@ -11,51 +13,67 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.IOException
+import java.io.InputStream
 
-fun getLocalProfilePicture(
-    context: Context,
-    fileName: String = "ProfilePicture"
-):  Bitmap?{
-    val appDirectory = context.getExternalFilesDir(
-        Environment.DIRECTORY_PICTURES
-    )
+suspend fun uploadImage(file: File, username: String) {
 
-    val imageFile = File(appDirectory, "$fileName.jpg")
-
-    if (!imageFile.exists()) {
-        return null
-    }
-    val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
-    return bitmap
-}
-
-fun storeImageLocally(context: Context, bitmap: Bitmap, imageName: String) {
-    val appDirectory = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-    if (appDirectory != null && !appDirectory.exists()) {
-        appDirectory.mkdirs()
-    }
-
-    val imageFile = File(appDirectory, "$imageName.jpg")
-
-    FileOutputStream(imageFile).use { out ->
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
-    }
-}
-suspend fun loadImageFromExternal(username: String): Bitmap? {
     val client = OkHttpClient()
-    val urlString = "${Settings.apiHost}:${Settings.apiPort}/getProfilePicture/$username"
-    TODO("possible missing jwt token in header request")
-    val request = Request.Builder()
-        .url(urlString)
+    val url = "http://${Settings.apiHost}:${Settings.apiPort}/user/avatar/"
+    val requestBody = MultipartBody.Builder()
+        .setType(MultipartBody.FORM)
+        .addFormDataPart(
+            name = "avatar",
+            filename = "avatar.jpg",
+            body = file.asRequestBody("image/*".toMediaType())
+        )
         .build()
-    return withContext(Dispatchers.IO) {
-        client.newCall(request).execute().use { response ->
-            if (response.isSuccessful) {
-                val inputStream = response.body?.byteStream()
-                BitmapFactory.decodeStream(inputStream)
-            } else {
-                null
-            }
+
+    val request = Request.Builder()
+        .url(url)
+        .post(requestBody)
+        .build()
+
+    try {
+        val response = withContext(Dispatchers.IO) {
+            client.newCall(request).execute()
         }
+
+        if (!response.isSuccessful) {
+            throw Exception("Failed to upload image")
+        }
+    } finally {
+        file.delete()
+    }
+}
+
+suspend fun downloadImage(username: String): InputStream? {
+    val client = OkHttpClient()
+    val url = "http://${Settings.apiHost}:${Settings.apiPort}/user/avatar/$username"
+    val request = Request.Builder()
+        .url(url)
+        .get()
+        .build()
+
+    try {
+        val response = withContext(Dispatchers.IO) {
+            client.newCall(request).execute()
+        }
+        if (!response.isSuccessful) {
+            throw IOException("Failed to download: ${response.code}")
+        }
+        val contentType = response.header("Content-Type") ?: "image/jpeg"
+        val fileExtension = when (contentType) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            else -> "jpg"
+        }
+        return response.body?.byteStream()
+    } catch (e: Exception) {
+        Log.e("DOWNLOAD", "Error: ${e.message}")
+        throw e
     }
 }

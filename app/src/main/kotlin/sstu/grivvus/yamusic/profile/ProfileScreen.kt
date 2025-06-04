@@ -45,6 +45,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import sstu.grivvus.yamusic.R
 import sstu.grivvus.yamusic.components.BottomBar
+import sstu.grivvus.yamusic.components.ErrorTooltip
+import sstu.grivvus.yamusic.getAvatarUrl
 import sstu.grivvus.yamusic.passwordChange.PasswordChangeDialog
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 import sstu.grivvus.yamusic.ui.theme.appIcons
@@ -65,7 +67,7 @@ fun ProfileScreen(
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? ->
-            uri?.let { viewModel.uploadAvatar(it) }
+            uri?.let { viewModel.uploadAvatar(context, it) }
         }
     )
 
@@ -90,11 +92,16 @@ fun ProfileScreen(
                 Box(
                     contentAlignment = Alignment.BottomEnd
                 ) {
+                    ErrorTooltip(
+                        uiState.errorMsg ?: "",
+                        uiState.errorMsg != null,
+                        onTimeout = { viewModel.dismissErrorMessage() },
+                    )
                     if (uiState.isLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(120.dp))
                     } else {
                         AsyncImage(
-                            model = uiState.avatarFileName ?: R.drawable.ic_placeholder_avatar,
+                            model = getAvatarUrl(uiState.username),
                             contentDescription = "User Avatar",
                             modifier = Modifier
                                 .size(120.dp)
@@ -155,7 +162,7 @@ fun ProfileScreen(
                 Spacer(Modifier.height(32.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround){
                     Column() {
-                        Button(onClick = { viewModel.tryToSaveChanges() }) {
+                        Button(onClick = { viewModel.tryToApplyChanges() }) {
                             Text("Save changes")
                         }
                     }
