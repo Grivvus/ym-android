@@ -24,7 +24,10 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
     compileOptions {
@@ -58,25 +61,29 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 
+    // Media3
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.exoplayer.dash)
+    implementation(libs.media3.ui)
+
     // HttpOk
     implementation(libs.okhttp)
-    
-    // dotenv-kotlin
-    implementation("io.github.cdimascio:dotenv-kotlin:6.5.1")
 
-    // Coil - to load images from internet
-    implementation("io.coil-kt.coil3:coil-compose:3.2.0")
-    implementation("io.coil-kt.coil3:coil-network-okhttp:3.2.0")
+    // dotenv-kotlin
+    implementation(libs.dotenv.kotlin)
+
+    // Coil
+    implementation(libs.coil3.compose)
+    implementation(libs.coil3.network.okhttp)
 
     // JSON-serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
-    // implementation("org.jetbrains.kotlinx:kotlinx-serialization-json")
+    implementation(libs.kotlinx.serialization.json)
 
     // Jetpack Compose
     val composeBom = platform(libs.androidx.compose.bom)
+    implementation(composeBom)
 
     implementation(libs.androidx.activity.compose)
-    implementation(composeBom)
     implementation(libs.androidx.compose.foundation.core)
     implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.animation)
@@ -120,7 +127,6 @@ dependencies {
     testImplementation(libs.androidx.test.core.ktx)
     testImplementation(libs.androidx.test.ext)
     testImplementation(libs.androidx.test.rules)
-    // testImplementation(project(":shared-test"))
 
     // AndroidX Test - Instrumented testing
     androidTestImplementation(libs.androidx.test.core.ktx)
@@ -134,7 +140,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.espresso.intents)
     androidTestImplementation(libs.androidx.test.espresso.idling.resources)
     androidTestImplementation(libs.androidx.test.espresso.idling.concurrent)
-    // androidTestImplementation(project(":shared-test"))
 
     // AndroidX Test - Hilt testing
     androidTestImplementation(libs.hilt.android.testing)
