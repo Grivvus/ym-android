@@ -1,5 +1,6 @@
 package sstu.grivvus.yamusic
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -9,10 +10,14 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.CoroutineScope
 import androidx.compose.runtime.getValue
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import sstu.grivvus.yamusic.components.BlankScreen
 import sstu.grivvus.yamusic.login.LoginScreen
+import sstu.grivvus.yamusic.music.TrackListScreen
+import sstu.grivvus.yamusic.music.UploadScreen
 import sstu.grivvus.yamusic.passwordChange.PasswordChangeDialog
 import sstu.grivvus.yamusic.profile.ProfileScreen
 import sstu.grivvus.yamusic.register.RegistrationScreen
@@ -61,7 +66,27 @@ fun YaMusicNavGraph(
         }
 
         composable(AppDestinations.MUSIC_ROUTE) {
-            BlankScreen(navActions)
+            TrackListScreen(
+                { navActions.navigateToMusic() },
+                { navActions.navigateToLibrary() },
+                { navActions.navigateToProfile() },
+                { navActions.navigateToUpload() }
+            )
         }
+
+        composable(AppDestinations.UPLOAD_ROUTE) {
+            UploadScreen(navController)
+        }
+
+//        composable(
+//            AppDestinations.PLAYER_ROUTE,
+//        ) {  backStackEntry ->
+//            AudioPlayerScreen(
+//                { navActions.navigateToMusic() },
+//                { navActions.navigateToLibrary() },
+//                { navActions.navigateToProfile() },
+//                backStackEntry.arguments?.getString("trackUri") ?: "-1"
+//            )
+//        }
     }
 }

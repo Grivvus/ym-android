@@ -2,10 +2,14 @@ package sstu.grivvus.yamusic.profile
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,26 +28,29 @@ data class ProfileUiState(
     val username: String = "",
     val email: String? = null,
     val isLoading: Boolean = false,
-    val errorMsg: String? = null
+    val errorMsg: String? = null,
+    val avatarUri: Uri? = null,
 )
 
 @HiltViewModel
 class ProfileViewModel
 @Inject constructor(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    @ApplicationContext private val context: Context,
 ): ViewModel() {
     private val _username: MutableStateFlow<String> = MutableStateFlow("")
     private val _email: MutableStateFlow<String?> = MutableStateFlow(null)
     private val _isLoading: MutableStateFlow<Boolean> = MutableStateFlow(true)
     private val _errorMsg: MutableStateFlow<String?> = MutableStateFlow(null)
+    private val _avatarUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
 
     val uiState: StateFlow<ProfileUiState> =
         combine(
-            _username, _email, _isLoading, _errorMsg,
+            _username, _email, _isLoading, _errorMsg, _avatarUri
         ) {
-            username, email, isLoading, errorMsg ->
+            username, email, isLoading, errorMsg, avatarUri ->
             ProfileUiState(
-                username, email, isLoading, errorMsg
+                username, email, isLoading, errorMsg, avatarUri
             )
         }.stateIn(viewModelScope, WhileUiSubscribed, ProfileUiState())
 
@@ -52,7 +59,11 @@ class ProfileViewModel
             val currentUser = userRepository.getCurrentUser()
             changeUsername(currentUser.username)
             changeEmail(currentUser.email ?: "")
-            downloadAvatar()
+            if (currentUser.avatarUri != null) {
+                _avatarUri.value = currentUser.avatarUri.toUri()
+            } else {
+                downloadAvatar()
+            }
             _isLoading.value = false
         }
     }
@@ -73,6 +84,10 @@ class ProfileViewModel
         userRepository.localDataSource.clearTable()
     }
 
+    private fun updateUri(uri: Uri) {
+        _avatarUri.value = uri
+    }
+
     fun uploadAvatar(context: Context, uri: Uri) = viewModelScope.launch{
         val inputStream = context.contentResolver.openInputStream(uri)
         val username = userRepository.getCurrentUser().username
@@ -85,18 +100,35 @@ class ProfileViewModel
             inputStream.copyTo(output)
         }
         uploadImage(file, username)
+        downloadAvatar()
     }
 
-    fun downloadAvatar() = viewModelScope.launch {
+    fun downloadAvatar() = viewModelScope.launch(Dispatchers.IO) {
         try {
             val username = userRepository.getCurrentUser().username
+            if (username == "") {
+                throw IllegalArgumentException("empty username")
+            }
             val data = downloadImage(username)
             if (data == null) {
                 _errorMsg.value = "Can't download avatar"
                 return@launch
             }
+            val fileName = "avatar"
+            val dir = File(context.filesDir, "user")
+            if (!dir.exists()) dir.mkdirs()
+            val outputFile = File(dir, fileName)
+            data.use {input ->
+                outputFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            val newUri = "${outputFile.toUri()}?t=${System.currentTimeMillis()}".toUri()
+            updateUri(newUri)
+            userRepository.updateCurrentUserAvatar(newUri.toString())
         } catch (e: Exception) {
             _errorMsg.value = "Unknown network error"
+            Log.e("ProfileViewModel", e.toString())
         }
     }
 

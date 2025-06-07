@@ -13,6 +13,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import sstu.grivvus.yamusic.data.local.AudioTrackDao
 import sstu.grivvus.yamusic.data.local.DatabaseProvider
 import javax.inject.Singleton
 
@@ -28,4 +29,8 @@ object DatabaseModule {
 
     @Provides
     fun provideTaskDao(database: AppDatabase): UserDao = database.userDao()
+
+    @Provides
+    fun provideAudioTrackDao(database: AppDatabase): AudioTrackDao
+        = database.audioTrackDao()
 }

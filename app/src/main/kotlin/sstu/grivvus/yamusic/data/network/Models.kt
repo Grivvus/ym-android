@@ -42,3 +42,17 @@ data class TokenResponse(
     @SerialName("access_token")
     val accessToken: String,
 )
+
+@Serializable
+data class RemoteTrackReturn(
+    val id: Long,
+    val name: String,
+    val artists: String?,
+    val album: String,
+    val url: String,
+)
+
+@Serializable
+data class GetInitialTracksDto(
+    val data: List<RemoteTrackReturn>
+)

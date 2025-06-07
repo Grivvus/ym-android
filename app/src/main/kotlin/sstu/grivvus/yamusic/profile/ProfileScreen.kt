@@ -74,34 +74,33 @@ fun ProfileScreen(
     YaMusicTheme {
         Scaffold(
             bottomBar = {BottomBar(navigateToMusic, navigateToLibrary, navigateToProfile)}
-        ) { padding ->
+        ) { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(innerPadding)
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
+                ErrorTooltip(
+                    uiState.errorMsg ?: "",
+                    uiState.errorMsg != null,
+                    onTimeout = { viewModel.dismissErrorMessage() },
+                )
                 if (showPasswordDialog) {
                     PasswordChangeDialog(
                         onDismiss = { showPasswordDialog = false }
                     )
                 }
-
                 Spacer(Modifier.height(50.dp))
                 Box(
-                    contentAlignment = Alignment.BottomEnd
+                    contentAlignment = Alignment.BottomEnd,
                 ) {
-                    ErrorTooltip(
-                        uiState.errorMsg ?: "",
-                        uiState.errorMsg != null,
-                        onTimeout = { viewModel.dismissErrorMessage() },
-                    )
                     if (uiState.isLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(120.dp))
                     } else {
                         AsyncImage(
-                            model = getAvatarUrl(uiState.username),
+                            model = uiState.avatarUri,
                             contentDescription = "User Avatar",
                             modifier = Modifier
                                 .size(120.dp)
@@ -175,7 +174,6 @@ fun ProfileScreen(
             }
         }
     }
-
 }
 
 @Composable

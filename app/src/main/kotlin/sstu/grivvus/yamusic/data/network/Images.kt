@@ -1,10 +1,5 @@
 package sstu.grivvus.yamusic.data.network
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.net.http.NetworkException
-import android.os.Environment
 import android.util.Log
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -13,6 +8,7 @@ import java.io.File
 import java.io.FileOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.CacheControl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -22,12 +18,12 @@ import java.io.InputStream
 suspend fun uploadImage(file: File, username: String) {
 
     val client = OkHttpClient()
-    val url = "http://${Settings.apiHost}:${Settings.apiPort}/user/avatar/"
+    val url = "http://${Settings.apiHost}:${Settings.apiPort}/user/avatar/$username"
     val requestBody = MultipartBody.Builder()
         .setType(MultipartBody.FORM)
         .addFormDataPart(
             name = "avatar",
-            filename = "avatar.jpg",
+            filename = "avatar",
             body = file.asRequestBody("image/*".toMediaType())
         )
         .build()
@@ -56,6 +52,7 @@ suspend fun downloadImage(username: String): InputStream? {
     val request = Request.Builder()
         .url(url)
         .get()
+        .cacheControl(CacheControl.FORCE_NETWORK)
         .build()
 
     try {

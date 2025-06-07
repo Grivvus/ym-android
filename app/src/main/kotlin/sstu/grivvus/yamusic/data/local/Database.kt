@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import dagger.hilt.android.qualifiers.ApplicationContext
+import androidx.room.TypeConverters
 
-@Database(entities = [LocalUser::class], version = 1)
+@Database(entities = [LocalUser::class, AudioTrack::class], version = 1)
+@TypeConverters(UriConverter::class)
 abstract class AppDatabase: RoomDatabase() {
     abstract fun userDao(): UserDao
+    abstract fun audioTrackDao(): AudioTrackDao
 }
 
 object DatabaseProvider {

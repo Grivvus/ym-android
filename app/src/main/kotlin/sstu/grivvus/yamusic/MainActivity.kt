@@ -12,6 +12,10 @@ import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            Log.e("APP_CRASH", "Uncaught exception in thread: ${thread.name}", throwable)
+            finishAffinity()
+        }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
