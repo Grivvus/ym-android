@@ -159,7 +159,7 @@ suspend fun changeUser(data: ChangeUserDto): Unit =
     suspendCancellableCoroutine { continuation ->
 
         val client = OkHttpClient()
-        val url = "http://${Settings.apiHost}:${Settings.apiPort}/user/change/"
+        val url = "http://${Settings.apiHost}:${Settings.apiPort}/user/"
         Log.i("Reqeust", "url: $url")
         val body = Json.encodeToString(data)
             .toRequestBody("application/json; charset=utf-8".toMediaType())

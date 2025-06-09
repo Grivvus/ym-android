@@ -24,7 +24,7 @@ data class AudioTrack(
     @ColumnInfo(name="server_id") val servId: Long,
     @ColumnInfo() val title: String,
 //    @ColumnInfo() val duration: Long,
-    @ColumnInfo() val artists: String,
+    @ColumnInfo() val artist: String,
     @ColumnInfo() val album: String,
     @ColumnInfo() val uri: Uri,
     @ColumnInfo val localPath: String? = null,

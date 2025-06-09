@@ -61,7 +61,7 @@ class AudioRepository @Inject constructor(
         }
         dao.insert(AudioTrack(
             servId = servId, title = name,
-            artists = artist ?: "unknown",
+            artist = artist ?: "unknown",
             album = album ?: "unknown",
             uri = "".toUri()
         ))

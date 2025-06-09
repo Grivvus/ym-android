@@ -18,6 +18,6 @@ fun netTrackToLocal(track: RemoteTrackReturn): AudioTrack {
         title = track.name,
         uri = track.url.toUri(),
         album = track.album,
-        artists = track.artists ?: "Unknown"
+        artist = track.artist ?: "Unknown"
     )
 }

@@ -123,7 +123,7 @@ class AudioNetClient {
 
     suspend fun downloadTrack(track: AudioTrack): InputStream? {
         val client = OkHttpClient()
-        val url = "http://${Settings.apiHost}:${Settings.apiPort}/track/track/${track.servId}"
+        val url = "http://${Settings.apiHost}:${Settings.apiPort}/track/${track.servId}"
 
         val request = Request.Builder()
             .url(url)

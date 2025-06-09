@@ -47,7 +47,7 @@ data class TokenResponse(
 data class RemoteTrackReturn(
     val id: Long,
     val name: String,
-    val artists: String?,
+    val artist: String?,
     val album: String,
     val url: String,
 )
