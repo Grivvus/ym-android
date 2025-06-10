@@ -54,7 +54,7 @@ class AudioRepository @Inject constructor(
         file: File, name: String, artist: String?, album: String?,
         callback: (Result<String>) -> Unit
 
-    ): Unit {
+    ) {
         val servId = audioClient.uploadTrack(file, name, artist, album, callback)
         if (servId == null) {
              throw IllegalArgumentException("servId return as null or unkonvertable string")

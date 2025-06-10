@@ -137,7 +137,7 @@ class AudioNetClient {
             if (!response.isSuccessful) {
                 throw IOException("Failed to download: ${response.code}")
             }
-            val contentType = response.header("Content-Type") ?: "audio/mpeg"
+            response.header("Content-Type") ?: "audio/mpeg"
             return response.body?.byteStream()
         } catch (e: Exception) {
             Log.e("DOWNLOAD", "Error: ${e.message}")

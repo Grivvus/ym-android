@@ -5,5 +5,4 @@ import sstu.grivvus.yamusic.data.network.NetworkUserCreate
 import sstu.grivvus.yamusic.data.network.NetworkUserLogin
 import sstu.grivvus.yamusic.data.User
 
-object Converter {
-}
+object Converter

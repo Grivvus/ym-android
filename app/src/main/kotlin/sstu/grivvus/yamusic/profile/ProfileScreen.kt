@@ -160,12 +160,12 @@ fun ProfileScreen(
                 }
                 Spacer(Modifier.height(32.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround){
-                    Column() {
+                    Column {
                         Button(onClick = { viewModel.tryToApplyChanges() }) {
                             Text("Save changes")
                         }
                     }
-                    Column() {
+                    Column {
                         IconButton({ viewModel.logOut(); onLogOut() }) {
                             Icon(appIconsMirrored.Logout, "Logout button")
                         }

@@ -63,7 +63,7 @@ suspend fun downloadImage(username: String): InputStream? {
             throw IOException("Failed to download: ${response.code}")
         }
         val contentType = response.header("Content-Type") ?: "image/jpeg"
-        val fileExtension = when (contentType) {
+        when (contentType) {
             "image/png" -> "png"
             "image/webp" -> "webp"
             else -> "jpg"

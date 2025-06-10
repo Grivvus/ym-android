@@ -29,7 +29,7 @@ object RouteArguments {
 object AppDestinations {
     const val PROFILE_ROUTE = PROFILE_SCREEN
     const val LOGIN_ROUTE = LOGIN_SCREEN
-    const val REGISTRATION_ROUTE = REGISTRATION_SCREEN;
+    const val REGISTRATION_ROUTE = REGISTRATION_SCREEN
     const val MUSIC_ROUTE = MUSIC_SCREEN
     const val PLAYER_ROUTE = "$MUSIC_SCREEN/$PLAYER_ARGS"
     const val LIBRARY_ROUTE = LIBRARY_SCREEN
