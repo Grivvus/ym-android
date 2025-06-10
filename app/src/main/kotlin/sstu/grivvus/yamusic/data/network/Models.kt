@@ -5,6 +5,13 @@ import kotlinx.serialization.SerialName
 import java.util.Date
 
 @Serializable
+data class BasicNetworkUser(
+    val id: Long,
+    val username: String,
+    val email: String?,
+)
+
+@Serializable
 data class NetworkUserCreate (
     val username: String,
     val email: String?,
@@ -37,6 +44,12 @@ data class ChangeUserDto(
 
 @Serializable
 data class TokenResponse(
+    @SerialName("id")
+    val servId: Long,
+    @SerialName("username")
+    val username: String,
+    @SerialName("email")
+    val email: String?,
     @SerialName("token_type")
     val tokenType: String,
     @SerialName("access_token")

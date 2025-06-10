@@ -3,14 +3,16 @@ package sstu.grivvus.yamusic.data.local
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import android.net.Uri
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 
 @Entity(
     tableName = "user",
-    primaryKeys = ["username"],
+    primaryKeys = ["server_id"],
     )
 data class LocalUser(
+    @ColumnInfo(name = "server_id") val servId: Long,
     @ColumnInfo(name = "username") val username: String,
     @ColumnInfo(name = "email") val email: String?,
     @ColumnInfo(name = "token") val token: String?,

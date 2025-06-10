@@ -17,19 +17,21 @@ class UserRepository @Inject constructor(
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     suspend fun register(user: NetworkUserCreate) {
-        val token = registerUser(user)
+        val data = registerUser(user)
         localDataSource.clearTable()
         localDataSource.insert(
             LocalUser(
-                user.username, user.email, token.accessToken
+                data.servId, data.username, data.email, data.accessToken
             )
         )
     }
 
     suspend fun login(user: NetworkUserLogin) {
-        val token = loginUser(user)
+        val data = loginUser(user)
         localDataSource.clearTable()
-        localDataSource.insert(LocalUser(user.username, null, token.accessToken))
+        localDataSource.insert(LocalUser(
+            data.servId, data.username, data.email, data.accessToken
+        ))
     }
 
     suspend fun changePassword(currentPassword: String, newPassword: String) {
@@ -41,6 +43,15 @@ class UserRepository @Inject constructor(
         )
     }
 
+    suspend fun updateLocalUserFromNetwork(): Unit {
+        val localUser = getCurrentUser()
+        val networkUser = getNetworkUser(localUser.servId)
+        localDataSource.update(LocalUser(
+            networkUser.id, networkUser.username, networkUser.email,
+            localUser.token
+        ))
+    }
+
     suspend fun getCurrentUser(): LocalUser {
         val currentUser = localDataSource.getActiveUser()
         return currentUser
@@ -49,6 +60,7 @@ class UserRepository @Inject constructor(
     suspend fun updateCurrentUserAvatar(uriStr: String) {
         val currentUser = localDataSource.getActiveUser()
         localDataSource.update(LocalUser(
+            currentUser.servId,
             currentUser.username, currentUser.email,
             currentUser.token, uriStr,
         ))
@@ -59,10 +71,11 @@ class UserRepository @Inject constructor(
         val localUser = localDataSource.getActiveUser()
         localDataSource.clearTable()
         val newUserData = LocalUser(
-            user.newUsername ?: user.username,
+            localUser.servId,
+            user.newUsername ?: localUser.username,
             user.newEmail ?: localUser.email,
             localUser.token,
         )
-        localDataSource.insert(newUserData)
+        localDataSource.update(newUserData)
     }
 }

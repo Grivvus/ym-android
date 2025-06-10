@@ -117,6 +117,54 @@ suspend fun loginUser(user: NetworkUserLogin): TokenResponse =
         })
     }
 
+suspend fun getNetworkUser(id: Long): BasicNetworkUser =
+    suspendCancellableCoroutine { continuation ->
+
+        val client = OkHttpClient()
+        val url = "http://${Settings.apiHost}:${Settings.apiPort}/user/$id"
+        Log.i("Reqeust", "url: $url")
+        val request = Request.Builder()
+            .url(url)
+            .get()
+            .build()
+
+        Log.i("Request", "Request $request is sent")
+
+        val call = client.newCall(request)
+
+        continuation.invokeOnCancellation {
+            call.cancel()
+        }
+
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                if (continuation.isCancelled) return
+                continuation.resumeWithException(e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (!response.isSuccessful) {
+                        continuation.resumeWithException(IOException("Unexpected code $response"))
+                        return
+                    }
+
+                    val responseBody = response.body?.string()
+                    if (responseBody == null) {
+                        continuation.resumeWithException(IOException("Response body is null"))
+                        return
+                    }
+
+                    try {
+                        continuation.resume(Json.decodeFromString(responseBody))
+                    } catch (e: Exception) {
+                        continuation.resumeWithException(e)
+                    }
+                }
+            }
+        })
+    }
+
 suspend fun changeUserPassword(data: ChangePasswordDto): Unit =
     suspendCancellableCoroutine { continuation ->
 

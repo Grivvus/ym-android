@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,6 +57,8 @@ class ProfileViewModel
 
     init {
         viewModelScope.launch {
+            val job = async {userRepository.updateLocalUserFromNetwork()}
+            job.await()
             val currentUser = userRepository.getCurrentUser()
             changeUsername(currentUser.username)
             changeEmail(currentUser.email ?: "")
