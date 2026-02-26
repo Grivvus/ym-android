@@ -6,19 +6,17 @@ import android.util.Log
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
-import sstu.grivvus.yamusic.data.local.LocalUser
 import sstu.grivvus.yamusic.data.network.ChangeUserDto
 import sstu.grivvus.yamusic.data.network.downloadImage
 import sstu.grivvus.yamusic.data.network.uploadImage
@@ -38,7 +36,7 @@ class ProfileViewModel
 @Inject constructor(
     private val userRepository: UserRepository,
     @ApplicationContext private val context: Context,
-): ViewModel() {
+) : ViewModel() {
     private val _username: MutableStateFlow<String> = MutableStateFlow("")
     private val _email: MutableStateFlow<String?> = MutableStateFlow(null)
     private val _isLoading: MutableStateFlow<Boolean> = MutableStateFlow(true)
@@ -48,8 +46,7 @@ class ProfileViewModel
     val uiState: StateFlow<ProfileUiState> =
         combine(
             _username, _email, _isLoading, _errorMsg, _avatarUri
-        ) {
-            username, email, isLoading, errorMsg, avatarUri ->
+        ) { username, email, isLoading, errorMsg, avatarUri ->
             ProfileUiState(
                 username, email, isLoading, errorMsg, avatarUri
             )
@@ -57,13 +54,13 @@ class ProfileViewModel
 
     init {
         viewModelScope.launch {
-            val job = async {userRepository.updateLocalUserFromNetwork()}
+            val job = async { userRepository.updateLocalUserFromNetwork() }
             job.await()
             val currentUser = userRepository.getCurrentUser()
             changeUsername(currentUser.username)
             changeEmail(currentUser.email ?: "")
             if (currentUser.avatarUri != null) {
-                _avatarUri.value = currentUser.avatarUri.toUri()
+                _avatarUri.value = currentUser.avatarUri
             } else {
                 downloadAvatar()
             }
@@ -83,7 +80,7 @@ class ProfileViewModel
         _username.value = value
     }
 
-    fun logOut() = viewModelScope.launch{
+    fun logOut() = viewModelScope.launch {
         userRepository.localDataSource.clearTable()
     }
 
@@ -91,7 +88,7 @@ class ProfileViewModel
         _avatarUri.value = uri
     }
 
-    fun uploadAvatar(context: Context, uri: Uri) = viewModelScope.launch{
+    fun uploadAvatar(context: Context, uri: Uri) = viewModelScope.launch {
         val inputStream = context.contentResolver.openInputStream(uri)
         val username = userRepository.getCurrentUser().username
         if (inputStream == null) {
@@ -121,7 +118,7 @@ class ProfileViewModel
             val dir = File(context.filesDir, "user")
             if (!dir.exists()) dir.mkdirs()
             val outputFile = File(dir, fileName)
-            data.use {input ->
+            data.use { input ->
                 outputFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
@@ -148,7 +145,7 @@ class ProfileViewModel
                 return@launch
             }
             userRepository.applyChanges(changeUser)
-        } catch(e: Exception) {
+        } catch (e: Exception) {
             _errorMsg.value = "New username or email are not unique"
         }
     }

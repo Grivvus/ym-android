@@ -3,11 +3,8 @@ package sstu.grivvus.yamusic.music
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,15 +14,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.AudioRepository
 import sstu.grivvus.yamusic.data.local.AudioTrack
-import sstu.grivvus.yamusic.data.local.AudioTrackDao
 import java.io.File
-import java.io.IOException
 import javax.inject.Inject
 
 data class MusicUiState(
@@ -40,17 +33,14 @@ class MusicViewModel @Inject constructor(
     @ApplicationContext context: Context,
 ) : ViewModel() {
     private val context = context
-    private val _tracks: MutableStateFlow<List<AudioTrack>>
-       = MutableStateFlow(listOf())
-    private val _currentTrack: MutableStateFlow<AudioTrack?>
-        = MutableStateFlow(null)
+    private val _tracks: MutableStateFlow<List<AudioTrack>> = MutableStateFlow(listOf())
+    private val _currentTrack: MutableStateFlow<AudioTrack?> = MutableStateFlow(null)
     private val _isPlaying: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
     val uiState: StateFlow<MusicUiState> =
         combine(
             _tracks, _currentTrack, _isPlaying
-        ) {
-                tracks, currentTrack, isPlaying ->
+        ) { tracks, currentTrack, isPlaying ->
             MusicUiState(tracks, currentTrack, isPlaying)
         }.stateIn(viewModelScope, WhileUiSubscribed, MusicUiState())
 
@@ -66,48 +56,50 @@ class MusicViewModel @Inject constructor(
     }
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
-            Log.i("MusicViewModel", "music viewModel init")
-            val testTracks = repository.getAllInitialTracks()
-            Log.i("MusicViewModel", testTracks.toString())
-            _tracks.update { currentList ->
-                testTracks
-            }
-            Log.i("MusicViewModel", "init finished")
-        }
+//        viewModelScope.launch(Dispatchers.IO) {
+//            Log.i("MusicViewModel", "music viewModel init")
+//            val testTracks = repository.getAllInitialTracks()
+//            Log.i("MusicViewModel", testTracks.toString())
+//            _tracks.update { currentList ->
+//                testTracks
+//            }
+//            Log.i("MusicViewModel", "init finished")
+//        }
     }
 
     fun playTrack(track: AudioTrack) {
-        viewModelScope.launch {
-            try {
-                val localTrack = if (!track.isDownloaded) {
-                    repository.downloadTrack(track)
-                } else {
-                    track
-                }
-                _currentTrack.value = localTrack
-                val mediaItem: MediaItem
-                if (localTrack.localPath != null)
-                    mediaItem = MediaItem.fromUri(localTrack.localPath)
-                else
-                    mediaItem = MediaItem.fromUri(localTrack.uri)
-                player.setMediaItem(mediaItem)
-                player.prepare()
-                player.play()
-                _isPlaying.value = true
-            } catch (e: Exception) {
-                Log.e("Player", "Playback error", e)
-                try {
-                    _currentTrack.value = track
-                    player.setMediaItem(MediaItem.fromUri(track.uri))
-                    player.prepare()
-                    player.play()
-                    _isPlaying.value = true
-                } catch (fallbackEx: Exception) {
-                    Log.e("Player", "Fallback playback failed", fallbackEx)
-                }
-            }
-        }    }
+//        viewModelScope.launch {
+//            try {
+//                val localTrack = if (!track.isDownloaded) {
+//                    repository.downloadTrack(track)
+//                } else {
+//                    track
+//                }
+//                _currentTrack.value = localTrack
+//                val mediaItem: MediaItem
+//                if (localTrack.localPath != null)
+//                    mediaItem = MediaItem.fromUri(localTrack.localPath)
+//                else
+//                    mediaItem = MediaItem.fromUri(localTrack.uri)
+//                player.setMediaItem(mediaItem)
+//                player.prepare()
+//                player.play()
+//                _isPlaying.value = true
+//            } catch (e: Exception) {
+//                Log.e("Player", "Playback error", e)
+//                try {
+//                    _currentTrack.value = track
+//                    player.setMediaItem(MediaItem.fromUri(track.uri))
+//                    player.prepare()
+//                    player.play()
+//                    _isPlaying.value = true
+//                } catch (fallbackEx: Exception) {
+//                    Log.e("Player", "Fallback playback failed", fallbackEx)
+//                }
+//            }
+//        }
+        TODO()
+    }
 
     fun togglePlayback() {
         if (player.isPlaying) {
@@ -128,24 +120,25 @@ class MusicViewModel @Inject constructor(
         uri: Uri, title: String,
         artist: String? = "unknown", album: String? = "unknown"
     ) {
-        viewModelScope.launch {
-            try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val file = File(context.cacheDir, "temp.track")
-                file.outputStream().use { output ->
-                    inputStream?.copyTo(output) ?: ""
-                }
-                repository.uploadTrack(file, title, artist, album) { result ->
-                    result.onSuccess {
-                        {}
-                    }.onFailure { e ->
-                        Log.e("Upload", "Failed to upload", e)
-                    }
-                }
-                inputStream?.close()
-            } catch (e: Exception) {
-            }
-        }
+//        viewModelScope.launch {
+//            try {
+//                val inputStream = context.contentResolver.openInputStream(uri)
+//                val file = File(context.cacheDir, "temp.track")
+//                file.outputStream().use { output ->
+//                    inputStream?.copyTo(output) ?: ""
+//                }
+//                repository.uploadTrack(file, title, artist, album) { result ->
+//                    result.onSuccess {
+//                        {}
+//                    }.onFailure { e ->
+//                        Log.e("Upload", "Failed to upload", e)
+//                    }
+//                }
+//                inputStream?.close()
+//            } catch (e: Exception) {
+//            }
+//        }
+        TODO()
     }
 
     private suspend fun getFileFromUri(context: Context, uri: Uri): File? {

@@ -53,6 +53,7 @@ media3 = "1.9.2"
 dotenvKotlin = "6.5.1"
 coil3 = "3.3.0"
 kotlinxSerializationJson = "1.10.0"
+media3Session = "1.9.2"
 
 
 [libraries]
@@ -146,6 +147,7 @@ coil3-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp
 # Dependencies of the included build-logic
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "androidGradlePlugin" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3Session" }
 
 
 [plugins]
