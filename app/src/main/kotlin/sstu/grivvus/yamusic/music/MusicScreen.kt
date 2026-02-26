@@ -22,11 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Equalizer
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.sharp.Equalizer
 import androidx.compose.material.icons.sharp.ExpandMore
 import androidx.compose.material.icons.sharp.GraphicEq
 import androidx.compose.material.icons.sharp.MusicNote
@@ -46,7 +41,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,7 +57,7 @@ import kotlin.random.Random
 @Composable
 fun TrackListScreen(
     navigateToMusic: () -> Unit,
-    navigateToLibrary:  () -> Unit,
+    navigateToLibrary: () -> Unit,
     navigateToProfile: () -> Unit,
     navigateToUpload: () -> Unit,
     viewModel: MusicViewModel = hiltViewModel(),
@@ -80,9 +74,13 @@ fun TrackListScreen(
     )
     YaMusicTheme {
         Scaffold(
-            bottomBar = {BottomBar(navigateToMusic, navigateToLibrary, navigateToProfile)}
+            bottomBar = { BottomBar(navigateToMusic, navigateToLibrary, navigateToProfile) }
         ) { innerPadding ->
-            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(items = uiState.tracks) { track ->
                         TrackItem(
@@ -94,7 +92,7 @@ fun TrackListScreen(
                 }
 
                 Button(
-                    onClick = {audioPickerLauncher.launch("audio/*")},
+                    onClick = { audioPickerLauncher.launch("audio/*") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
@@ -151,7 +149,7 @@ fun TrackItem(
             Spacer(Modifier.width(16.dp))
 
             Text(
-                text = track.title,
+                text = track.name,
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 8.dp),
@@ -175,7 +173,8 @@ fun TrackItem(
                 )
             }
         }
-    }}
+    }
+}
 
 @Composable
 fun MiniPlayer(
@@ -239,7 +238,7 @@ fun MiniPlayer(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = track.title,
+                        text = track.name,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
@@ -267,6 +266,7 @@ fun MiniPlayer(
                                 contentDescription = "Pause",
                                 tint = MaterialTheme.colorScheme.primary
                             )
+
                             false -> Icon(
                                 appIcons.PlayArrow,
                                 contentDescription = "Play",
@@ -290,6 +290,7 @@ fun MiniPlayer(
         }
     }
 }
+
 @Composable
 fun UploadScreen(navController: NavController) {
     Column(

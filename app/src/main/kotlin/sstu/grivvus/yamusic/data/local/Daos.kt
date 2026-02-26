@@ -7,18 +7,25 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
-import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface ServerInfoDao {
+    @Upsert
+    suspend fun insertOrUpdate(info: ServerInfo)
+
+    @Query("select * from server_info")
+    suspend fun get(): ServerInfo
+}
 
 @Dao
 interface UserDao {
     @Insert
     suspend fun insert(user: LocalUser)
 
-    @Upsert
-    suspend fun upsert(user: LocalUser)
-
-    @Query("UPDATE user SET token = :newToken WHERE username=:username")
-    suspend fun updateToken(username: String, newToken: String)
+    @Query(
+        "UPDATE user SET access_token = :newAccess, refresh_token = :newRefresh WHERE remote_id = :id"
+    )
+    suspend fun updateTokens(id: Long, newAccess: String, newRefresh: String)
 
     @Update
     suspend fun update(user: LocalUser)
@@ -32,8 +39,8 @@ interface UserDao {
     @Query("select * from user limit 1")
     suspend fun getActiveUser(): LocalUser
 
-    @Query("select token from user where username=:username limit 1")
-    suspend fun getUserToken(username: String): String
+    @Query("select access_token, refresh_token from user where remote_id=:id limit 1")
+    suspend fun getUserTokens(id: Long): Tokens
 }
 
 @Dao
@@ -50,7 +57,7 @@ interface AudioTrackDao {
     @Delete
     suspend fun delete(track: AudioTrack)
 
-    @Query("SELECT * FROM audio_tracks ORDER BY title ASC")
+    @Query("SELECT * FROM audio_tracks ORDER BY name ASC")
     suspend fun getAllTracks(): List<AudioTrack>
 
 //    @Query("SELECT * FROM audio_tracks WHERE is_favorite = 1 ORDER BY title ASC")

@@ -1,15 +1,22 @@
 package sstu.grivvus.yamusic.data
 
-import sstu.grivvus.yamusic.di.IoDispatcher
-import sstu.grivvus.yamusic.di.DefaultDispatcher
-import sstu.grivvus.yamusic.di.ApplicationScope
-import sstu.grivvus.yamusic.data.network.*
-import sstu.grivvus.yamusic.data.local.UserDao
-import kotlinx.coroutines.*
+import androidx.core.net.toUri
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import sstu.grivvus.yamusic.data.local.LocalUser
-import java.io.IOException
+import sstu.grivvus.yamusic.data.local.UserDao
+import sstu.grivvus.yamusic.data.network.ChangePasswordDto
+import sstu.grivvus.yamusic.data.network.ChangeUserDto
+import sstu.grivvus.yamusic.data.network.NetworkUserCreate
+import sstu.grivvus.yamusic.data.network.NetworkUserLogin
+import sstu.grivvus.yamusic.data.network.changeUser
+import sstu.grivvus.yamusic.data.network.changeUserPassword
+import sstu.grivvus.yamusic.data.network.getNetworkUser
+import sstu.grivvus.yamusic.data.network.loginUser
+import sstu.grivvus.yamusic.data.network.registerUser
+import sstu.grivvus.yamusic.di.ApplicationScope
+import sstu.grivvus.yamusic.di.DefaultDispatcher
 import javax.inject.Inject
-import kotlin.coroutines.EmptyCoroutineContext
 
 class UserRepository @Inject constructor(
     val localDataSource: UserDao,
@@ -21,7 +28,8 @@ class UserRepository @Inject constructor(
         localDataSource.clearTable()
         localDataSource.insert(
             LocalUser(
-                data.servId, data.username, data.email, data.accessToken
+                data.userId, user.username, user.email,
+                data.accessToken, data.refreshToken
             )
         )
     }
@@ -29,9 +37,12 @@ class UserRepository @Inject constructor(
     suspend fun login(user: NetworkUserLogin) {
         val data = loginUser(user)
         localDataSource.clearTable()
-        localDataSource.insert(LocalUser(
-            data.servId, data.username, data.email, data.accessToken
-        ))
+        localDataSource.insert(
+            LocalUser(
+                data.userId, user.username, null,
+                data.accessToken, data.refreshToken,
+            )
+        )
     }
 
     suspend fun changePassword(currentPassword: String, newPassword: String) {
@@ -45,11 +56,13 @@ class UserRepository @Inject constructor(
 
     suspend fun updateLocalUserFromNetwork(): Unit {
         val localUser = getCurrentUser()
-        val networkUser = getNetworkUser(localUser.servId)
-        localDataSource.update(LocalUser(
-            networkUser.id, networkUser.username, networkUser.email,
-            localUser.token
-        ))
+        val networkUser = getNetworkUser(localUser.remoteId)
+        localDataSource.update(
+            LocalUser(
+                networkUser.id, networkUser.username, networkUser.email,
+                localUser.access, localUser.refresh
+            )
+        )
     }
 
     suspend fun getCurrentUser(): LocalUser {
@@ -59,11 +72,14 @@ class UserRepository @Inject constructor(
 
     suspend fun updateCurrentUserAvatar(uriStr: String) {
         val currentUser = localDataSource.getActiveUser()
-        localDataSource.update(LocalUser(
-            currentUser.servId,
-            currentUser.username, currentUser.email,
-            currentUser.token, uriStr,
-        ))
+        localDataSource.update(
+            LocalUser(
+                currentUser.remoteId,
+                currentUser.username, currentUser.email,
+                currentUser.access, currentUser.refresh,
+                uriStr.toUri(),
+            )
+        )
     }
 
     suspend fun applyChanges(user: ChangeUserDto) {
@@ -71,10 +87,11 @@ class UserRepository @Inject constructor(
         val localUser = localDataSource.getActiveUser()
         localDataSource.clearTable()
         val newUserData = LocalUser(
-            localUser.servId,
+            localUser.remoteId,
             user.newUsername ?: localUser.username,
             user.newEmail ?: localUser.email,
-            localUser.token,
+            localUser.access,
+            localUser.refresh
         )
         localDataSource.update(newUserData)
     }

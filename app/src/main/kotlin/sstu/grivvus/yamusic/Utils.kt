@@ -14,7 +14,7 @@ object Settings {
         filename = "env"
     }
 
-    val apiHost = dotenv["API_HOST"] ?: "0.0.0.0"
+    val apiHost = dotenv["API_HOST"] ?: "10.0.2.2"
     val apiPort = dotenv["API_PORT"] ?: "8000"
 }
 

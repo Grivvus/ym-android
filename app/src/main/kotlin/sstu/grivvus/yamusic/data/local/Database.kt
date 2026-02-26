@@ -6,7 +6,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [LocalUser::class, AudioTrack::class], version = 1)
+@Database(
+    entities = [
+        LocalUser::class, AudioTrack::class, ServerInfo::class, Artist::class,
+        Album::class, Playlist::class,
+    ],
+    version = 1
+)
 @TypeConverters(UriConverter::class)
 abstract class AppDatabase: RoomDatabase() {
     abstract fun userDao(): UserDao

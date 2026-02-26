@@ -1,8 +1,7 @@
 package sstu.grivvus.yamusic.data.network
 
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
-import java.util.Date
+import kotlinx.serialization.Serializable
 
 @Serializable
 data class BasicNetworkUser(
@@ -12,7 +11,7 @@ data class BasicNetworkUser(
 )
 
 @Serializable
-data class NetworkUserCreate (
+data class NetworkUserCreate(
     val username: String,
     val email: String?,
     val password: String,
@@ -44,16 +43,14 @@ data class ChangeUserDto(
 
 @Serializable
 data class TokenResponse(
-    @SerialName("id")
-    val servId: Long,
-    @SerialName("username")
-    val username: String,
-    @SerialName("email")
-    val email: String?,
+    @SerialName("user_id")
+    val userId: Long,
     @SerialName("token_type")
     val tokenType: String,
     @SerialName("access_token")
     val accessToken: String,
+    @SerialName("refresh_token")
+    val refreshToken: String,
 )
 
 @Serializable

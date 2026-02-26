@@ -13,11 +13,5 @@ fun responseToRemoteTrackReturn(responseBody: String): List<RemoteTrackReturn> {
 }
 
 fun netTrackToLocal(track: RemoteTrackReturn): AudioTrack {
-    return AudioTrack(
-        servId = track.id,
-        title = track.name,
-        uri = track.url.toUri(),
-        album = track.album,
-        artist = track.artist ?: "Unknown"
-    )
+    TODO()
 }

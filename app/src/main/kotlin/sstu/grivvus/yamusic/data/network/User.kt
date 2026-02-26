@@ -21,7 +21,7 @@ import kotlin.coroutines.resumeWithException
 suspend fun registerUser(user: NetworkUserCreate): TokenResponse =
     suspendCancellableCoroutine { continuation ->
         val client = OkHttpClient()
-        val url = "http://${Settings.apiHost}:${Settings.apiPort}/auth/register/"
+        val url = "http://${Settings.apiHost}:${Settings.apiPort}/auth/register"
         Timber.tag("Request").i("url: $url")
         val body = Json.encodeToString(user)
             .toRequestBody("application/json; charset=utf-8".toMediaType())
@@ -51,11 +51,7 @@ suspend fun registerUser(user: NetworkUserCreate): TokenResponse =
                         return
                     }
 
-                    val responseBody = response.body?.string()
-                    if (responseBody == null) {
-                        continuation.resumeWithException(IOException("Response body is null"))
-                        return
-                    }
+                    val responseBody = response.body.string()
 
                     try {
                         continuation.resume(responseToToken(responseBody))
@@ -71,7 +67,7 @@ suspend fun loginUser(user: NetworkUserLogin): TokenResponse =
     suspendCancellableCoroutine { continuation ->
 
         val client = OkHttpClient()
-        val url = "http://${Settings.apiHost}:${Settings.apiPort}/auth/login/"
+        val url = "http://${Settings.apiHost}:${Settings.apiPort}/auth/login"
         Log.i("Reqeust", "url: $url")
         val body = Json.encodeToString(user)
             .toRequestBody("application/json; charset=utf-8".toMediaType())
