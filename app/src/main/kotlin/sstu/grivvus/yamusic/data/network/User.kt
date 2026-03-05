@@ -2,19 +2,18 @@ package sstu.grivvus.yamusic.data.network
 
 import android.util.Log
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import java.io.IOException
 import sstu.grivvus.yamusic.Settings
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
 import timber.log.Timber
+import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -107,130 +106,6 @@ suspend fun loginUser(user: NetworkUserLogin): TokenResponse =
                         continuation.resume(responseToToken(responseBody))
                     } catch (e: Exception) {
                         continuation.resumeWithException(e)
-                    }
-                }
-            }
-        })
-    }
-
-suspend fun getNetworkUser(id: Long): BasicNetworkUser =
-    suspendCancellableCoroutine { continuation ->
-
-        val client = OkHttpClient()
-        val url = "http://${Settings.apiHost}:${Settings.apiPort}/user/$id"
-        Log.i("Reqeust", "url: $url")
-        val request = Request.Builder()
-            .url(url)
-            .get()
-            .build()
-
-        Log.i("Request", "Request $request is sent")
-
-        val call = client.newCall(request)
-
-        continuation.invokeOnCancellation {
-            call.cancel()
-        }
-
-        call.enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                if (continuation.isCancelled) return
-                continuation.resumeWithException(e)
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    if (!response.isSuccessful) {
-                        continuation.resumeWithException(IOException("Unexpected code $response"))
-                        return
-                    }
-
-                    val responseBody = response.body?.string()
-                    if (responseBody == null) {
-                        continuation.resumeWithException(IOException("Response body is null"))
-                        return
-                    }
-
-                    try {
-                        continuation.resume(Json.decodeFromString(responseBody))
-                    } catch (e: Exception) {
-                        continuation.resumeWithException(e)
-                    }
-                }
-            }
-        })
-    }
-
-suspend fun changeUserPassword(data: ChangePasswordDto): Unit =
-    suspendCancellableCoroutine { continuation ->
-
-        val client = OkHttpClient()
-        val url = "http://${Settings.apiHost}:${Settings.apiPort}/user/change_password/"
-        Log.i("Reqeust", "url: $url")
-        val body = Json.encodeToString(data)
-            .toRequestBody("application/json; charset=utf-8".toMediaType())
-        val request = Request.Builder()
-            .url(url)
-            .patch(body)
-            .build()
-
-        Log.i("Request", "Request $request is sent")
-
-        val call = client.newCall(request)
-
-        continuation.invokeOnCancellation {
-            call.cancel()
-        }
-
-        call.enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                if (continuation.isCancelled) return
-                continuation.resumeWithException(e)
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    if (!response.isSuccessful) {
-                        continuation.resumeWithException(IOException("Unexpected code $response"))
-                        return
-                    }
-                }
-            }
-        })
-    }
-
-suspend fun changeUser(data: ChangeUserDto): Unit =
-    suspendCancellableCoroutine { continuation ->
-
-        val client = OkHttpClient()
-        val url = "http://${Settings.apiHost}:${Settings.apiPort}/user/"
-        Log.i("Reqeust", "url: $url")
-        val body = Json.encodeToString(data)
-            .toRequestBody("application/json; charset=utf-8".toMediaType())
-        val request = Request.Builder()
-            .url(url)
-            .patch(body)
-            .build()
-
-        Log.i("Request", "Request $request is sent")
-
-        val call = client.newCall(request)
-
-        continuation.invokeOnCancellation {
-            call.cancel()
-        }
-
-        call.enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                if (continuation.isCancelled) return
-                continuation.resumeWithException(e)
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    if (!response.isSuccessful) {
-                        continuation.resumeWithException(IOException("Unexpected code $response"))
-                        return
                     }
                 }
             }

@@ -10,8 +10,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
-import sstu.grivvus.yamusic.data.network.NetworkUserLogin
-import timber.log.Timber
 import java.io.IOException
 import javax.inject.Inject
 
@@ -37,8 +35,7 @@ class PasswordChangeViewModel @Inject constructor(
     private val _success: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
     val uiState: StateFlow<PasswordChangeUiState> = combine(
-        combine(_currentPassword, _newPassword, _newPasswordConfirm) {
-            current, new, confirm ->
+        combine(_currentPassword, _newPassword, _newPasswordConfirm) { current, new, confirm ->
             Triple(current, new, confirm)
         },
         combine(_isLoading, _errorMessage, _success) { loading, error, success ->
@@ -61,7 +58,7 @@ class PasswordChangeViewModel @Inject constructor(
     )
 
 
-    fun changePassword() = viewModelScope.launch{
+    fun changePassword() = viewModelScope.launch {
         if (_newPassword.value.length < 6) {
             _errorMessage.value = "password's length should be 6 symbols or more"
         } else if (_newPassword.value != _newPasswordConfirm.value) {
@@ -96,7 +93,7 @@ class PasswordChangeViewModel @Inject constructor(
 
     fun clear() {
         _newPassword.value = ""
-        _newPasswordConfirm. value = ""
+        _newPasswordConfirm.value = ""
         _currentPassword.value = ""
         _errorMessage.value = null
         _isLoading.value = false

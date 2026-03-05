@@ -2,13 +2,9 @@ package sstu.grivvus.yamusic.profile
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
-import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,9 +14,6 @@ import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.ChangeUserDto
-import sstu.grivvus.yamusic.data.network.downloadImage
-import sstu.grivvus.yamusic.data.network.uploadImage
-import java.io.File
 import javax.inject.Inject
 
 data class ProfileUiState(
@@ -35,7 +28,6 @@ data class ProfileUiState(
 class ProfileViewModel
 @Inject constructor(
     private val userRepository: UserRepository,
-    @ApplicationContext private val context: Context,
 ) : ViewModel() {
     private val _username: MutableStateFlow<String> = MutableStateFlow("")
     private val _email: MutableStateFlow<String?> = MutableStateFlow(null)
@@ -59,11 +51,7 @@ class ProfileViewModel
             val currentUser = userRepository.getCurrentUser()
             changeUsername(currentUser.username)
             changeEmail(currentUser.email ?: "")
-            if (currentUser.avatarUri != null) {
-                _avatarUri.value = currentUser.avatarUri
-            } else {
-                downloadAvatar()
-            }
+            _avatarUri.value = currentUser.avatarUri
             _isLoading.value = false
         }
     }
@@ -89,46 +77,12 @@ class ProfileViewModel
     }
 
     fun uploadAvatar(context: Context, uri: Uri) = viewModelScope.launch {
-        val inputStream = context.contentResolver.openInputStream(uri)
-        val username = userRepository.getCurrentUser().username
-        if (inputStream == null) {
-            _errorMsg.value = "Failing to upload image"
-            return@launch
-        }
-        val file = File(context.cacheDir, "temp_image.jpg")
-        file.outputStream().use { output ->
-            inputStream.copyTo(output)
-        }
-        uploadImage(file, username)
-        downloadAvatar()
-    }
-
-    fun downloadAvatar() = viewModelScope.launch(Dispatchers.IO) {
         try {
-            val username = userRepository.getCurrentUser().username
-            if (username == "") {
-                throw IllegalArgumentException("empty username")
-            }
-            val data = downloadImage(username)
-            if (data == null) {
-                _errorMsg.value = "Can't download avatar"
-                return@launch
-            }
-            val fileName = "avatar"
-            val dir = File(context.filesDir, "user")
-            if (!dir.exists()) dir.mkdirs()
-            val outputFile = File(dir, fileName)
-            data.use { input ->
-                outputFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            }
-            val newUri = "${outputFile.toUri()}?t=${System.currentTimeMillis()}".toUri()
-            updateUri(newUri)
-            userRepository.updateCurrentUserAvatar(newUri.toString())
+            context.contentResolver.openInputStream(uri)?.close()
+            updateUri(uri)
+            userRepository.updateCurrentUserAvatar(uri.toString())
         } catch (e: Exception) {
-            _errorMsg.value = "Unknown network error"
-            Log.e("ProfileViewModel", e.toString())
+            _errorMsg.value = "Failed to set avatar image"
         }
     }
 

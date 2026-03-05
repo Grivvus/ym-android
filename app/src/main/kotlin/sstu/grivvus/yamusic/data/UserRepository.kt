@@ -3,15 +3,12 @@ package sstu.grivvus.yamusic.data
 import androidx.core.net.toUri
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import java.io.IOException
 import sstu.grivvus.yamusic.data.local.LocalUser
 import sstu.grivvus.yamusic.data.local.UserDao
-import sstu.grivvus.yamusic.data.network.ChangePasswordDto
 import sstu.grivvus.yamusic.data.network.ChangeUserDto
 import sstu.grivvus.yamusic.data.network.NetworkUserCreate
 import sstu.grivvus.yamusic.data.network.NetworkUserLogin
-import sstu.grivvus.yamusic.data.network.changeUser
-import sstu.grivvus.yamusic.data.network.changeUserPassword
-import sstu.grivvus.yamusic.data.network.getNetworkUser
 import sstu.grivvus.yamusic.data.network.loginUser
 import sstu.grivvus.yamusic.data.network.registerUser
 import sstu.grivvus.yamusic.di.ApplicationScope
@@ -46,23 +43,13 @@ class UserRepository @Inject constructor(
     }
 
     suspend fun changePassword(currentPassword: String, newPassword: String) {
-        val username = getCurrentUser().username
-        changeUserPassword(
-            ChangePasswordDto(
-                username, currentPassword, newPassword
-            )
-        )
+        if (newPassword.length < 6) {
+            throw IOException("password's length should be 6 symbols or more")
+        }
     }
 
     suspend fun updateLocalUserFromNetwork(): Unit {
-        val localUser = getCurrentUser()
-        val networkUser = getNetworkUser(localUser.remoteId)
-        localDataSource.update(
-            LocalUser(
-                networkUser.id, networkUser.username, networkUser.email,
-                localUser.access, localUser.refresh
-            )
-        )
+        // Network profile endpoint is temporary disabled.
     }
 
     suspend fun getCurrentUser(): LocalUser {
@@ -83,15 +70,14 @@ class UserRepository @Inject constructor(
     }
 
     suspend fun applyChanges(user: ChangeUserDto) {
-        changeUser(user)
         val localUser = localDataSource.getActiveUser()
-        localDataSource.clearTable()
         val newUserData = LocalUser(
             localUser.remoteId,
             user.newUsername ?: localUser.username,
             user.newEmail ?: localUser.email,
             localUser.access,
-            localUser.refresh
+            localUser.refresh,
+            localUser.avatarUri,
         )
         localDataSource.update(newUserData)
     }

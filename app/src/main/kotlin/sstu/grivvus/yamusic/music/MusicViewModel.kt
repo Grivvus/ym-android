@@ -68,37 +68,7 @@ class MusicViewModel @Inject constructor(
     }
 
     fun playTrack(track: AudioTrack) {
-//        viewModelScope.launch {
-//            try {
-//                val localTrack = if (!track.isDownloaded) {
-//                    repository.downloadTrack(track)
-//                } else {
-//                    track
-//                }
-//                _currentTrack.value = localTrack
-//                val mediaItem: MediaItem
-//                if (localTrack.localPath != null)
-//                    mediaItem = MediaItem.fromUri(localTrack.localPath)
-//                else
-//                    mediaItem = MediaItem.fromUri(localTrack.uri)
-//                player.setMediaItem(mediaItem)
-//                player.prepare()
-//                player.play()
-//                _isPlaying.value = true
-//            } catch (e: Exception) {
-//                Log.e("Player", "Playback error", e)
-//                try {
-//                    _currentTrack.value = track
-//                    player.setMediaItem(MediaItem.fromUri(track.uri))
-//                    player.prepare()
-//                    player.play()
-//                    _isPlaying.value = true
-//                } catch (fallbackEx: Exception) {
-//                    Log.e("Player", "Fallback playback failed", fallbackEx)
-//                }
-//            }
-//        }
-        TODO()
+        Log.i("MusicViewModel", "playTrack is temporarily disabled")
     }
 
     fun togglePlayback() {
@@ -120,25 +90,7 @@ class MusicViewModel @Inject constructor(
         uri: Uri, title: String,
         artist: String? = "unknown", album: String? = "unknown"
     ) {
-//        viewModelScope.launch {
-//            try {
-//                val inputStream = context.contentResolver.openInputStream(uri)
-//                val file = File(context.cacheDir, "temp.track")
-//                file.outputStream().use { output ->
-//                    inputStream?.copyTo(output) ?: ""
-//                }
-//                repository.uploadTrack(file, title, artist, album) { result ->
-//                    result.onSuccess {
-//                        {}
-//                    }.onFailure { e ->
-//                        Log.e("Upload", "Failed to upload", e)
-//                    }
-//                }
-//                inputStream?.close()
-//            } catch (e: Exception) {
-//            }
-//        }
-        TODO()
+        Log.i("MusicViewModel", "uploadTrack is temporarily disabled")
     }
 
     private suspend fun getFileFromUri(context: Context, uri: Uri): File? {

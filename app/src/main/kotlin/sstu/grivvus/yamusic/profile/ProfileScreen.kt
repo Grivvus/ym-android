@@ -46,7 +46,6 @@ import coil3.compose.AsyncImage
 import sstu.grivvus.yamusic.R
 import sstu.grivvus.yamusic.components.BottomBar
 import sstu.grivvus.yamusic.components.ErrorTooltip
-import sstu.grivvus.yamusic.getAvatarUrl
 import sstu.grivvus.yamusic.passwordChange.PasswordChangeDialog
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 import sstu.grivvus.yamusic.ui.theme.appIcons
@@ -73,7 +72,7 @@ fun ProfileScreen(
 
     YaMusicTheme {
         Scaffold(
-            bottomBar = {BottomBar(navigateToMusic, navigateToLibrary, navigateToProfile)}
+            bottomBar = { BottomBar(navigateToMusic, navigateToLibrary, navigateToProfile) }
         ) { innerPadding ->
             Column(
                 modifier = Modifier
@@ -159,7 +158,7 @@ fun ProfileScreen(
                     }
                 }
                 Spacer(Modifier.height(32.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround){
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                     Column {
                         Button(onClick = { viewModel.tryToApplyChanges() }) {
                             Text("Save changes")

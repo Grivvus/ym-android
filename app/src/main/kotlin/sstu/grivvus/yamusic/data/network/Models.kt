@@ -4,13 +4,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class BasicNetworkUser(
-    val id: Long,
-    val username: String,
-    val email: String?,
-)
-
-@Serializable
 data class NetworkUserCreate(
     val username: String,
     val email: String?,
@@ -21,15 +14,6 @@ data class NetworkUserCreate(
 data class NetworkUserLogin(
     val username: String,
     val password: String,
-)
-
-@Serializable
-data class ChangePasswordDto(
-    val username: String,
-    @SerialName("current_password")
-    val currentPassword: String,
-    @SerialName("new_password")
-    val newPassword: String,
 )
 
 @Serializable
@@ -51,18 +35,4 @@ data class TokenResponse(
     val accessToken: String,
     @SerialName("refresh_token")
     val refreshToken: String,
-)
-
-@Serializable
-data class RemoteTrackReturn(
-    val id: Long,
-    val name: String,
-    val artist: String?,
-    val album: String,
-    val url: String,
-)
-
-@Serializable
-data class GetInitialTracksDto(
-    val data: List<RemoteTrackReturn>
 )
