@@ -1,11 +1,10 @@
 package sstu.grivvus.yamusic.data.network
 
-import android.util.Log
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -14,100 +13,83 @@ import okhttp3.Response
 import sstu.grivvus.yamusic.Settings
 import timber.log.Timber
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-suspend fun registerUser(user: NetworkUserCreate): TokenResponse =
-    suspendCancellableCoroutine { continuation ->
-        val client = OkHttpClient()
-        val url = "http://${Settings.apiHost}:${Settings.apiPort}/auth/register"
-        Timber.tag("Request").i("url: $url")
-        val body = Json.encodeToString(user)
-            .toRequestBody("application/json; charset=utf-8".toMediaType())
-        val request = Request.Builder()
-            .url(url)
-            .post(body)
-            .build()
+private const val JSON_MEDIA_TYPE = "application/json; charset=utf-8"
 
-        Timber.tag("Request").i("Request $request is sent")
+private val networkJson = Json {
+    ignoreUnknownKeys = true
+}
 
-        val call = client.newCall(request)
+private val authClient: OkHttpClient =
+    OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .writeTimeout(10, TimeUnit.SECONDS)
+        .build()
 
-        continuation.invokeOnCancellation {
-            call.cancel()
+suspend fun registerUser(user: NetworkUserCreate): TokenResponse {
+    return authPost("/auth/register", user)
+}
+
+suspend fun loginUser(user: NetworkUserLogin): TokenResponse {
+    return authPost("/auth/login", user)
+}
+
+private suspend inline fun <reified Req : Any> authPost(
+    path: String,
+    payload: Req,
+): TokenResponse {
+    val url = "http://${Settings.apiHost}:${Settings.apiPort}$path"
+    val requestBody = networkJson
+        .encodeToString(payload)
+        .toRequestBody(JSON_MEDIA_TYPE.toMediaType())
+    val request = Request.Builder()
+        .url(url)
+        .post(requestBody)
+        .build()
+
+    Timber.tag("Request").i("POST %s", url)
+
+    val response = authClient.newCall(request).await()
+    return response.use {
+        val responseBody = it.body.string()
+        if (!it.isSuccessful) {
+            val responsePreview = responseBody.take(200)
+            throw IOException("HTTP ${it.code}: $responsePreview")
+        }
+        if (responseBody.isBlank()) {
+            throw IOException("Empty response body")
         }
 
-        call.enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                if (continuation.isCancelled) return
-                continuation.resumeWithException(e)
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    if (!response.isSuccessful) {
-                        continuation.resumeWithException(IOException("Unexpected code $response"))
-                        return
-                    }
-
-                    val responseBody = response.body.string()
-
-                    try {
-                        continuation.resume(responseToToken(responseBody))
-                    } catch (e: Exception) {
-                        continuation.resumeWithException(e)
-                    }
-                }
-            }
-        })
+        try {
+            networkJson.decodeFromString<TokenResponse>(responseBody)
+        } catch (e: SerializationException) {
+            throw IOException("Invalid auth response format", e)
+        }
     }
+}
 
-suspend fun loginUser(user: NetworkUserLogin): TokenResponse =
+private suspend fun okhttp3.Call.await(): Response =
     suspendCancellableCoroutine { continuation ->
-
-        val client = OkHttpClient()
-        val url = "http://${Settings.apiHost}:${Settings.apiPort}/auth/login"
-        Log.i("Reqeust", "url: $url")
-        val body = Json.encodeToString(user)
-            .toRequestBody("application/json; charset=utf-8".toMediaType())
-        val request = Request.Builder()
-            .url(url)
-            .post(body)
-            .build()
-
-        Log.i("Request", "Request $request is sent")
-
-        val call = client.newCall(request)
-
-        continuation.invokeOnCancellation {
-            call.cancel()
-        }
-
-        call.enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                if (continuation.isCancelled) return
-                continuation.resumeWithException(e)
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    if (!response.isSuccessful) {
-                        continuation.resumeWithException(IOException("Unexpected code $response"))
-                        return
-                    }
-
-                    val responseBody = response.body?.string()
-                    if (responseBody == null) {
-                        continuation.resumeWithException(IOException("Response body is null"))
-                        return
-                    }
-
-                    try {
-                        continuation.resume(responseToToken(responseBody))
-                    } catch (e: Exception) {
+        continuation.invokeOnCancellation { cancel() }
+        enqueue(
+            object : okhttp3.Callback {
+                override fun onFailure(call: okhttp3.Call, e: IOException) {
+                    if (!continuation.isCancelled) {
                         continuation.resumeWithException(e)
                     }
                 }
-            }
-        })
+
+                override fun onResponse(call: okhttp3.Call, response: Response) {
+                    if (!continuation.isCancelled) {
+                        continuation.resume(response)
+                    } else {
+                        response.close()
+                    }
+                }
+            },
+        )
     }
