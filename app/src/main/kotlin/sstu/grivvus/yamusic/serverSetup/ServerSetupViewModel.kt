@@ -12,6 +12,7 @@ import sstu.grivvus.yamusic.Settings
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.ServerInfoRepository
 import sstu.grivvus.yamusic.data.network.pingServer
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.io.IOException
 import javax.inject.Inject
 
@@ -43,16 +44,22 @@ constructor(
 
     fun proceed(onSuccess: () -> Unit) =
         viewModelScope.launch {
-            val host = _host.value.trim()
+            val rawHost = _host.value.trim()
             val portValue = _port.value.trim()
             val portInt = portValue.toIntOrNull()
 
-            if (host.isBlank()) {
+            if (rawHost.isBlank()) {
                 showError("Host value must not be empty")
                 return@launch
             }
             if (portInt == null || portInt !in 1..65535) {
                 showError("Port value must be in range 1..65535")
+                return@launch
+            }
+
+            val host = normalizeHost(rawHost) ?: return@launch
+            if ("http://$host:$portInt/ping".toHttpUrlOrNull() == null) {
+                showError("Host or port format is invalid")
                 return@launch
             }
 
@@ -94,5 +101,28 @@ constructor(
     private fun showError(message: String) {
         _showError.value = true
         _errorMessage.value = message
+    }
+
+    private fun normalizeHost(value: String): String? {
+        if (value.contains(' ')) {
+            showError("Host should not contain spaces")
+            return null
+        }
+
+        if (!value.contains("://")) {
+            return value
+        }
+
+        val parsed = value.toHttpUrlOrNull()
+        if (parsed == null) {
+            showError("Invalid URL format")
+            return null
+        }
+        if (parsed.encodedPath != "/" || parsed.query != null || parsed.fragment != null) {
+            showError("Use only host URL without path or query")
+            return null
+        }
+
+        return parsed.host
     }
 }

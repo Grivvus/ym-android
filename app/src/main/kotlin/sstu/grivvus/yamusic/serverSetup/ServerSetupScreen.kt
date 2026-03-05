@@ -66,7 +66,7 @@ fun ServerSetup(
                     OutlinedTextField(
                         value = uiState.host,
                         onValueChange = { viewModel.updateHost(it) },
-                        label = { Text("Server host") },
+                        label = { Text("Server host or URL") },
                         leadingIcon = {
                             Icon(
                                 imageVector = appIconsMirrored.Login,
