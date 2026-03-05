@@ -11,9 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.automirrored.sharp.Login
-import androidx.compose.material.icons.sharp.Password
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -25,13 +24,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import sstu.grivvus.yamusic.components.ErrorTooltip
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
-import sstu.grivvus.yamusic.ui.theme.appIcons
 import sstu.grivvus.yamusic.ui.theme.appIconsMirrored
 
 @Composable
@@ -61,7 +58,7 @@ fun ServerSetup(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Create Account",
+                        text = "Server Setup",
                         style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -69,11 +66,11 @@ fun ServerSetup(
                     OutlinedTextField(
                         value = uiState.host,
                         onValueChange = { viewModel.updateHost(it) },
-                        label = { Text("server host") },
+                        label = { Text("Server host") },
                         leadingIcon = {
                             Icon(
                                 imageVector = appIconsMirrored.Login,
-                                contentDescription = "Username icon"
+                                contentDescription = "Server host icon"
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -81,18 +78,17 @@ fun ServerSetup(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                     )
                     OutlinedTextField(
-                        value = uiState.port.toString(),
+                        value = uiState.port,
                         onValueChange = { viewModel.updatePort(it) },
-                        label = { Text("server port") },
+                        label = { Text("Server port") },
                         leadingIcon = {
                             Icon(
-                                imageVector = appIcons.Password,
-                                contentDescription = "Password icon"
+                                imageVector = appIconsMirrored.Login,
+                                contentDescription = "Server port icon"
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(
                             imeAction = ImeAction.Done,
                             keyboardType = KeyboardType.Number
@@ -108,20 +104,35 @@ fun ServerSetup(
                         Button(
                             onClick = { viewModel.clearForm() },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer
-                            )
+                            enabled = !uiState.isLoading && (uiState.host.isNotBlank() || uiState.port.isNotBlank()),
                         ) {
                             Text("Clear")
                         }
                         Button(
                             onClick = { viewModel.proceed(onProceed) },
                             modifier = Modifier.weight(1f),
-                            enabled = uiState.host.isNotBlank() &&
-                                    uiState.port.toString().isNotBlank()
+                            enabled = !uiState.isLoading &&
+                                    uiState.host.isNotBlank() &&
+                                    uiState.port.isNotBlank()
                         ) {
-                            Text("Confirm")
+                            if (uiState.isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.height(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Test & Save")
+                            }
                         }
+                    }
+
+                    if (!uiState.isLoading) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "The app will use this server for all requests.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                        )
                     }
                 }
             }

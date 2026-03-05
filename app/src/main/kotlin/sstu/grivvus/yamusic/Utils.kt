@@ -1,7 +1,5 @@
 package sstu.grivvus.yamusic
 
-import io.github.cdimascio.dotenv.dotenv
-
 import kotlinx.coroutines.flow.SharingStarted
 
 private const val StopTimeoutMillis: Long = 5000
@@ -9,13 +7,18 @@ val WhileUiSubscribed: SharingStarted = SharingStarted.WhileSubscribed(StopTimeo
 
 
 object Settings {
-    private val dotenv = dotenv{
-        directory = "/assets"
-        filename = "env"
-    }
+    @Volatile
+    var apiHost: String = "10.0.2.2"
+        private set
 
-    val apiHost = dotenv["API_HOST"] ?: "10.0.2.2"
-    val apiPort = dotenv["API_PORT"] ?: "8000"
+    @Volatile
+    var apiPort: String = "8000"
+        private set
+
+    fun configureApi(host: String, port: String) {
+        apiHost = host
+        apiPort = port
+    }
 }
 
 fun getAvatarUrl(username: String): String {

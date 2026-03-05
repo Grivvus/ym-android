@@ -17,14 +17,16 @@ import sstu.grivvus.yamusic.music.TrackListScreen
 import sstu.grivvus.yamusic.music.UploadScreen
 import sstu.grivvus.yamusic.profile.ProfileScreen
 import sstu.grivvus.yamusic.register.RegistrationScreen
+import sstu.grivvus.yamusic.serverSetup.ServerSetup
+import sstu.grivvus.yamusic.startup.StartupScreen
 
 @Composable
 fun YaMusicNavGraph(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
-    startDestination: String = AppDestinations.REGISTRATION_ROUTE,
-    navActions: NavigationActions = remember(navController){
+    startDestination: String = AppDestinations.STARTUP_ROUTE,
+    navActions: NavigationActions = remember(navController) {
         NavigationActions(navController)
     }
 ) {
@@ -36,10 +38,32 @@ fun YaMusicNavGraph(
         startDestination = startDestination,
         modifier = modifier
     ) {
+        composable(AppDestinations.STARTUP_ROUTE) {
+            StartupScreen(
+                onRouteResolved = { route ->
+                    navController.navigate(route) {
+                        popUpTo(AppDestinations.STARTUP_ROUTE) {
+                            inclusive = true
+                        }
+                    }
+                },
+            )
+        }
+        composable(AppDestinations.SERVER_SETUP_ROUTE) {
+            ServerSetup(
+                onProceed = {
+                    navController.navigate(AppDestinations.REGISTRATION_ROUTE) {
+                        popUpTo(AppDestinations.SERVER_SETUP_ROUTE) {
+                            inclusive = true
+                        }
+                    }
+                },
+            )
+        }
         composable(AppDestinations.LOGIN_ROUTE) {
             LoginScreen(
-                {navActions.navigateToRegistration()},
-                {navActions.navigateToProfile()}
+                { navActions.navigateToRegistration() },
+                { navActions.navigateToProfile() }
             )
         }
         composable(AppDestinations.REGISTRATION_ROUTE) {
@@ -57,7 +81,7 @@ fun YaMusicNavGraph(
             )
         }
 
-         composable(AppDestinations.LIBRARY_ROUTE) {
+        composable(AppDestinations.LIBRARY_ROUTE) {
             BlankScreen(navActions)
         }
 

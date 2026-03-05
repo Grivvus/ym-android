@@ -13,8 +13,11 @@ interface ServerInfoDao {
     @Upsert
     suspend fun insertOrUpdate(info: ServerInfo)
 
-    @Query("select * from server_info")
-    suspend fun get(): ServerInfo
+    @Query("select * from server_info order by rowid desc limit 1")
+    suspend fun get(): ServerInfo?
+
+    @Query("delete from server_info")
+    suspend fun clear()
 }
 
 @Dao

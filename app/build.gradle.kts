@@ -75,9 +75,6 @@ dependencies {
     // HttpOk
     implementation(libs.okhttp)
 
-    // dotenv-kotlin
-    implementation(libs.dotenv.kotlin)
-
     // Coil
     implementation(libs.coil3.compose)
     implementation(libs.coil3.network.okhttp)

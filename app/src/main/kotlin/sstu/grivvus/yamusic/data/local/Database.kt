@@ -14,9 +14,10 @@ import androidx.room.TypeConverters
     version = 1
 )
 @TypeConverters(UriConverter::class)
-abstract class AppDatabase: RoomDatabase() {
+abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun audioTrackDao(): AudioTrackDao
+    abstract fun serverInfoDao(): ServerInfoDao
 }
 
 object DatabaseProvider {
