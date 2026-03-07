@@ -44,7 +44,7 @@ class RegisterViewModel
             _errorMessage,
         ) {
             // not quite understand what happens here
-            username, password, passwordCheck, showError, errorMessage ->
+                username, password, passwordCheck, showError, errorMessage ->
             RegisterUiState(username, password, passwordCheck, showError, errorMessage)
         }.stateIn(viewModelScope, WhileUiSubscribed, RegisterUiState())
 
@@ -74,7 +74,6 @@ class RegisterViewModel
                     Timber.tag("NetworkError").e(e)
                     _showError.value = true
                     _errorMessage.value = "Can't proceed registration due to server error"
-                    throw e
                 }
             }
         }

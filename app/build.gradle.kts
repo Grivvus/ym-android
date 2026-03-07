@@ -62,7 +62,7 @@ android {
     }
 
     sourceSets {
-        getByName("main").java.directories.add("${layout.buildDirectory.get().asFile}/generated/openapi/src/main/kotlin")
+        getByName("main").kotlin.srcDir("${layout.buildDirectory.get().asFile}/generated/openapi/src/main/kotlin")
     }
 }
 
@@ -115,9 +115,40 @@ openApiValidate {
     inputSpec.set(openApiSpec.asFile.absolutePath)
 }
 
+val patchOpenApiGeneratedSources = tasks.register("patchOpenApiGeneratedSources") {
+    dependsOn(tasks.named("openApiGenerate"))
+
+    doLast {
+        val apiClientPath = openApiOutputDir.get()
+            .file("src/main/kotlin/sstu/grivvus/yamusic/openapi/infrastructure/ApiClient.kt")
+            .asFile
+
+        if (!apiClientPath.exists()) return@doLast
+
+        val original = apiClientPath.readText()
+        val patched = original.replace(
+            "is OffsetDateTime, is OffsetTime, is LocalDateTime, is LocalDate, is LocalTime ->\n            parseDateToQueryString(value)",
+            "is OffsetDateTime, is OffsetTime, is LocalDateTime, is LocalDate, is LocalTime ->\n            value.toString()",
+        )
+            .replace(
+                "if(body == null) {\n            return null\n        }",
+                "if (T::class == Unit::class) {\n            @Suppress(\"UNCHECKED_CAST\")\n            return Unit as T\n        }\n        if(body == null) {\n            return null\n        }",
+            )
+
+
+        if (patched != original) {
+            apiClientPath.writeText(patched)
+        }
+    }
+}
+
 tasks.named("openApiGenerate") {
     dependsOn(syncOpenApiSpec)
     onlyIf { openApiSpec.asFile.exists() }
+}
+
+tasks.named("preBuild") {
+    dependsOn(patchOpenApiGeneratedSources)
 }
 
 

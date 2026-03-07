@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.Settings
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.ServerInfoRepository
-import sstu.grivvus.yamusic.data.network.pingServer
+import sstu.grivvus.yamusic.data.network.OpenApiNetworkClient
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.io.IOException
 import javax.inject.Inject
@@ -29,6 +29,7 @@ class ServerSetupViewModel
 @Inject
 constructor(
     private val serverInfoRepository: ServerInfoRepository,
+    private val networkClient: OpenApiNetworkClient,
 ) : ViewModel() {
     private val _host: MutableStateFlow<String> = MutableStateFlow("10.0.2.2")
     private val _port: MutableStateFlow<String> = MutableStateFlow("8000")
@@ -65,7 +66,7 @@ constructor(
 
             _isLoading.value = true
             try {
-                pingServer(host, portInt)
+                networkClient.ping(host, portInt)
                 serverInfoRepository.saveServerInfo(host, portValue)
                 Settings.configureApi(host, portValue)
                 onSuccess()

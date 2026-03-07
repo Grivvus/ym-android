@@ -9,19 +9,19 @@ import sstu.grivvus.yamusic.data.local.UserDao
 import sstu.grivvus.yamusic.data.network.ChangeUserDto
 import sstu.grivvus.yamusic.data.network.NetworkUserCreate
 import sstu.grivvus.yamusic.data.network.NetworkUserLogin
-import sstu.grivvus.yamusic.data.network.loginUser
-import sstu.grivvus.yamusic.data.network.registerUser
+import sstu.grivvus.yamusic.data.network.OpenApiNetworkClient
 import sstu.grivvus.yamusic.di.ApplicationScope
 import sstu.grivvus.yamusic.di.DefaultDispatcher
 import javax.inject.Inject
 
 class UserRepository @Inject constructor(
     val localDataSource: UserDao,
+    private val networkClient: OpenApiNetworkClient,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     suspend fun register(user: NetworkUserCreate) {
-        val data = registerUser(user)
+        val data = networkClient.register(user)
         localDataSource.clearTable()
         localDataSource.insert(
             LocalUser(
@@ -32,7 +32,7 @@ class UserRepository @Inject constructor(
     }
 
     suspend fun login(user: NetworkUserLogin) {
-        val data = loginUser(user)
+        val data = networkClient.login(user)
         localDataSource.clearTable()
         localDataSource.insert(
             LocalUser(
