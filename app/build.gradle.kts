@@ -1,9 +1,31 @@
+import java.net.HttpURLConnection
+import java.net.URI
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.openapi.generator)
+}
+
+val openApiSpec = rootProject.layout.projectDirectory.file("openapi/openapi.yml")
+val openApiOutputDir = layout.buildDirectory.dir("generated/openapi")
+val openApiRemoteSpecUrl = providers.gradleProperty("openapi.remoteSpecUrl").orNull
+
+openApiGenerate {
+    generatorName.set("kotlin")
+    library.set("jvm-okhttp4")
+    inputSpec.set(openApiSpec.asFile.absolutePath)
+    outputDir.set(openApiOutputDir.get().asFile.absolutePath)
+    packageName.set("sstu.grivvus.yamusic.openapi")
+    configOptions.set(
+        mapOf(
+            "dateLibrary" to "java8",
+            "serializationLibrary" to "kotlinx_serialization"
+        )
+    )
 }
 
 android {
@@ -38,12 +60,64 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
+
+    sourceSets {
+        getByName("main").java.directories.add("${layout.buildDirectory.get().asFile}/generated/openapi/src/main/kotlin")
+    }
 }
 
 kotlin {
     jvmToolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
     }
+}
+
+tasks.named("preBuild") {
+    dependsOn(tasks.named("openApiGenerate"))
+}
+
+val syncOpenApiSpec = tasks.register("syncOpenApiSpec") {
+    group = "openapi"
+    description =
+        "Downloads OpenAPI spec from remote repository (if openapi.remoteSpecUrl is configured)."
+
+    outputs.file(openApiSpec)
+    onlyIf { !openApiRemoteSpecUrl.isNullOrBlank() }
+
+    doLast {
+        val remoteUrl = checkNotNull(openApiRemoteSpecUrl)
+        val connection = (URI.create(remoteUrl).toURL().openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 30_000
+            readTimeout = 60_000
+            setRequestProperty("Accept", "application/yaml, text/yaml, application/vnd.github.raw")
+        }
+
+        val responseCode = connection.responseCode
+        if (responseCode !in 200..299) {
+            val errorBody =
+                connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            throw GradleException(
+                "Failed to download OpenAPI spec from $remoteUrl. HTTP $responseCode. $errorBody"
+            )
+        }
+
+        openApiSpec.asFile.parentFile.mkdirs()
+        connection.inputStream.use { input ->
+            openApiSpec.asFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+    }
+}
+
+openApiValidate {
+    inputSpec.set(openApiSpec.asFile.absolutePath)
+}
+
+tasks.named("openApiGenerate") {
+    dependsOn(syncOpenApiSpec)
+    onlyIf { openApiSpec.asFile.exists() }
 }
 
 
