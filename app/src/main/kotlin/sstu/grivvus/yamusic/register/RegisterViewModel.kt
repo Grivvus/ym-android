@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.NavigationActions
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
+import sstu.grivvus.yamusic.data.network.isServerSideError
 import sstu.grivvus.yamusic.data.network.NetworkUserCreate
 import timber.log.Timber
 import java.io.IOException
@@ -69,7 +70,11 @@ class RegisterViewModel
                     onSuccess()
                 } catch (e: IOException) {
                     _showError.value = true
-                    _errorMessage.value = "This username is already used"
+                    _errorMessage.value = if (e.isServerSideError()) {
+                        "Server error. Please try again later"
+                    } else {
+                        "This username is already used"
+                    }
                 } catch (e: Exception) {
                     Timber.tag("NetworkError").e(e)
                     _showError.value = true

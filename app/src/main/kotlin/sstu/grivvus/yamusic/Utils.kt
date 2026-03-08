@@ -21,6 +21,6 @@ object Settings {
     }
 }
 
-fun getAvatarUrl(username: String): String {
-    return "http://${Settings.apiHost}:${Settings.apiPort}/user/avatar/$username"
+fun getAvatarUrl(userId: Long): String {
+    return "http://${Settings.apiHost}:${Settings.apiPort}/user/$userId/avatar"
 }

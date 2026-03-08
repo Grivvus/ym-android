@@ -82,15 +82,28 @@ val syncOpenApiSpec = tasks.register("syncOpenApiSpec") {
         "Downloads OpenAPI spec from remote repository (if openapi.remoteSpecUrl is configured)."
 
     outputs.file(openApiSpec)
+    outputs.upToDateWhen { false }
+    outputs.doNotCacheIf("Always download latest OpenAPI spec") { true }
     onlyIf { !openApiRemoteSpecUrl.isNullOrBlank() }
 
     doLast {
         val remoteUrl = checkNotNull(openApiRemoteSpecUrl)
-        val connection = (URI.create(remoteUrl).toURL().openConnection() as HttpURLConnection).apply {
+        val cacheBustedUrl = buildString {
+            append(remoteUrl)
+            append(if (remoteUrl.contains("?")) "&" else "?")
+            append("_ts=")
+            append(System.currentTimeMillis())
+        }
+
+        val connection = (URI.create(cacheBustedUrl).toURL().openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 30_000
             readTimeout = 60_000
+            useCaches = false
             setRequestProperty("Accept", "application/yaml, text/yaml, application/vnd.github.raw")
+            setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0")
+            setRequestProperty("Pragma", "no-cache")
+            setRequestProperty("Expires", "0")
         }
 
         val responseCode = connection.responseCode
@@ -133,6 +146,10 @@ val patchOpenApiGeneratedSources = tasks.register("patchOpenApiGeneratedSources"
             .replace(
                 "if(body == null) {\n            return null\n        }",
                 "if (T::class == Unit::class) {\n            @Suppress(\"UNCHECKED_CAST\")\n            return Unit as T\n        }\n        if(body == null) {\n            return null\n        }",
+            )
+            .replace(
+                "if (requestConfig.body != null && requestConfig.headers[ContentType].isNullOrEmpty()) {\n            requestConfig.headers[ContentType] = JsonMediaType\n        }",
+                "if (requestConfig.body != null && requestConfig.body !is File && requestConfig.headers[ContentType].isNullOrEmpty()) {\n            requestConfig.headers[ContentType] = JsonMediaType\n        }",
             )
 
 

@@ -14,6 +14,8 @@ import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.ChangeUserDto
+import sstu.grivvus.yamusic.data.network.isServerSideError
+import java.io.IOException
 import javax.inject.Inject
 
 data class ProfileUiState(
@@ -79,8 +81,9 @@ class ProfileViewModel
     fun uploadAvatar(context: Context, uri: Uri) = viewModelScope.launch {
         try {
             context.contentResolver.openInputStream(uri)?.close()
-            updateUri(uri)
             userRepository.updateCurrentUserAvatar(uri.toString())
+            val updatedUser = userRepository.getCurrentUser()
+            updatedUser.avatarUri?.let { updateUri(it) }
         } catch (e: Exception) {
             _errorMsg.value = "Failed to set avatar image"
         }
@@ -99,8 +102,18 @@ class ProfileViewModel
                 return@launch
             }
             userRepository.applyChanges(changeUser)
+            val updatedUser = userRepository.getCurrentUser()
+            changeUsername(updatedUser.username)
+            changeEmail(updatedUser.email ?: "")
+            _errorMsg.value = "Profile updated successfully"
+        } catch (e: IOException) {
+            _errorMsg.value = if (e.isServerSideError()) {
+                "Server error. Please try again later"
+            } else {
+                "New username or email are not unique"
+            }
         } catch (e: Exception) {
-            _errorMsg.value = "New username or email are not unique"
+            _errorMsg.value = "Can't update profile due to unexpected error"
         }
     }
 }

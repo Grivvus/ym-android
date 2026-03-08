@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
+import sstu.grivvus.yamusic.data.network.isServerSideError
 import sstu.grivvus.yamusic.data.network.NetworkUserLogin
 import timber.log.Timber
 import java.io.IOException
@@ -63,7 +64,11 @@ constructor(
                     onSuccess()
                 } catch (e: IOException) {
                     _showError.value = true
-                    _errorMessage.value = "Wrong username or password"
+                    _errorMessage.value = if (e.isServerSideError()) {
+                        "Server error. Please try again later"
+                    } else {
+                        "Wrong username or password"
+                    }
                 } catch (e: Exception) {
                     Timber.tag("NetworkError").e(e)
                     _showError.value = true
