@@ -255,8 +255,15 @@ class OpenApiNetworkClient @Inject constructor(
                 val response = defaultApi().changePasswordWithHttpInfo(apiUserId, payload)
                 logResponse("PATCH", "/user/$apiUserId/change_password", response.statusCode)
                 when (response) {
-                    is Success -> response.data?.msg
-                        ?: throw IOException("HTTP ${response.statusCode}: empty response body for changePassword")
+                    is Success -> {
+                        val data = response.data
+                        when (data) {
+                            is sstu.grivvus.yamusic.openapi.models.MessageResponse -> data.msg
+                            is Unit -> "OK"
+                            null -> ""
+                            else -> data.toString()
+                        }
+                    }
 
                     is ClientError -> throw response.toIOException()
                     is ServerError -> throw response.toIOException()
