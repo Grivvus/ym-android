@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -48,10 +47,21 @@ class ProfileViewModel
 
     init {
         viewModelScope.launch {
-            val job = async { userRepository.updateLocalUserFromNetwork() }
-            job.await()
+            updateUserFromNetwork()
+        }
+    }
+
+    fun updateUserFromNetwork(): Unit {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                userRepository.updateLocalUserFromNetwork()
+            } catch (e: Exception) {
+                _errorMsg.value = "can't connect to the server, local data will be used"
+            }
             val currentUser = userRepository.getCurrentUser()
-            changeUsername(currentUser.username)
+            assert(currentUser != null)
+            changeUsername(currentUser!!.username)
             changeEmail(currentUser.email ?: "")
             _avatarUri.value = currentUser.avatarUri
             _isLoading.value = false
@@ -83,7 +93,8 @@ class ProfileViewModel
             context.contentResolver.openInputStream(uri)?.close()
             userRepository.updateCurrentUserAvatar(uri.toString())
             val updatedUser = userRepository.getCurrentUser()
-            updatedUser.avatarUri?.let { updateUri(it) }
+            assert(updatedUser != null)
+            updatedUser!!.avatarUri?.let { updateUri(it) }
         } catch (e: Exception) {
             _errorMsg.value = "Failed to set avatar image"
         }
@@ -91,9 +102,10 @@ class ProfileViewModel
 
     fun tryToApplyChanges() = viewModelScope.launch {
         val currentUserData = userRepository.getCurrentUser()
+        assert(currentUserData != null)
         try {
             val changeUser = ChangeUserDto(
-                currentUserData.username,
+                currentUserData!!.username,
                 if (_username.value != currentUserData.username) _username.value else null,
                 if (_email.value != currentUserData.email) _email.value else null
             )
@@ -103,7 +115,8 @@ class ProfileViewModel
             }
             userRepository.applyChanges(changeUser)
             val updatedUser = userRepository.getCurrentUser()
-            changeUsername(updatedUser.username)
+            assert(updatedUser != null)
+            changeUsername(updatedUser!!.username)
             changeEmail(updatedUser.email ?: "")
             _errorMsg.value = "Profile updated successfully"
         } catch (e: IOException) {

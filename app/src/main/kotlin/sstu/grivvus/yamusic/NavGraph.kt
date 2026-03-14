@@ -63,13 +63,13 @@ fun YaMusicNavGraph(
         composable(AppDestinations.LOGIN_ROUTE) {
             LoginScreen(
                 { navActions.navigateToRegistration() },
-                { navActions.navigateToProfile() }
+                { navActions.navigateToMusic() }
             )
         }
         composable(AppDestinations.REGISTRATION_ROUTE) {
             RegistrationScreen(
                 { navActions.navigateToLogin() },
-                { navActions.navigateToProfile() },
+                { navActions.navigateToMusic() },
             )
         }
         composable(AppDestinations.PROFILE_ROUTE) {

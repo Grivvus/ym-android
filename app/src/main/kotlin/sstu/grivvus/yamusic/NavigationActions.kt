@@ -1,18 +1,15 @@
 package sstu.grivvus.yamusic
 
-import android.util.Log
 import androidx.navigation.NavController
 import sstu.grivvus.yamusic.AppScreens.LIBRARY_SCREEN
 import sstu.grivvus.yamusic.AppScreens.LOGIN_SCREEN
 import sstu.grivvus.yamusic.AppScreens.MUSIC_SCREEN
-import sstu.grivvus.yamusic.AppScreens.PLAYER_SCREEN
 import sstu.grivvus.yamusic.AppScreens.PROFILE_SCREEN
 import sstu.grivvus.yamusic.AppScreens.REGISTRATION_SCREEN
 import sstu.grivvus.yamusic.AppScreens.SERVER_SETUP_SCREEN
 import sstu.grivvus.yamusic.AppScreens.STARTUP_SCREEN
 import sstu.grivvus.yamusic.AppScreens.UPLOAD_SCREEN
 import sstu.grivvus.yamusic.RouteArguments.PLAYER_ARGS
-import sstu.grivvus.yamusic.data.local.AudioTrack
 
 object AppScreens {
     const val STARTUP_SCREEN = "startup"
@@ -60,7 +57,6 @@ class NavigationActions(val navController: NavController) {
     }
 
     fun navigateToMusic() {
-        Log.i("Navigation", "navigate to music screen")
         navController.navigate(AppDestinations.MUSIC_ROUTE)
     }
 

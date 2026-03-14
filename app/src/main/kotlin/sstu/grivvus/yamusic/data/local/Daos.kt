@@ -40,7 +40,7 @@ interface UserDao {
     suspend fun clearTable()
 
     @Query("select * from user limit 1")
-    suspend fun getActiveUser(): LocalUser
+    suspend fun getActiveUser(): LocalUser?
 
     @Query("select access_token, refresh_token from user where remote_id=:id limit 1")
     suspend fun getUserTokens(id: Long): Tokens

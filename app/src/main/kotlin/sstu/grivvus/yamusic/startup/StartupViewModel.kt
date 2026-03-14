@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.AppDestinations
 import sstu.grivvus.yamusic.Settings
 import sstu.grivvus.yamusic.data.ServerInfoRepository
+import sstu.grivvus.yamusic.data.UserRepository
 import javax.inject.Inject
 
 data class StartupUiState(
@@ -19,6 +20,7 @@ data class StartupUiState(
 @HiltViewModel
 class StartupViewModel @Inject constructor(
     private val serverInfoRepository: ServerInfoRepository,
+    private val userRepository: UserRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(StartupUiState())
     val uiState: StateFlow<StartupUiState> = _uiState.asStateFlow()
@@ -26,12 +28,16 @@ class StartupViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val serverInfo = serverInfoRepository.getServerInfo()
+            val userInfo = userRepository.getCurrentUser()
             val route =
                 if (serverInfo == null) {
                     AppDestinations.SERVER_SETUP_ROUTE
-                } else {
+                } else if (userInfo == null) {
                     Settings.configureApi(serverInfo.ip, serverInfo.port)
                     AppDestinations.REGISTRATION_ROUTE
+                } else {
+                    Settings.configureApi(serverInfo.ip, serverInfo.port)
+                    AppDestinations.MUSIC_ROUTE
                 }
             _uiState.value = StartupUiState(targetRoute = route)
         }

@@ -128,8 +128,7 @@ fun ProfileScreen(
                 UserInfoItem(
                     label = "Username",
                     value = uiState.username,
-                    { viewModel.changeUsername(it) },
-                )
+                ) { viewModel.changeUsername(it) }
 
                 Spacer(Modifier.height(16.dp))
 
@@ -196,9 +195,3 @@ fun UserInfoItem(label: String, value: String, onValueChange: (String) -> Unit) 
         )
     }
 }
-
-//@Preview(showBackground = true)
-//@Composable
-//fun PreviewProfileScreen(){
-//    ProfileScreenUI()
-//}

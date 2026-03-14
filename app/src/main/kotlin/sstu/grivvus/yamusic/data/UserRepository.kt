@@ -54,7 +54,7 @@ class UserRepository @Inject constructor(
         }
         val localUser = localDataSource.getActiveUser()
         networkClient.changePassword(
-            userId = localUser.remoteId,
+            userId = localUser!!.remoteId,
             currentPassword = currentPassword,
             newPassword = newPassword,
         )
@@ -62,7 +62,8 @@ class UserRepository @Inject constructor(
 
     suspend fun updateLocalUserFromNetwork(): Unit {
         val localUser = localDataSource.getActiveUser()
-        val remoteUser = networkClient.getUserById(localUser.remoteId)
+        assert(localUser != null)
+        val remoteUser = networkClient.getUserById(localUser!!.remoteId)
         localDataSource.update(
             LocalUser(
                 remoteId = localUser.remoteId,
@@ -75,17 +76,18 @@ class UserRepository @Inject constructor(
         )
     }
 
-    suspend fun getCurrentUser(): LocalUser {
+    suspend fun getCurrentUser(): LocalUser? {
         val currentUser = localDataSource.getActiveUser()
         return currentUser
     }
 
     suspend fun updateCurrentUserAvatar(uriStr: String) {
         val currentUser = localDataSource.getActiveUser()
+        assert(currentUser != null)
         val selectedAvatarUri = uriStr.toUri()
         val tempFile = createTempAvatarFile(selectedAvatarUri)
         try {
-            networkClient.uploadUserAvatar(currentUser.remoteId, tempFile)
+            networkClient.uploadUserAvatar(currentUser!!.remoteId, tempFile)
             localDataSource.update(
                 LocalUser(
                     currentUser.remoteId,
@@ -101,11 +103,12 @@ class UserRepository @Inject constructor(
 
     suspend fun applyChanges(user: ChangeUserDto) {
         val localUser = localDataSource.getActiveUser()
-        val targetUsername = user.newUsername ?: localUser.username
-        val targetEmail = user.newEmail ?: (localUser.email ?: "")
+        assert(localUser != null)
+        val targetUsername = user.newUsername ?: localUser!!.username
+        val targetEmail = user.newEmail ?: (localUser!!.email ?: "")
 
         val remoteUser = networkClient.changeUser(
-            userId = localUser.remoteId,
+            userId = localUser!!.remoteId,
             newUsername = targetUsername,
             newEmail = targetEmail,
         )
