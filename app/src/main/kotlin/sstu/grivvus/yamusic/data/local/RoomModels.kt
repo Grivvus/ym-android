@@ -7,9 +7,9 @@ import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 
-@Entity(tableName = "server_info", primaryKeys = ["ip", "port"])
+@Entity(tableName = "server_info", primaryKeys = ["host", "port"])
 data class ServerInfo(
-    @ColumnInfo() val ip: String,
+    @ColumnInfo() val host: String,
     @ColumnInfo() val port: String,
 )
 

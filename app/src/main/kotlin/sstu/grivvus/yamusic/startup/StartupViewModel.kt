@@ -33,10 +33,10 @@ class StartupViewModel @Inject constructor(
                 if (serverInfo == null) {
                     AppDestinations.SERVER_SETUP_ROUTE
                 } else if (userInfo == null) {
-                    Settings.configureApi(serverInfo.ip, serverInfo.port)
+                    Settings.configureApi(serverInfo.host, serverInfo.port)
                     AppDestinations.REGISTRATION_ROUTE
                 } else {
-                    Settings.configureApi(serverInfo.ip, serverInfo.port)
+                    Settings.configureApi(serverInfo.host, serverInfo.port)
                     AppDestinations.MUSIC_ROUTE
                 }
             _uiState.value = StartupUiState(targetRoute = route)

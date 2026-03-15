@@ -11,7 +11,7 @@ import androidx.room.TypeConverters
         LocalUser::class, AudioTrack::class, ServerInfo::class, Artist::class,
         Album::class, Playlist::class,
     ],
-    version = 1
+    version = 2
 )
 @TypeConverters(UriConverter::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -26,6 +26,7 @@ object DatabaseProvider {
     fun initDB(context: Context) {
         instance = Room
             .databaseBuilder(context, AppDatabase::class.java, "database")
+            .fallbackToDestructiveMigration(true)
             .build()
     }
 

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.WhileUiSubscribed
+import sstu.grivvus.yamusic.data.ServerInfoRepository
 import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.ChangeUserDto
 import sstu.grivvus.yamusic.data.network.isServerSideError
@@ -22,6 +23,8 @@ data class ProfileUiState(
     val email: String? = null,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
+    val serverHost: String = "",
+    val serverPort: String = "8000",
     val errorMsg: String? = null,
     val avatarUri: Uri? = null,
 )
@@ -30,11 +33,14 @@ data class ProfileUiState(
 class ProfileViewModel
 @Inject constructor(
     private val userRepository: UserRepository,
+    private val serverInfoRepository: ServerInfoRepository,
 ) : ViewModel() {
     private val _username: MutableStateFlow<String> = MutableStateFlow("")
     private val _email: MutableStateFlow<String?> = MutableStateFlow(null)
     private val _isLoading: MutableStateFlow<Boolean> = MutableStateFlow(true)
     private val _isRefreshing: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    private val _serverHost: MutableStateFlow<String> = MutableStateFlow("")
+    private val _serverPort: MutableStateFlow<String> = MutableStateFlow("8000")
     private val _errorMsg: MutableStateFlow<String?> = MutableStateFlow(null)
     private val _avatarUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
 
@@ -51,27 +57,46 @@ class ProfileViewModel
                     avatarUri = avatarUri,
                 )
             },
-            _isRefreshing
-        ) { baseState, isRefreshing ->
+            combine(
+                _isRefreshing,
+                _serverHost,
+                _serverPort
+            ) { isRefreshing, serverHost, serverPort ->
+                ProfileUiState(
+                    isRefreshing = isRefreshing,
+                    serverHost = serverHost,
+                    serverPort = serverPort,
+                )
+            }
+        ) { baseState, otherState ->
             ProfileUiState(
                 username = baseState.username,
                 email = baseState.email,
                 isLoading = baseState.isLoading,
-                isRefreshing = isRefreshing,
+                isRefreshing = otherState.isRefreshing,
+                serverHost = otherState.serverHost,
+                serverPort = otherState.serverPort,
                 errorMsg = baseState.errorMsg,
                 avatarUri = baseState.avatarUri,
             )
         }.stateIn(viewModelScope, WhileUiSubscribed, ProfileUiState())
 
     init {
+        _isLoading.value = true
         loadUserFromLocal()
+        loadServerSettings()
+        _isLoading.value = false
     }
 
     private fun loadUserFromLocal() {
         viewModelScope.launch {
-            _isLoading.value = true
             applyCurrentUser()
-            _isLoading.value = false
+        }
+    }
+
+    private fun loadServerSettings() {
+        viewModelScope.launch {
+            applyCurrentServerSettings()
         }
     }
 
@@ -100,6 +125,14 @@ class ProfileViewModel
 
     fun changeUsername(value: String) {
         _username.value = value
+    }
+
+    fun changeServerHost(value: String) {
+        _serverHost.value = value
+    }
+
+    fun changeServerPort(value: String) {
+        _serverPort.value = value
     }
 
     fun logOut() = viewModelScope.launch {
@@ -154,5 +187,11 @@ class ProfileViewModel
         changeUsername(currentUser.username)
         changeEmail(currentUser.email ?: "")
         _avatarUri.value = currentUser.avatarUri
+    }
+
+    private suspend fun applyCurrentServerSettings() {
+        val currentServerSettings = serverInfoRepository.getServerInfo() ?: return
+        _serverHost.value = currentServerSettings.host
+        _serverPort.value = currentServerSettings.port
     }
 }
