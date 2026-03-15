@@ -21,6 +21,7 @@ data class ProfileUiState(
     val username: String = "",
     val email: String? = null,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val errorMsg: String? = null,
     val avatarUri: Uri? = null,
 )
@@ -33,38 +34,59 @@ class ProfileViewModel
     private val _username: MutableStateFlow<String> = MutableStateFlow("")
     private val _email: MutableStateFlow<String?> = MutableStateFlow(null)
     private val _isLoading: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    private val _isRefreshing: MutableStateFlow<Boolean> = MutableStateFlow(false)
     private val _errorMsg: MutableStateFlow<String?> = MutableStateFlow(null)
     private val _avatarUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
 
     val uiState: StateFlow<ProfileUiState> =
         combine(
-            _username, _email, _isLoading, _errorMsg, _avatarUri
-        ) { username, email, isLoading, errorMsg, avatarUri ->
+            combine(
+                _username, _email, _isLoading, _errorMsg, _avatarUri
+            ) { username, email, isLoading, errorMsg, avatarUri ->
+                ProfileUiState(
+                    username = username,
+                    email = email,
+                    isLoading = isLoading,
+                    errorMsg = errorMsg,
+                    avatarUri = avatarUri,
+                )
+            },
+            _isRefreshing
+        ) { baseState, isRefreshing ->
             ProfileUiState(
-                username, email, isLoading, errorMsg, avatarUri
+                username = baseState.username,
+                email = baseState.email,
+                isLoading = baseState.isLoading,
+                isRefreshing = isRefreshing,
+                errorMsg = baseState.errorMsg,
+                avatarUri = baseState.avatarUri,
             )
         }.stateIn(viewModelScope, WhileUiSubscribed, ProfileUiState())
 
     init {
+        loadUserFromLocal()
+    }
+
+    private fun loadUserFromLocal() {
         viewModelScope.launch {
-            updateUserFromNetwork()
+            _isLoading.value = true
+            applyCurrentUser()
+            _isLoading.value = false
         }
     }
 
-    fun updateUserFromNetwork(): Unit {
+    fun refreshUser() {
         viewModelScope.launch {
-            _isLoading.value = true
+            if (_isRefreshing.value) return@launch
+            _isRefreshing.value = true
             try {
                 userRepository.updateLocalUserFromNetwork()
+                applyCurrentUser()
             } catch (e: Exception) {
                 _errorMsg.value = "can't connect to the server, local data will be used"
+            } finally {
+                _isRefreshing.value = false
             }
-            val currentUser = userRepository.getCurrentUser()
-            assert(currentUser != null)
-            changeUsername(currentUser!!.username)
-            changeEmail(currentUser.email ?: "")
-            _avatarUri.value = currentUser.avatarUri
-            _isLoading.value = false
         }
     }
 
@@ -84,19 +106,16 @@ class ProfileViewModel
         userRepository.localDataSource.clearTable()
     }
 
-    private fun updateUri(uri: Uri) {
-        _avatarUri.value = uri
-    }
-
     fun uploadAvatar(context: Context, uri: Uri) = viewModelScope.launch {
+        _isLoading.value = true
         try {
             context.contentResolver.openInputStream(uri)?.close()
             userRepository.updateCurrentUserAvatar(uri.toString())
-            val updatedUser = userRepository.getCurrentUser()
-            assert(updatedUser != null)
-            updatedUser!!.avatarUri?.let { updateUri(it) }
+            applyCurrentUser()
         } catch (e: Exception) {
             _errorMsg.value = "Failed to set avatar image"
+        } finally {
+            _isLoading.value = false
         }
     }
 
@@ -113,11 +132,9 @@ class ProfileViewModel
                 _errorMsg.value = "Nothing that can be saved"
                 return@launch
             }
+            _isLoading.value = true
             userRepository.applyChanges(changeUser)
-            val updatedUser = userRepository.getCurrentUser()
-            assert(updatedUser != null)
-            changeUsername(updatedUser!!.username)
-            changeEmail(updatedUser.email ?: "")
+            applyCurrentUser()
             _errorMsg.value = "Profile updated successfully"
         } catch (e: IOException) {
             _errorMsg.value = if (e.isServerSideError()) {
@@ -127,6 +144,15 @@ class ProfileViewModel
             }
         } catch (e: Exception) {
             _errorMsg.value = "Can't update profile due to unexpected error"
+        } finally {
+            _isLoading.value = false
         }
+    }
+
+    private suspend fun applyCurrentUser() {
+        val currentUser = userRepository.getCurrentUser() ?: return
+        changeUsername(currentUser.username)
+        changeEmail(currentUser.email ?: "")
+        _avatarUri.value = currentUser.avatarUri
     }
 }
