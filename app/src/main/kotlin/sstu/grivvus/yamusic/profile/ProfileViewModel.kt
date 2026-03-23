@@ -10,9 +10,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import sstu.grivvus.yamusic.Settings
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.ServerInfoRepository
 import sstu.grivvus.yamusic.data.UserRepository
+import sstu.grivvus.yamusic.data.network.ChangeServerDto
 import sstu.grivvus.yamusic.data.network.ChangeUserDto
 import sstu.grivvus.yamusic.data.network.isServerSideError
 import java.io.IOException
@@ -161,11 +163,24 @@ class ProfileViewModel
                 if (_username.value != currentUserData.username) _username.value else null,
                 if (_email.value != currentUserData.email) _email.value else null
             )
-            if (changeUser.newEmail == null && changeUser.newUsername == null) {
+            val changeServer = ChangeServerDto(
+                if (_serverHost.value != serverInfoRepository.getServerInfo()?.host) _serverHost.value else null,
+                if (_serverPort.value != serverInfoRepository.getServerInfo()?.port) _serverPort.value else null
+            )
+            if (changeUser.newEmail == null && changeUser.newUsername == null && changeServer.host == null && changeServer.port == null) {
                 _errorMsg.value = "Nothing that can be saved"
                 return@launch
             }
             _isLoading.value = true
+            // я не проверяю правильность хоста/порта
+            // а так же не проверяю, что сервер по этим данным доступен
+            serverInfoRepository.saveServerInfo(_serverHost.value, _serverPort.value)
+            applyCurrentServerSettings()
+            Settings.configureApi(_serverHost.value, _serverPort.value)
+
+            if (changeUser.newEmail == null && changeUser.newUsername == null) {
+                return@launch
+            }
             userRepository.applyChanges(changeUser)
             applyCurrentUser()
             _errorMsg.value = "Profile updated successfully"

@@ -25,6 +25,11 @@ data class ChangeUserDto(
     val newEmail: String?
 )
 
+data class ChangeServerDto(
+    val host: String?,
+    val port: String?,
+)
+
 @Serializable
 data class TokenResponse(
     @SerialName("user_id")
