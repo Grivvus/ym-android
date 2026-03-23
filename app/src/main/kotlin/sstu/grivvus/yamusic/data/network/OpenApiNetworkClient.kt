@@ -1,10 +1,18 @@
 package sstu.grivvus.yamusic.data.network
 
 import android.util.Log
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Request
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.MediaType.Companion.toMediaType
 import okio.Buffer
 import sstu.grivvus.yamusic.Settings
 import sstu.grivvus.yamusic.di.IoDispatcher
@@ -14,6 +22,11 @@ import sstu.grivvus.yamusic.openapi.infrastructure.Informational
 import sstu.grivvus.yamusic.openapi.infrastructure.Redirection
 import sstu.grivvus.yamusic.openapi.infrastructure.ServerError
 import sstu.grivvus.yamusic.openapi.infrastructure.Success
+import sstu.grivvus.yamusic.openapi.models.PlaylistCreateResponse
+import sstu.grivvus.yamusic.openapi.models.PlaylistInfoResponse
+import sstu.grivvus.yamusic.openapi.models.PlaylistsResponseInner
+import sstu.grivvus.yamusic.openapi.models.TrackMetadata
+import sstu.grivvus.yamusic.openapi.models.TrackUploadSuccessResponse
 import sstu.grivvus.yamusic.openapi.models.UserAuth
 import sstu.grivvus.yamusic.openapi.models.UserChangePassword
 import sstu.grivvus.yamusic.openapi.models.UserUpdate
@@ -37,6 +50,8 @@ class OpenApiNetworkClient @Inject constructor(
     companion object {
         private const val MAX_LOGGED_BODY_CHARS = 2048
     }
+
+    private val json = Json { ignoreUnknownKeys = true }
 
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
@@ -300,6 +315,198 @@ class OpenApiNetworkClient @Inject constructor(
             }
         }
 
+    suspend fun getPlaylists(userId: Long, accessToken: String?): List<PlaylistsResponseInner> =
+        withContext(ioDispatcher) {
+            val path = "/playlist"
+            logRequest("GET", path, "<empty>")
+            try {
+                executeJsonRequest(
+                    request = authenticatedRequestBuilder(path, userId, accessToken)
+                        .get()
+                        .build(),
+                    expectedStatuses = setOf(200),
+                )
+            } catch (e: Exception) {
+                logException("GET", path, e)
+                throw e
+            }
+        }
+
+    suspend fun getPlaylist(
+        userId: Long,
+        accessToken: String?,
+        playlistId: Long,
+    ): PlaylistInfoResponse = withContext(ioDispatcher) {
+        val path = "/playlist/$playlistId"
+        logRequest("GET", path, "<empty>")
+        try {
+            executeJsonRequest(
+                request = authenticatedRequestBuilder(path, userId, accessToken)
+                    .get()
+                    .build(),
+                expectedStatuses = setOf(200),
+            )
+        } catch (e: Exception) {
+            logException("GET", path, e)
+            throw e
+        }
+    }
+
+    suspend fun createPlaylist(
+        userId: Long,
+        accessToken: String?,
+        playlistName: String,
+        coverFile: File?,
+        coverMimeType: String?,
+    ): Long = withContext(ioDispatcher) {
+        val path = "/playlist"
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("owner_id", userId.toString())
+            .addFormDataPart("playlist_name", playlistName)
+            .apply {
+                if (coverFile != null) {
+                    addFormDataPart(
+                        "playlist_cover",
+                        coverFile.name,
+                        coverFile.asRequestBody(resolveMediaType(coverMimeType)),
+                    )
+                }
+            }
+            .build()
+        logRequest("POST", path, requestBody.toLogString())
+        try {
+            val response: PlaylistCreateResponse = executeJsonRequest(
+                request = authenticatedRequestBuilder(path, userId, accessToken)
+                    .post(requestBody)
+                    .build(),
+                expectedStatuses = setOf(200, 201),
+            )
+            response.playlistId.toLong()
+        } catch (e: Exception) {
+            logException("POST", path, e)
+            throw e
+        }
+    }
+
+    suspend fun deletePlaylist(userId: Long, accessToken: String?, playlistId: Long) =
+        withContext(ioDispatcher) {
+            val path = "/playlist/$playlistId"
+            logRequest("DELETE", path, "<empty>")
+            try {
+                executeWithoutBody(
+                    request = authenticatedRequestBuilder(path, userId, accessToken)
+                        .delete()
+                        .build(),
+                    expectedStatuses = setOf(200, 204),
+                )
+            } catch (e: Exception) {
+                logException("DELETE", path, e)
+                throw e
+            }
+        }
+
+    suspend fun addTrackToPlaylist(
+        userId: Long,
+        accessToken: String?,
+        playlistId: Long,
+        trackId: Long,
+    ) = withContext(ioDispatcher) {
+        val path = "/playlist/$playlistId"
+        val requestBody = """{"track_id":$trackId}"""
+            .toRequestBody("application/json".toMediaType())
+        logRequest("POST", path, requestBody.toLogString())
+        try {
+            executeWithoutBody(
+                request = authenticatedRequestBuilder(path, userId, accessToken)
+                    .post(requestBody)
+                    .header("Content-Type", "application/json")
+                    .build(),
+                expectedStatuses = setOf(200, 201, 204),
+            )
+        } catch (e: Exception) {
+            logException("POST", path, e)
+            throw e
+        }
+    }
+
+    suspend fun uploadPlaylistCover(
+        userId: Long,
+        accessToken: String?,
+        playlistId: Long,
+        coverFile: File,
+        coverMimeType: String?,
+    ) = withContext(ioDispatcher) {
+        val path = "/playlist/$playlistId/cover"
+        val requestBody = coverFile.asRequestBody(resolveMediaType(coverMimeType))
+        logRequest("POST", path, requestBody.toLogString())
+        try {
+            executeWithoutBody(
+                request = authenticatedRequestBuilder(path, userId, accessToken)
+                    .post(requestBody)
+                    .header("Content-Type", coverMimeType ?: "image/*")
+                    .build(),
+                expectedStatuses = setOf(200, 201),
+            )
+        } catch (e: Exception) {
+            logException("POST", path, e)
+            throw e
+        }
+    }
+
+    suspend fun getTracks(userId: Long, accessToken: String?): List<TrackMetadata> =
+        withContext(ioDispatcher) {
+            val path = "/track"
+            logRequest("GET", path, "<empty>")
+            try {
+                executeJsonRequest(
+                    request = authenticatedRequestBuilder(path, userId, accessToken)
+                        .get()
+                        .build(),
+                    expectedStatuses = setOf(200),
+                )
+            } catch (e: Exception) {
+                logException("GET", path, e)
+                throw e
+            }
+        }
+
+    suspend fun uploadTrack(
+        userId: Long,
+        accessToken: String?,
+        name: String,
+        artistId: Long,
+        albumId: Long,
+        trackFile: File,
+        trackMimeType: String?,
+    ): Long = withContext(ioDispatcher) {
+        val path = "/track"
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("name", name)
+            .addFormDataPart("artist_id", artistId.toString())
+            .addFormDataPart("album_id", albumId.toString())
+            .addFormDataPart(
+                "track",
+                trackFile.name,
+                trackFile.asRequestBody(resolveMediaType(trackMimeType)),
+            )
+            .build()
+        logRequest("POST", path, requestBody.toLogString())
+        try {
+            val response: TrackUploadSuccessResponse = executeJsonRequest(
+                request = authenticatedRequestBuilder(path, userId, accessToken)
+                    .post(requestBody)
+                    .build(),
+                expectedStatuses = setOf(200, 201),
+            )
+            response.trackId.toLong()
+        } catch (e: Exception) {
+            logException("POST", path, e)
+            throw e
+        }
+    }
+
     private fun defaultApi(): DefaultApi {
         return defaultApi(baseUrl = "http://${Settings.apiHost}:${Settings.apiPort}")
     }
@@ -393,5 +600,65 @@ class OpenApiNetworkClient @Inject constructor(
             throw IOException("User id is out of Int range: $this")
         }
         return id
+    }
+
+    private fun authenticatedRequestBuilder(
+        path: String,
+        userId: Long,
+        accessToken: String?,
+    ): Request.Builder {
+        val url = "${defaultBaseUrl()}$path".toHttpUrl()
+        return Request.Builder()
+            .url(url)
+            .header("Accept", "application/json")
+            .header("X-User-Id", userId.toString())
+            .apply {
+                if (!accessToken.isNullOrBlank()) {
+                    header("Authorization", "Bearer $accessToken")
+                }
+            }
+    }
+
+    private fun defaultBaseUrl(): String {
+        return "http://${Settings.apiHost}:${Settings.apiPort}"
+    }
+
+    private fun resolveMediaType(mimeType: String?) =
+        (mimeType ?: "application/octet-stream").toMediaType()
+
+    private inline fun <reified T> executeJsonRequest(
+        request: Request,
+        expectedStatuses: Set<Int>,
+    ): T {
+        httpClient.newCall(request).execute().use { response ->
+            val body = response.body.string()
+            logResponse(request.method, request.url.encodedPath, response.code)
+            if (response.code !in expectedStatuses) {
+                throw IOException(buildHttpErrorMessage(response.code, body))
+            }
+            return json.decodeFromString(body)
+        }
+    }
+
+    private fun executeWithoutBody(
+        request: Request,
+        expectedStatuses: Set<Int>,
+    ) {
+        httpClient.newCall(request).execute().use { response ->
+            val body = response.body.string()
+            logResponse(request.method, request.url.encodedPath, response.code)
+            if (response.code !in expectedStatuses) {
+                throw IOException(buildHttpErrorMessage(response.code, body))
+            }
+        }
+    }
+
+    private fun buildHttpErrorMessage(statusCode: Int, body: String?): String {
+        val bodyText = body?.trim().orEmpty()
+        return if (bodyText.isBlank()) {
+            "HTTP $statusCode"
+        } else {
+            "HTTP $statusCode | $bodyText"
+        }
     }
 }

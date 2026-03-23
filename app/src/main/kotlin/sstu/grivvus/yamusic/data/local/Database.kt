@@ -9,15 +9,18 @@ import androidx.room.TypeConverters
 @Database(
     entities = [
         LocalUser::class, AudioTrack::class, ServerInfo::class, Artist::class,
-        Album::class, Playlist::class,
+        Album::class, Playlist::class, LibraryTrack::class, PlaylistTrackCrossRef::class,
     ],
-    version = 2
+    version = 3
 )
 @TypeConverters(UriConverter::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun audioTrackDao(): AudioTrackDao
     abstract fun serverInfoDao(): ServerInfoDao
+    abstract fun playlistDao(): PlaylistDao
+    abstract fun libraryTrackDao(): LibraryTrackDao
+    abstract fun playlistTrackDao(): PlaylistTrackDao
 }
 
 object DatabaseProvider {

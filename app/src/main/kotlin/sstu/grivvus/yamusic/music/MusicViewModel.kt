@@ -1,115 +1,199 @@
 package sstu.grivvus.yamusic.music
 
-import android.content.Context
 import android.net.Uri
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.withContext
-import sstu.grivvus.yamusic.WhileUiSubscribed
-import sstu.grivvus.yamusic.data.AudioRepository
-import sstu.grivvus.yamusic.data.local.AudioTrack
-import java.io.File
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import sstu.grivvus.yamusic.data.MusicLibraryData
+import sstu.grivvus.yamusic.data.MusicRepository
+import sstu.grivvus.yamusic.data.local.LibraryTrack
+import java.io.IOException
 import javax.inject.Inject
 
+data class PlaylistListItemUi(
+    val id: Long,
+    val name: String,
+    val coverUri: Uri? = null,
+    val trackCount: Int = 0,
+)
+
+data class TrackItemUi(
+    val id: Long,
+    val name: String,
+    val subtitle: String,
+    val coverUri: Uri? = null,
+)
+
+data class PlaylistDetailUi(
+    val id: Long,
+    val name: String,
+    val coverUri: Uri? = null,
+    val tracks: List<TrackItemUi> = emptyList(),
+)
+
 data class MusicUiState(
-    val tracks: List<AudioTrack> = listOf(),
-    val currentTrack: AudioTrack? = null,
-    val isPlaying: Boolean = false
+    val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val isMutating: Boolean = false,
+    val playlists: List<PlaylistListItemUi> = emptyList(),
+    val libraryTracks: List<TrackItemUi> = emptyList(),
+    val selectedPlaylist: PlaylistDetailUi? = null,
+    val errorMessage: String? = null,
 )
 
 @HiltViewModel
 class MusicViewModel @Inject constructor(
-    private val repository: AudioRepository,
-    @ApplicationContext context: Context,
+    private val repository: MusicRepository,
 ) : ViewModel() {
-    private val context = context
-    private val _tracks: MutableStateFlow<List<AudioTrack>> = MutableStateFlow(listOf())
-    private val _currentTrack: MutableStateFlow<AudioTrack?> = MutableStateFlow(null)
-    private val _isPlaying: MutableStateFlow<Boolean> = MutableStateFlow(false)
-
-    val uiState: StateFlow<MusicUiState> =
-        combine(
-            _tracks, _currentTrack, _isPlaying
-        ) { tracks, currentTrack, isPlaying ->
-            MusicUiState(tracks, currentTrack, isPlaying)
-        }.stateIn(viewModelScope, WhileUiSubscribed, MusicUiState())
-
-    val player by lazy {
-        Log.i("PLAYER", "player instantiation")
-        ExoPlayer.Builder(context).build().apply {
-            addListener(object : Player.Listener {
-                override fun onPlaybackStateChanged(playbackState: Int) {
-                    _isPlaying.value = playbackState == Player.STATE_READY && isPlaying
-                }
-            })
-        }
-    }
+    private val _uiState = MutableStateFlow(MusicUiState())
+    private var latestLibraryData = MusicLibraryData(emptyList(), emptyList())
+    val uiState: StateFlow<MusicUiState> = _uiState.asStateFlow()
 
     init {
-//        viewModelScope.launch(Dispatchers.IO) {
-//            Log.i("MusicViewModel", "music viewModel init")
-//            val testTracks = repository.getAllInitialTracks()
-//            Log.i("MusicViewModel", testTracks.toString())
-//            _tracks.update { currentList ->
-//                testTracks
-//            }
-//            Log.i("MusicViewModel", "init finished")
-//        }
+        refresh(initialLoad = true)
     }
 
-    fun playTrack(track: AudioTrack) {
-        Log.i("MusicViewModel", "playTrack is temporarily disabled")
-    }
-
-    fun togglePlayback() {
-        if (player.isPlaying) {
-            player.pause()
-            _isPlaying.value = false
-        } else {
-            player.play()
-            _isPlaying.value = true
-        }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        player.release()
-    }
-
-    fun uploadTrack(
-        uri: Uri, title: String,
-        artist: String? = "unknown", album: String? = "unknown"
-    ) {
-        Log.i("MusicViewModel", "uploadTrack is temporarily disabled")
-    }
-
-    private suspend fun getFileFromUri(context: Context, uri: Uri): File? {
-        return withContext(Dispatchers.IO) {
+    fun refresh(initialLoad: Boolean = false) {
+        viewModelScope.launch {
+            if (initialLoad) {
+                _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            } else {
+                _uiState.value = _uiState.value.copy(isRefreshing = true, errorMessage = null)
+            }
             try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val tempFile = File.createTempFile("upload_", ".mp3", context.cacheDir)
-                inputStream?.use { input ->
-                    tempFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
+                val data = repository.loadLibrary(refreshFromNetwork = true)
+                applyLibraryData(data)
+            } catch (error: Exception) {
+                val fallbackData =
+                    runCatching { repository.loadLibrary(refreshFromNetwork = false) }.getOrNull()
+                if (fallbackData != null) {
+                    applyLibraryData(fallbackData)
                 }
-                tempFile
-            } catch (e: Exception) {
-                null
+                _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
+            } finally {
+                _uiState.value = _uiState.value.copy(isLoading = false, isRefreshing = false)
             }
         }
     }
 
-    fun loadRemoteTracks() {
+    fun openPlaylist(playlistId: Long) {
+        val selected =
+            latestLibraryData.playlists.firstOrNull { it.playlist.remoteId == playlistId } ?: return
+        _uiState.value = _uiState.value.copy(
+            selectedPlaylist = PlaylistDetailUi(
+                id = selected.playlist.remoteId,
+                name = selected.playlist.name,
+                coverUri = selected.playlist.coverUri,
+                tracks = selected.tracks.map(::toTrackUi),
+            )
+        )
+    }
+
+    fun closePlaylist() {
+        _uiState.value = _uiState.value.copy(selectedPlaylist = null)
+    }
+
+    fun createPlaylist(name: String, coverUri: Uri?) {
+        mutate { repository.createPlaylist(name, coverUri) }
+    }
+
+    fun deletePlaylist(playlistId: Long) {
+        mutate { repository.deletePlaylist(playlistId) }
+    }
+
+    fun renamePlaylist(playlistId: Long, newName: String) {
+        mutate { repository.renamePlaylist(playlistId, newName) }
+    }
+
+    fun uploadPlaylistCover(playlistId: Long, coverUri: Uri) {
+        mutate { repository.uploadPlaylistCover(playlistId, coverUri) }
+    }
+
+    fun addTracksToPlaylist(playlistId: Long, trackIds: Collection<Long>) {
+        mutate { repository.addTracksToPlaylist(playlistId, trackIds) }
+    }
+
+    fun uploadTrackAndAddToPlaylist(
+        playlistId: Long,
+        trackUri: Uri,
+        title: String,
+        artistId: Long,
+        albumId: Long,
+    ) {
+        mutate {
+            repository.uploadTrackAndAddToPlaylist(
+                playlistId = playlistId,
+                trackUri = trackUri,
+                title = title,
+                artistId = artistId,
+                albumId = albumId,
+            )
+        }
+    }
+
+    fun dismissError() {
+        _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    private fun mutate(block: suspend () -> MusicLibraryData) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isMutating = true, errorMessage = null)
+            try {
+                applyLibraryData(block())
+            } catch (error: Exception) {
+                _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
+            } finally {
+                _uiState.value = _uiState.value.copy(isMutating = false)
+            }
+        }
+    }
+
+    private fun applyLibraryData(data: MusicLibraryData) {
+        latestLibraryData = data
+        val playlists = data.playlists.map { bundle ->
+            PlaylistListItemUi(
+                id = bundle.playlist.remoteId,
+                name = bundle.playlist.name,
+                coverUri = bundle.playlist.coverUri,
+                trackCount = bundle.tracks.size,
+            )
+        }
+        val libraryTracks = data.libraryTracks.map(::toTrackUi)
+        val selectedPlaylistId = _uiState.value.selectedPlaylist?.id
+        val selectedPlaylist =
+            data.playlists.firstOrNull { it.playlist.remoteId == selectedPlaylistId }
+        _uiState.value = _uiState.value.copy(
+            playlists = playlists,
+            libraryTracks = libraryTracks,
+            selectedPlaylist = selectedPlaylist?.let { bundle ->
+                PlaylistDetailUi(
+                    id = bundle.playlist.remoteId,
+                    name = bundle.playlist.name,
+                    coverUri = bundle.playlist.coverUri,
+                    tracks = bundle.tracks.map(::toTrackUi),
+                )
+            },
+        )
+    }
+
+    private fun toTrackUi(track: LibraryTrack): TrackItemUi {
+        return TrackItemUi(
+            id = track.remoteId,
+            name = track.name,
+            subtitle = "Artist #${track.artistId}",
+            coverUri = track.coverUri,
+        )
+    }
+
+    private fun Throwable.toReadableMessage(): String {
+        val messageText = message?.takeIf { it.isNotBlank() }
+        return messageText ?: when (this) {
+            is IOException -> "Network request failed"
+            else -> "Unexpected error"
+        }
     }
 }

@@ -1,5 +1,6 @@
 package sstu.grivvus.yamusic
 
+import android.net.Uri
 import kotlinx.coroutines.flow.SharingStarted
 
 private const val StopTimeoutMillis: Long = 5000
@@ -23,4 +24,17 @@ object Settings {
 
 fun getAvatarUrl(userId: Long): String {
     return "http://${Settings.apiHost}:${Settings.apiPort}/user/$userId/avatar"
+}
+
+fun getPlaylistCoverUrl(playlistId: Long): String {
+    return "http://${Settings.apiHost}:${Settings.apiPort}/playlist/$playlistId/cover"
+}
+
+fun playlistCoverUri(playlistId: Long, cacheBust: Boolean = false): Uri {
+    val url = getPlaylistCoverUrl(playlistId)
+    return if (cacheBust) {
+        "$url?ts=${System.currentTimeMillis()}".let(Uri::parse)
+    } else {
+        Uri.parse(url)
+    }
 }

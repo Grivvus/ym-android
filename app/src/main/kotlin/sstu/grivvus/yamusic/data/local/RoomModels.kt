@@ -75,8 +75,38 @@ data class Album(
 )
 
 @Entity(tableName = "playlist")
+@TypeConverters(UriConverter::class)
 data class Playlist(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "remote_id") val remoteId: Long,
+    @PrimaryKey
+    @ColumnInfo(name = "remote_id")
+    val remoteId: Long,
     @ColumnInfo() val name: String,
+    @ColumnInfo(name = "cover_uri") val coverUri: Uri? = null,
+    @ColumnInfo(name = "name_is_local_override") val nameIsLocalOverride: Boolean = false,
+    @ColumnInfo(name = "tracks_seeded") val tracksSeeded: Boolean = false,
+)
+
+@Entity(tableName = "library_track")
+@TypeConverters(UriConverter::class)
+data class LibraryTrack(
+    @PrimaryKey
+    @ColumnInfo(name = "remote_id")
+    val remoteId: Long,
+    @ColumnInfo() val name: String,
+    @ColumnInfo(name = "artist_id") val artistId: Long,
+    @ColumnInfo(name = "cover_uri") val coverUri: Uri? = null,
+    @ColumnInfo(name = "local_path") val localPath: String? = null,
+)
+
+@Entity(
+    tableName = "playlist_track_cross_ref",
+    primaryKeys = ["playlist_id", "track_id"],
+    foreignKeys = [
+        ForeignKey(Playlist::class, ["remote_id"], ["playlist_id"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(LibraryTrack::class, ["remote_id"], ["track_id"], onDelete = ForeignKey.CASCADE),
+    ],
+)
+data class PlaylistTrackCrossRef(
+    @ColumnInfo(name = "playlist_id") val playlistId: Long,
+    @ColumnInfo(name = "track_id") val trackId: Long,
 )

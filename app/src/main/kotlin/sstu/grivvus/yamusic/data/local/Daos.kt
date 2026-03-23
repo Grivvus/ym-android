@@ -81,3 +81,51 @@ interface AudioTrackDao {
     @Query("DELETE FROM audio_tracks")
     suspend fun clearAll()
 }
+
+@Dao
+interface PlaylistDao {
+    @Upsert
+    suspend fun upsert(playlist: Playlist)
+
+    @Upsert
+    suspend fun upsertAll(playlists: List<Playlist>)
+
+    @Query("SELECT * FROM playlist ORDER BY name ASC")
+    suspend fun getAll(): List<Playlist>
+
+    @Query("SELECT * FROM playlist WHERE remote_id = :playlistId LIMIT 1")
+    suspend fun getById(playlistId: Long): Playlist?
+
+    @Query("DELETE FROM playlist WHERE remote_id = :playlistId")
+    suspend fun deleteById(playlistId: Long)
+}
+
+@Dao
+interface LibraryTrackDao {
+    @Upsert
+    suspend fun upsert(track: LibraryTrack)
+
+    @Upsert
+    suspend fun upsertAll(tracks: List<LibraryTrack>)
+
+    @Query("SELECT * FROM library_track ORDER BY name ASC")
+    suspend fun getAll(): List<LibraryTrack>
+
+    @Query("SELECT * FROM library_track WHERE remote_id = :trackId LIMIT 1")
+    suspend fun getById(trackId: Long): LibraryTrack?
+}
+
+@Dao
+interface PlaylistTrackDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(ref: PlaylistTrackCrossRef)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(refs: List<PlaylistTrackCrossRef>)
+
+    @Query("SELECT track_id FROM playlist_track_cross_ref WHERE playlist_id = :playlistId")
+    suspend fun getTrackIdsForPlaylist(playlistId: Long): List<Long>
+
+    @Query("DELETE FROM playlist_track_cross_ref WHERE playlist_id = :playlistId")
+    suspend fun deleteForPlaylist(playlistId: Long)
+}

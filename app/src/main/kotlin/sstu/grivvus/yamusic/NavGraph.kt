@@ -13,7 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.CoroutineScope
 import sstu.grivvus.yamusic.components.BlankScreen
 import sstu.grivvus.yamusic.login.LoginScreen
-import sstu.grivvus.yamusic.music.TrackListScreen
+import sstu.grivvus.yamusic.music.MusicScreen
 import sstu.grivvus.yamusic.music.UploadScreen
 import sstu.grivvus.yamusic.profile.ProfileScreen
 import sstu.grivvus.yamusic.register.RegistrationScreen
@@ -86,11 +86,10 @@ fun YaMusicNavGraph(
         }
 
         composable(AppDestinations.MUSIC_ROUTE) {
-            TrackListScreen(
+            MusicScreen(
                 { navActions.navigateToMusic() },
                 { navActions.navigateToLibrary() },
                 { navActions.navigateToProfile() },
-                { navActions.navigateToUpload() }
             )
         }
 
