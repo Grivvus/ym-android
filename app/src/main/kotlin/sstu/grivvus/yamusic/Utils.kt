@@ -23,11 +23,11 @@ object Settings {
 }
 
 fun getAvatarUrl(userId: Long): String {
-    return "http://${Settings.apiHost}:${Settings.apiPort}/user/$userId/avatar"
+    return "http://${Settings.apiHost}:${Settings.apiPort}/users/$userId/avatar"
 }
 
 fun getPlaylistCoverUrl(playlistId: Long): String {
-    return "http://${Settings.apiHost}:${Settings.apiPort}/playlist/$playlistId/cover"
+    return "http://${Settings.apiHost}:${Settings.apiPort}/playlists/$playlistId/cover"
 }
 
 fun playlistCoverUri(playlistId: Long, cacheBust: Boolean = false): Uri {

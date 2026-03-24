@@ -95,10 +95,28 @@ class MusicRepository @Inject constructor(
         withContext(dispatcher) {
             val currentPlaylist = playlistDao.getById(playlistId)
                 ?: throw IOException("Playlist was not found")
+            val user = requireActiveUser()
+            val updatedPlaylist = networkClient.updatePlaylist(
+                userId = user.remoteId,
+                accessToken = user.access,
+                playlistId = playlistId,
+                playlistName = newName,
+            )
+            playlistTrackDao.deleteForPlaylist(playlistId)
+            playlistTrackDao.insertAll(
+                updatedPlaylist.tracks.map { trackId ->
+                    PlaylistTrackCrossRef(
+                        playlistId = playlistId,
+                        trackId = trackId.toLong(),
+                    )
+                }
+            )
             playlistDao.upsert(
                 currentPlaylist.copy(
-                    name = newName,
-                    nameIsLocalOverride = true,
+                    name = updatedPlaylist.playlistName,
+                    coverUri = updatedPlaylist.coverUrl?.toUri() ?: currentPlaylist.coverUri,
+                    nameIsLocalOverride = false,
+                    tracksSeeded = true,
                 )
             )
             buildLocalState()
@@ -247,13 +265,9 @@ class MusicRepository @Inject constructor(
                 val existingPlaylist = existingPlaylists[remotePlaylist.playlistId.toLong()]
                 Playlist(
                     remoteId = remotePlaylist.playlistId.toLong(),
-                    name = if (existingPlaylist?.nameIsLocalOverride == true) {
-                        existingPlaylist.name
-                    } else {
-                        remotePlaylist.playlistName
-                    },
+                    name = remotePlaylist.playlistName,
                     coverUri = existingPlaylist?.coverUri,
-                    nameIsLocalOverride = existingPlaylist?.nameIsLocalOverride ?: false,
+                    nameIsLocalOverride = false,
                     tracksSeeded = existingPlaylist?.tracksSeeded ?: false,
                 )
             }

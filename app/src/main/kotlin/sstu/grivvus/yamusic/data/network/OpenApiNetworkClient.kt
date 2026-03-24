@@ -4,6 +4,8 @@ import android.util.Log
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MultipartBody
@@ -17,13 +19,15 @@ import okio.Buffer
 import sstu.grivvus.yamusic.Settings
 import sstu.grivvus.yamusic.di.IoDispatcher
 import sstu.grivvus.yamusic.openapi.apis.DefaultApi
+import sstu.grivvus.yamusic.openapi.infrastructure.ApiClient as GeneratedApiClient
 import sstu.grivvus.yamusic.openapi.infrastructure.ClientError
 import sstu.grivvus.yamusic.openapi.infrastructure.Informational
 import sstu.grivvus.yamusic.openapi.infrastructure.Redirection
 import sstu.grivvus.yamusic.openapi.infrastructure.ServerError
 import sstu.grivvus.yamusic.openapi.infrastructure.Success
 import sstu.grivvus.yamusic.openapi.models.PlaylistCreateResponse
-import sstu.grivvus.yamusic.openapi.models.PlaylistInfoResponse
+import sstu.grivvus.yamusic.openapi.models.PlaylistResponse
+import sstu.grivvus.yamusic.openapi.models.PlaylistWithTracksResponse
 import sstu.grivvus.yamusic.openapi.models.PlaylistsResponseInner
 import sstu.grivvus.yamusic.openapi.models.TrackMetadata
 import sstu.grivvus.yamusic.openapi.models.TrackUploadSuccessResponse
@@ -52,6 +56,7 @@ class OpenApiNetworkClient @Inject constructor(
     }
 
     private val json = Json { ignoreUnknownKeys = true }
+    private val generatedApiMutex = Mutex()
 
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
@@ -195,12 +200,14 @@ class OpenApiNetworkClient @Inject constructor(
         }
     }
 
-    suspend fun getUserById(userId: Long): RemoteUser = withContext(ioDispatcher) {
+    suspend fun getUserById(userId: Long, accessToken: String?): RemoteUser = withContext(ioDispatcher) {
         val apiUserId = userId.toApiUserId()
-        logRequest("GET", "/user/$apiUserId", "<empty>")
+        logRequest("GET", "/users/$apiUserId", "<empty>")
         try {
-            val response = defaultApi().getUserByIdWithHttpInfo(apiUserId)
-            logResponse("GET", "/user/$apiUserId", response.statusCode)
+            val response = withGeneratedApi(accessToken) { api ->
+                api.getUserByIdWithHttpInfo(apiUserId)
+            }
+            logResponse("GET", "/users/$apiUserId", response.statusCode)
             when (response) {
                 is Success -> {
                     val data = response.data
@@ -219,19 +226,26 @@ class OpenApiNetworkClient @Inject constructor(
                 else -> throw IOException("Unexpected response for getUserById")
             }
         } catch (e: Exception) {
-            logException("GET", "/user/$apiUserId", e)
+            logException("GET", "/users/$apiUserId", e)
             throw e
         }
     }
 
-    suspend fun changeUser(userId: Long, newUsername: String, newEmail: String): RemoteUser =
+    suspend fun changeUser(
+        userId: Long,
+        newUsername: String,
+        newEmail: String,
+        accessToken: String?,
+    ): RemoteUser =
         withContext(ioDispatcher) {
             val apiUserId = userId.toApiUserId()
             val payload = UserUpdate(newUsername = newUsername, newEmail = newEmail)
-            logRequest("PATCH", "/user/$apiUserId", payload.toLogString())
+            logRequest("PATCH", "/users/$apiUserId", payload.toLogString())
             try {
-                val response = defaultApi().changeUserWithHttpInfo(apiUserId, payload)
-                logResponse("PATCH", "/user/$apiUserId", response.statusCode)
+                val response = withGeneratedApi(accessToken) { api ->
+                    api.changeUserWithHttpInfo(apiUserId, payload)
+                }
+                logResponse("PATCH", "/users/$apiUserId", response.statusCode)
                 when (response) {
                     is Success -> {
                         val data = response.data
@@ -255,20 +269,27 @@ class OpenApiNetworkClient @Inject constructor(
                     else -> throw IOException("Unexpected response for changeUser")
                 }
             } catch (e: Exception) {
-                logException("PATCH", "/user/$apiUserId", e)
+                logException("PATCH", "/users/$apiUserId", e)
                 throw e
             }
         }
 
-    suspend fun changePassword(userId: Long, currentPassword: String, newPassword: String): String =
+    suspend fun changePassword(
+        userId: Long,
+        currentPassword: String,
+        newPassword: String,
+        accessToken: String?,
+    ): String =
         withContext(ioDispatcher) {
             val apiUserId = userId.toApiUserId()
             val payload =
                 UserChangePassword(oldPassword = currentPassword, newPassword = newPassword)
-            logRequest("PATCH", "/user/$apiUserId/change_password", payload.toLogString())
+            logRequest("PATCH", "/users/$apiUserId/change_password", payload.toLogString())
             try {
-                val response = defaultApi().changePasswordWithHttpInfo(apiUserId, payload)
-                logResponse("PATCH", "/user/$apiUserId/change_password", response.statusCode)
+                val response = withGeneratedApi(accessToken) { api ->
+                    api.changePasswordWithHttpInfo(apiUserId, payload)
+                }
+                logResponse("PATCH", "/users/$apiUserId/change_password", response.statusCode)
                 when (response) {
                     is Success -> {
                         val data = response.data
@@ -287,18 +308,20 @@ class OpenApiNetworkClient @Inject constructor(
                     else -> throw IOException("Unexpected response for changePassword")
                 }
             } catch (e: Exception) {
-                logException("PATCH", "/user/$apiUserId/change_password", e)
+                logException("PATCH", "/users/$apiUserId/change_password", e)
                 throw e
             }
         }
 
-    suspend fun uploadUserAvatar(userId: Long, avatarFile: File): String =
+    suspend fun uploadUserAvatar(userId: Long, avatarFile: File, accessToken: String?): String =
         withContext(ioDispatcher) {
             val apiUserId = userId.toApiUserId()
-            logRequest("POST", "/user/$apiUserId/avatar", avatarFile.toLogString())
+            logRequest("POST", "/users/$apiUserId/avatar", avatarFile.toLogString())
             try {
-                val response = defaultApi().uploadUserAvatarWithHttpInfo(apiUserId, avatarFile)
-                logResponse("POST", "/user/$apiUserId/avatar", response.statusCode)
+                val response = withGeneratedApi(accessToken) { api ->
+                    api.uploadUserAvatarWithHttpInfo(apiUserId, avatarFile)
+                }
+                logResponse("POST", "/users/$apiUserId/avatar", response.statusCode)
                 when (response) {
                     is Success -> response.data?.msg
                         ?: throw IOException("HTTP ${response.statusCode}: empty response body for uploadUserAvatar")
@@ -310,14 +333,14 @@ class OpenApiNetworkClient @Inject constructor(
                     else -> throw IOException("Unexpected response for uploadUserAvatar")
                 }
             } catch (e: Exception) {
-                logException("POST", "/user/$apiUserId/avatar", e)
+                logException("POST", "/users/$apiUserId/avatar", e)
                 throw e
             }
         }
 
     suspend fun getPlaylists(userId: Long, accessToken: String?): List<PlaylistsResponseInner> =
         withContext(ioDispatcher) {
-            val path = "/playlist"
+            val path = "/playlists"
             logRequest("GET", path, "<empty>")
             try {
                 executeJsonRequest(
@@ -336,8 +359,8 @@ class OpenApiNetworkClient @Inject constructor(
         userId: Long,
         accessToken: String?,
         playlistId: Long,
-    ): PlaylistInfoResponse = withContext(ioDispatcher) {
-        val path = "/playlist/$playlistId"
+    ): PlaylistWithTracksResponse = withContext(ioDispatcher) {
+        val path = "/playlists/$playlistId"
         logRequest("GET", path, "<empty>")
         try {
             executeJsonRequest(
@@ -352,6 +375,34 @@ class OpenApiNetworkClient @Inject constructor(
         }
     }
 
+    suspend fun updatePlaylist(
+        userId: Long,
+        accessToken: String?,
+        playlistId: Long,
+        playlistName: String,
+    ): PlaylistWithTracksResponse = withContext(ioDispatcher) {
+        val path = "/playlists/$playlistId"
+        val requestBody = json.encodeToString(
+            PlaylistResponse(
+                playlistId = playlistId.toApiIntId(),
+                playlistName = playlistName,
+            )
+        ).toRequestBody("application/json".toMediaType())
+        logRequest("PATCH", path, requestBody.toLogString())
+        try {
+            executeJsonRequest(
+                request = authenticatedRequestBuilder(path, userId, accessToken)
+                    .patch(requestBody)
+                    .header("Content-Type", "application/json")
+                    .build(),
+                expectedStatuses = setOf(200),
+            )
+        } catch (e: Exception) {
+            logException("PATCH", path, e)
+            throw e
+        }
+    }
+
     suspend fun createPlaylist(
         userId: Long,
         accessToken: String?,
@@ -359,7 +410,7 @@ class OpenApiNetworkClient @Inject constructor(
         coverFile: File?,
         coverMimeType: String?,
     ): Long = withContext(ioDispatcher) {
-        val path = "/playlist"
+        val path = "/playlists"
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("owner_id", userId.toString())
@@ -391,7 +442,7 @@ class OpenApiNetworkClient @Inject constructor(
 
     suspend fun deletePlaylist(userId: Long, accessToken: String?, playlistId: Long) =
         withContext(ioDispatcher) {
-            val path = "/playlist/$playlistId"
+            val path = "/playlists/$playlistId"
             logRequest("DELETE", path, "<empty>")
             try {
                 executeWithoutBody(
@@ -412,7 +463,7 @@ class OpenApiNetworkClient @Inject constructor(
         playlistId: Long,
         trackId: Long,
     ) = withContext(ioDispatcher) {
-        val path = "/playlist/$playlistId"
+        val path = "/playlists/$playlistId"
         val requestBody = """{"track_id":$trackId}"""
             .toRequestBody("application/json".toMediaType())
         logRequest("POST", path, requestBody.toLogString())
@@ -437,7 +488,7 @@ class OpenApiNetworkClient @Inject constructor(
         coverFile: File,
         coverMimeType: String?,
     ) = withContext(ioDispatcher) {
-        val path = "/playlist/$playlistId/cover"
+        val path = "/playlists/$playlistId/cover"
         val requestBody = coverFile.asRequestBody(resolveMediaType(coverMimeType))
         logRequest("POST", path, requestBody.toLogString())
         try {
@@ -456,7 +507,7 @@ class OpenApiNetworkClient @Inject constructor(
 
     suspend fun getTracks(userId: Long, accessToken: String?): List<TrackMetadata> =
         withContext(ioDispatcher) {
-            val path = "/track"
+            val path = "/tracks"
             logRequest("GET", path, "<empty>")
             try {
                 executeJsonRequest(
@@ -480,7 +531,7 @@ class OpenApiNetworkClient @Inject constructor(
         trackFile: File,
         trackMimeType: String?,
     ): Long = withContext(ioDispatcher) {
-        val path = "/track"
+        val path = "/tracks"
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("name", name)
@@ -513,6 +564,18 @@ class OpenApiNetworkClient @Inject constructor(
 
     private fun defaultApi(baseUrl: String): DefaultApi {
         return DefaultApi(basePath = baseUrl, client = httpClient)
+    }
+
+    private suspend fun <T> withGeneratedApi(accessToken: String?, block: (DefaultApi) -> T): T {
+        return generatedApiMutex.withLock {
+            val previousAccessToken = GeneratedApiClient.accessToken
+            GeneratedApiClient.accessToken = accessToken?.takeIf { it.isNotBlank() }
+            try {
+                block(defaultApi())
+            } finally {
+                GeneratedApiClient.accessToken = previousAccessToken
+            }
+        }
     }
 
     private fun sstu.grivvus.yamusic.openapi.models.TokenResponse.toNetworkToken(): TokenResponse {
@@ -602,6 +665,14 @@ class OpenApiNetworkClient @Inject constructor(
         return id
     }
 
+    private fun Long.toApiIntId(): Int {
+        val id = toInt()
+        if (id.toLong() != this) {
+            throw IOException("Id is out of Int range: $this")
+        }
+        return id
+    }
+
     private fun authenticatedRequestBuilder(
         path: String,
         userId: Long,
@@ -611,7 +682,6 @@ class OpenApiNetworkClient @Inject constructor(
         return Request.Builder()
             .url(url)
             .header("Accept", "application/json")
-            .header("X-User-Id", userId.toString())
             .apply {
                 if (!accessToken.isNullOrBlank()) {
                     header("Authorization", "Bearer $accessToken")

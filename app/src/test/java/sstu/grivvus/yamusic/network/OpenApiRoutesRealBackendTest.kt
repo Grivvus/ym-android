@@ -102,7 +102,7 @@ class OpenApiRoutesRealBackendTest {
         val token = registerUser(username, password)
 
         val response = client.newCall(
-            requestBuilder("/user/${token.userId}", authHeader(token))
+            requestBuilder("/users/${token.userId}", authHeader(token))
                 .get()
                 .build()
         ).execute()
@@ -126,7 +126,7 @@ class OpenApiRoutesRealBackendTest {
         val newEmail = "${newUsername}@example.com"
 
         val response = client.newCall(
-            requestBuilder("/user/${token.userId}", authHeader(token))
+            requestBuilder("/users/${token.userId}", authHeader(token))
                 .patch(
                     jsonBody(
                         "new_username" to newUsername,
@@ -153,7 +153,7 @@ class OpenApiRoutesRealBackendTest {
         val token = registerUser(username, oldPassword)
 
         val response = client.newCall(
-            requestBuilder("/user/${token.userId}/change_password", authHeader(token))
+            requestBuilder("/users/${token.userId}/change_password", authHeader(token))
                 .patch(
                     jsonBody(
                         "old_password" to oldPassword,
@@ -183,7 +183,7 @@ class OpenApiRoutesRealBackendTest {
 
     private fun fetchUserById(token: Token): ParsedUser {
         val response = client.newCall(
-            requestBuilder("/user/${token.userId}", authHeader(token))
+            requestBuilder("/users/${token.userId}", authHeader(token))
                 .get()
                 .build()
         ).execute()

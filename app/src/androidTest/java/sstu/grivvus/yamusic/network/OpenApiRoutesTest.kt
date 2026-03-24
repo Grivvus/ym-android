@@ -49,7 +49,7 @@ class OpenApiRoutesRealBackendTest {
         val avatarBytes = createWebpAvatar()
         val response = withContext(Dispatchers.IO) {
             client.newCall(
-                requestBuilder("/user/${token.userId}/avatar", authHeader(token))
+                requestBuilder("/users/${token.userId}/avatar", authHeader(token))
                     .post(avatarBytes.toRequestBody(webpMediaType))
                     .build()
             ).execute()

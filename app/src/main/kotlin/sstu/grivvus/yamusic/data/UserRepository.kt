@@ -57,13 +57,17 @@ class UserRepository @Inject constructor(
             userId = localUser!!.remoteId,
             currentPassword = currentPassword,
             newPassword = newPassword,
+            accessToken = localUser.access,
         )
     }
 
     suspend fun updateLocalUserFromNetwork(): Unit {
         val localUser = localDataSource.getActiveUser()
         assert(localUser != null)
-        val remoteUser = networkClient.getUserById(localUser!!.remoteId)
+        val remoteUser = networkClient.getUserById(
+            userId = localUser!!.remoteId,
+            accessToken = localUser.access,
+        )
         localDataSource.update(
             LocalUser(
                 remoteId = localUser.remoteId,
@@ -87,7 +91,11 @@ class UserRepository @Inject constructor(
         val selectedAvatarUri = uriStr.toUri()
         val tempFile = createTempAvatarFile(selectedAvatarUri)
         try {
-            networkClient.uploadUserAvatar(currentUser!!.remoteId, tempFile)
+            networkClient.uploadUserAvatar(
+                userId = currentUser!!.remoteId,
+                avatarFile = tempFile,
+                accessToken = currentUser.access,
+            )
             localDataSource.update(
                 LocalUser(
                     currentUser.remoteId,
@@ -111,6 +119,7 @@ class UserRepository @Inject constructor(
             userId = localUser!!.remoteId,
             newUsername = targetUsername,
             newEmail = targetEmail,
+            accessToken = localUser.access,
         )
 
         val newUserData = LocalUser(
