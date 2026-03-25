@@ -31,7 +31,7 @@ class UserRepository @Inject constructor(
         localDataSource.clearTable()
         localDataSource.insert(
             LocalUser(
-                data.userId, user.username, user.email,
+                data.userId.toLong(), user.username, user.email,
                 data.accessToken, data.refreshToken
             )
         )
@@ -42,7 +42,7 @@ class UserRepository @Inject constructor(
         localDataSource.clearTable()
         localDataSource.insert(
             LocalUser(
-                data.userId, user.username, null,
+                data.userId.toLong(), user.username, null,
                 data.accessToken, data.refreshToken,
             )
         )

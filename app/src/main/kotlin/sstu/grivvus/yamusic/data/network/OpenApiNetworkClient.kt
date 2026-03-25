@@ -1,25 +1,25 @@
 package sstu.grivvus.yamusic.data.network
 
+import android.content.Context
 import android.util.Log
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
-import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
-import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import okio.Buffer
 import sstu.grivvus.yamusic.Settings
 import sstu.grivvus.yamusic.di.IoDispatcher
 import sstu.grivvus.yamusic.openapi.apis.DefaultApi
-import sstu.grivvus.yamusic.openapi.infrastructure.ApiClient as GeneratedApiClient
 import sstu.grivvus.yamusic.openapi.infrastructure.ClientError
 import sstu.grivvus.yamusic.openapi.infrastructure.Informational
 import sstu.grivvus.yamusic.openapi.infrastructure.Redirection
@@ -29,6 +29,7 @@ import sstu.grivvus.yamusic.openapi.models.PlaylistCreateResponse
 import sstu.grivvus.yamusic.openapi.models.PlaylistResponse
 import sstu.grivvus.yamusic.openapi.models.PlaylistWithTracksResponse
 import sstu.grivvus.yamusic.openapi.models.PlaylistsResponseInner
+import sstu.grivvus.yamusic.openapi.models.TokenResponse
 import sstu.grivvus.yamusic.openapi.models.TrackMetadata
 import sstu.grivvus.yamusic.openapi.models.TrackUploadSuccessResponse
 import sstu.grivvus.yamusic.openapi.models.UserAuth
@@ -40,9 +41,11 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+import sstu.grivvus.yamusic.openapi.infrastructure.ApiClient as GeneratedApiClient
 
 @Singleton
 class OpenApiNetworkClient @Inject constructor(
+    @ApplicationContext context: Context,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
     data class RemoteUser(
@@ -57,6 +60,7 @@ class OpenApiNetworkClient @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
     private val generatedApiMutex = Mutex()
+    private val authSessionManager = AuthSessionManager(context)
 
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
@@ -72,7 +76,7 @@ class OpenApiNetworkClient @Inject constructor(
             logResponse("POST", "/auth/register", response.statusCode)
             when (response) {
                 is Success -> {
-                    response.data?.toNetworkToken()
+                    response.data
                         ?: throw IOException("HTTP ${response.statusCode}: empty response body for register")
                 }
 
@@ -108,7 +112,7 @@ class OpenApiNetworkClient @Inject constructor(
             logResponse("POST", "/auth/login", response.statusCode)
             when (response) {
                 is Success -> {
-                    response.data?.toNetworkToken()
+                    response.data
                         ?: throw IOException("HTTP ${response.statusCode}: empty response body for login")
                 }
 
@@ -200,36 +204,39 @@ class OpenApiNetworkClient @Inject constructor(
         }
     }
 
-    suspend fun getUserById(userId: Long, accessToken: String?): RemoteUser = withContext(ioDispatcher) {
-        val apiUserId = userId.toApiUserId()
-        logRequest("GET", "/users/$apiUserId", "<empty>")
-        try {
-            val response = withGeneratedApi(accessToken) { api ->
-                api.getUserByIdWithHttpInfo(apiUserId)
-            }
-            logResponse("GET", "/users/$apiUserId", response.statusCode)
-            when (response) {
-                is Success -> {
-                    val data = response.data
-                        ?: throw IOException("HTTP ${response.statusCode}: empty response body for getUserById")
-                    RemoteUser(
-                        id = data.id.toLong(),
-                        username = data.username,
-                        email = data.email,
-                    )
-                }
+    suspend fun getUserById(userId: Long, accessToken: String?): RemoteUser =
+        withContext(ioDispatcher) {
+            val apiUserId = userId.toApiUserId()
+            logRequest("GET", "/users/$apiUserId", "<empty>")
+            try {
+                withAuthRetry(accessToken) { resolvedAccessToken ->
+                    val response = withGeneratedApi(resolvedAccessToken) { api ->
+                        api.getUserByIdWithHttpInfo(apiUserId)
+                    }
+                    logResponse("GET", "/users/$apiUserId", response.statusCode)
+                    when (response) {
+                        is Success -> {
+                            val data = response.data
+                                ?: throw IOException("HTTP ${response.statusCode}: empty response body for getUserById")
+                            RemoteUser(
+                                id = data.id.toLong(),
+                                username = data.username,
+                                email = data.email,
+                            )
+                        }
 
-                is ClientError -> throw response.toIOException()
-                is ServerError -> throw response.toIOException()
-                is Informational -> throw IOException("HTTP ${response.statusCode}: informational response is not supported")
-                is Redirection -> throw IOException("HTTP ${response.statusCode}: redirection response is not supported")
-                else -> throw IOException("Unexpected response for getUserById")
+                        is ClientError -> throw response.toIOException()
+                        is ServerError -> throw response.toIOException()
+                        is Informational -> throw IOException("HTTP ${response.statusCode}: informational response is not supported")
+                        is Redirection -> throw IOException("HTTP ${response.statusCode}: redirection response is not supported")
+                        else -> throw IOException("Unexpected response for getUserById")
+                    }
+                }
+            } catch (e: Exception) {
+                logException("GET", "/users/$apiUserId", e)
+                throw e
             }
-        } catch (e: Exception) {
-            logException("GET", "/users/$apiUserId", e)
-            throw e
         }
-    }
 
     suspend fun changeUser(
         userId: Long,
@@ -242,31 +249,33 @@ class OpenApiNetworkClient @Inject constructor(
             val payload = UserUpdate(newUsername = newUsername, newEmail = newEmail)
             logRequest("PATCH", "/users/$apiUserId", payload.toLogString())
             try {
-                val response = withGeneratedApi(accessToken) { api ->
-                    api.changeUserWithHttpInfo(apiUserId, payload)
-                }
-                logResponse("PATCH", "/users/$apiUserId", response.statusCode)
-                when (response) {
-                    is Success -> {
-                        val data = response.data
-                            ?: throw IOException("HTTP ${response.statusCode}: empty response body for changeUser")
-
-                        if (data is sstu.grivvus.yamusic.openapi.models.UserReturn) {
-                            RemoteUser(
-                                id = data.id.toLong(),
-                                username = data.username,
-                                email = data.email,
-                            )
-                        } else {
-                            throw IOException("HTTP ${response.statusCode}: unexpected response type for changeUser: ${data::class.qualifiedName}")
-                        }
+                withAuthRetry(accessToken) { resolvedAccessToken ->
+                    val response = withGeneratedApi(resolvedAccessToken) { api ->
+                        api.changeUserWithHttpInfo(apiUserId, payload)
                     }
+                    logResponse("PATCH", "/users/$apiUserId", response.statusCode)
+                    when (response) {
+                        is Success -> {
+                            val data = response.data
+                                ?: throw IOException("HTTP ${response.statusCode}: empty response body for changeUser")
 
-                    is ClientError -> throw response.toIOException()
-                    is ServerError -> throw response.toIOException()
-                    is Informational -> throw IOException("HTTP ${response.statusCode}: informational response is not supported")
-                    is Redirection -> throw IOException("HTTP ${response.statusCode}: redirection response is not supported")
-                    else -> throw IOException("Unexpected response for changeUser")
+                            if (data is sstu.grivvus.yamusic.openapi.models.UserReturn) {
+                                RemoteUser(
+                                    id = data.id.toLong(),
+                                    username = data.username,
+                                    email = data.email,
+                                )
+                            } else {
+                                throw IOException("HTTP ${response.statusCode}: unexpected response type for changeUser: ${data::class.qualifiedName}")
+                            }
+                        }
+
+                        is ClientError -> throw response.toIOException()
+                        is ServerError -> throw response.toIOException()
+                        is Informational -> throw IOException("HTTP ${response.statusCode}: informational response is not supported")
+                        is Redirection -> throw IOException("HTTP ${response.statusCode}: redirection response is not supported")
+                        else -> throw IOException("Unexpected response for changeUser")
+                    }
                 }
             } catch (e: Exception) {
                 logException("PATCH", "/users/$apiUserId", e)
@@ -286,26 +295,26 @@ class OpenApiNetworkClient @Inject constructor(
                 UserChangePassword(oldPassword = currentPassword, newPassword = newPassword)
             logRequest("PATCH", "/users/$apiUserId/change_password", payload.toLogString())
             try {
-                val response = withGeneratedApi(accessToken) { api ->
-                    api.changePasswordWithHttpInfo(apiUserId, payload)
-                }
-                logResponse("PATCH", "/users/$apiUserId/change_password", response.statusCode)
-                when (response) {
-                    is Success -> {
-                        val data = response.data
-                        when (data) {
-                            is sstu.grivvus.yamusic.openapi.models.MessageResponse -> data.msg
-                            is Unit -> "OK"
-                            null -> ""
-                            else -> data.toString()
-                        }
+                withAuthRetry(accessToken) { resolvedAccessToken ->
+                    val response = withGeneratedApi(resolvedAccessToken) { api ->
+                        api.changePasswordWithHttpInfo(apiUserId, payload)
                     }
+                    logResponse("PATCH", "/users/$apiUserId/change_password", response.statusCode)
+                    when (response) {
+                        is Success -> {
+                            when (val data = response.data) {
+                                is Unit -> "OK"
+                                null -> ""
+                                else -> data.toString()
+                            }
+                        }
 
-                    is ClientError -> throw response.toIOException()
-                    is ServerError -> throw response.toIOException()
-                    is Informational -> throw IOException("HTTP ${response.statusCode}: informational response is not supported")
-                    is Redirection -> throw IOException("HTTP ${response.statusCode}: redirection response is not supported")
-                    else -> throw IOException("Unexpected response for changePassword")
+                        is ClientError -> throw response.toIOException()
+                        is ServerError -> throw response.toIOException()
+                        is Informational -> throw IOException("HTTP ${response.statusCode}: informational response is not supported")
+                        is Redirection -> throw IOException("HTTP ${response.statusCode}: redirection response is not supported")
+                        else -> throw IOException("Unexpected response for changePassword")
+                    }
                 }
             } catch (e: Exception) {
                 logException("PATCH", "/users/$apiUserId/change_password", e)
@@ -318,19 +327,21 @@ class OpenApiNetworkClient @Inject constructor(
             val apiUserId = userId.toApiUserId()
             logRequest("POST", "/users/$apiUserId/avatar", avatarFile.toLogString())
             try {
-                val response = withGeneratedApi(accessToken) { api ->
-                    api.uploadUserAvatarWithHttpInfo(apiUserId, avatarFile)
-                }
-                logResponse("POST", "/users/$apiUserId/avatar", response.statusCode)
-                when (response) {
-                    is Success -> response.data?.msg
-                        ?: throw IOException("HTTP ${response.statusCode}: empty response body for uploadUserAvatar")
+                withAuthRetry(accessToken) { resolvedAccessToken ->
+                    val response = withGeneratedApi(resolvedAccessToken) { api ->
+                        api.uploadUserAvatarWithHttpInfo(apiUserId, avatarFile)
+                    }
+                    logResponse("POST", "/users/$apiUserId/avatar", response.statusCode)
+                    when (response) {
+                        is Success -> response.data?.msg
+                            ?: throw IOException("HTTP ${response.statusCode}: empty response body for uploadUserAvatar")
 
-                    is ClientError -> throw response.toIOException()
-                    is ServerError -> throw response.toIOException()
-                    is Informational -> throw IOException("HTTP ${response.statusCode}: informational response is not supported")
-                    is Redirection -> throw IOException("HTTP ${response.statusCode}: redirection response is not supported")
-                    else -> throw IOException("Unexpected response for uploadUserAvatar")
+                        is ClientError -> throw response.toIOException()
+                        is ServerError -> throw response.toIOException()
+                        is Informational -> throw IOException("HTTP ${response.statusCode}: informational response is not supported")
+                        is Redirection -> throw IOException("HTTP ${response.statusCode}: redirection response is not supported")
+                        else -> throw IOException("Unexpected response for uploadUserAvatar")
+                    }
                 }
             } catch (e: Exception) {
                 logException("POST", "/users/$apiUserId/avatar", e)
@@ -343,12 +354,14 @@ class OpenApiNetworkClient @Inject constructor(
             val path = "/playlists"
             logRequest("GET", path, "<empty>")
             try {
-                executeJsonRequest(
-                    request = authenticatedRequestBuilder(path, userId, accessToken)
-                        .get()
-                        .build(),
-                    expectedStatuses = setOf(200),
-                )
+                withAuthRetry(accessToken) { resolvedAccessToken ->
+                    executeJsonRequest(
+                        request = authenticatedRequestBuilder(path, userId, resolvedAccessToken)
+                            .get()
+                            .build(),
+                        expectedStatuses = setOf(200),
+                    )
+                }
             } catch (e: Exception) {
                 logException("GET", path, e)
                 throw e
@@ -363,12 +376,14 @@ class OpenApiNetworkClient @Inject constructor(
         val path = "/playlists/$playlistId"
         logRequest("GET", path, "<empty>")
         try {
-            executeJsonRequest(
-                request = authenticatedRequestBuilder(path, userId, accessToken)
-                    .get()
-                    .build(),
-                expectedStatuses = setOf(200),
-            )
+            withAuthRetry(accessToken) { resolvedAccessToken ->
+                executeJsonRequest(
+                    request = authenticatedRequestBuilder(path, userId, resolvedAccessToken)
+                        .get()
+                        .build(),
+                    expectedStatuses = setOf(200),
+                )
+            }
         } catch (e: Exception) {
             logException("GET", path, e)
             throw e
@@ -390,13 +405,15 @@ class OpenApiNetworkClient @Inject constructor(
         ).toRequestBody("application/json".toMediaType())
         logRequest("PATCH", path, requestBody.toLogString())
         try {
-            executeJsonRequest(
-                request = authenticatedRequestBuilder(path, userId, accessToken)
-                    .patch(requestBody)
-                    .header("Content-Type", "application/json")
-                    .build(),
-                expectedStatuses = setOf(200),
-            )
+            withAuthRetry(accessToken) { resolvedAccessToken ->
+                executeJsonRequest(
+                    request = authenticatedRequestBuilder(path, userId, resolvedAccessToken)
+                        .patch(requestBody)
+                        .header("Content-Type", "application/json")
+                        .build(),
+                    expectedStatuses = setOf(200),
+                )
+            }
         } catch (e: Exception) {
             logException("PATCH", path, e)
             throw e
@@ -427,12 +444,14 @@ class OpenApiNetworkClient @Inject constructor(
             .build()
         logRequest("POST", path, requestBody.toLogString())
         try {
-            val response: PlaylistCreateResponse = executeJsonRequest(
-                request = authenticatedRequestBuilder(path, userId, accessToken)
-                    .post(requestBody)
-                    .build(),
-                expectedStatuses = setOf(200, 201),
-            )
+            val response: PlaylistCreateResponse = withAuthRetry(accessToken) { resolvedAccessToken ->
+                executeJsonRequest(
+                    request = authenticatedRequestBuilder(path, userId, resolvedAccessToken)
+                        .post(requestBody)
+                        .build(),
+                    expectedStatuses = setOf(200, 201),
+                )
+            }
             response.playlistId.toLong()
         } catch (e: Exception) {
             logException("POST", path, e)
@@ -445,12 +464,14 @@ class OpenApiNetworkClient @Inject constructor(
             val path = "/playlists/$playlistId"
             logRequest("DELETE", path, "<empty>")
             try {
-                executeWithoutBody(
-                    request = authenticatedRequestBuilder(path, userId, accessToken)
-                        .delete()
-                        .build(),
-                    expectedStatuses = setOf(200, 204),
-                )
+                withAuthRetry(accessToken) { resolvedAccessToken ->
+                    executeWithoutBody(
+                        request = authenticatedRequestBuilder(path, userId, resolvedAccessToken)
+                            .delete()
+                            .build(),
+                        expectedStatuses = setOf(200, 204),
+                    )
+                }
             } catch (e: Exception) {
                 logException("DELETE", path, e)
                 throw e
@@ -468,13 +489,15 @@ class OpenApiNetworkClient @Inject constructor(
             .toRequestBody("application/json".toMediaType())
         logRequest("POST", path, requestBody.toLogString())
         try {
-            executeWithoutBody(
-                request = authenticatedRequestBuilder(path, userId, accessToken)
-                    .post(requestBody)
-                    .header("Content-Type", "application/json")
-                    .build(),
-                expectedStatuses = setOf(200, 201, 204),
-            )
+            withAuthRetry(accessToken) { resolvedAccessToken ->
+                executeWithoutBody(
+                    request = authenticatedRequestBuilder(path, userId, resolvedAccessToken)
+                        .post(requestBody)
+                        .header("Content-Type", "application/json")
+                        .build(),
+                    expectedStatuses = setOf(200, 201, 204),
+                )
+            }
         } catch (e: Exception) {
             logException("POST", path, e)
             throw e
@@ -492,13 +515,15 @@ class OpenApiNetworkClient @Inject constructor(
         val requestBody = coverFile.asRequestBody(resolveMediaType(coverMimeType))
         logRequest("POST", path, requestBody.toLogString())
         try {
-            executeWithoutBody(
-                request = authenticatedRequestBuilder(path, userId, accessToken)
-                    .post(requestBody)
-                    .header("Content-Type", coverMimeType ?: "image/*")
-                    .build(),
-                expectedStatuses = setOf(200, 201),
-            )
+            withAuthRetry(accessToken) { resolvedAccessToken ->
+                executeWithoutBody(
+                    request = authenticatedRequestBuilder(path, userId, resolvedAccessToken)
+                        .post(requestBody)
+                        .header("Content-Type", coverMimeType ?: "image/*")
+                        .build(),
+                    expectedStatuses = setOf(200, 201),
+                )
+            }
         } catch (e: Exception) {
             logException("POST", path, e)
             throw e
@@ -510,12 +535,14 @@ class OpenApiNetworkClient @Inject constructor(
             val path = "/tracks"
             logRequest("GET", path, "<empty>")
             try {
-                executeJsonRequest(
-                    request = authenticatedRequestBuilder(path, userId, accessToken)
-                        .get()
-                        .build(),
-                    expectedStatuses = setOf(200),
-                )
+                withAuthRetry(accessToken) { resolvedAccessToken ->
+                    executeJsonRequest(
+                        request = authenticatedRequestBuilder(path, userId, resolvedAccessToken)
+                            .get()
+                            .build(),
+                        expectedStatuses = setOf(200),
+                    )
+                }
             } catch (e: Exception) {
                 logException("GET", path, e)
                 throw e
@@ -545,12 +572,14 @@ class OpenApiNetworkClient @Inject constructor(
             .build()
         logRequest("POST", path, requestBody.toLogString())
         try {
-            val response: TrackUploadSuccessResponse = executeJsonRequest(
-                request = authenticatedRequestBuilder(path, userId, accessToken)
-                    .post(requestBody)
-                    .build(),
-                expectedStatuses = setOf(200, 201),
-            )
+            val response: TrackUploadSuccessResponse = withAuthRetry(accessToken) { resolvedAccessToken ->
+                executeJsonRequest(
+                    request = authenticatedRequestBuilder(path, userId, resolvedAccessToken)
+                        .post(requestBody)
+                        .build(),
+                    expectedStatuses = setOf(200, 201),
+                )
+            }
             response.trackId.toLong()
         } catch (e: Exception) {
             logException("POST", path, e)
@@ -578,13 +607,32 @@ class OpenApiNetworkClient @Inject constructor(
         }
     }
 
-    private fun sstu.grivvus.yamusic.openapi.models.TokenResponse.toNetworkToken(): TokenResponse {
-        return TokenResponse(
-            userId = userId.toLong(),
-            tokenType = tokenType,
-            accessToken = accessToken,
-            refreshToken = refreshToken,
-        )
+    private suspend fun <T> withAuthRetry(
+        accessToken: String?,
+        block: suspend (String?) -> T,
+    ): T {
+        val resolvedAccessToken = authSessionManager.resolveAccessToken(accessToken)
+        val initialError = try {
+            return block(resolvedAccessToken)
+        } catch (error: Exception) {
+            if (error.httpStatusCodeOrNull() != 401) {
+                throw error
+            }
+            error
+        }
+
+        val refreshedAccessToken =
+            authSessionManager.refreshAccessTokenAfterUnauthorized(resolvedAccessToken)
+                ?: throw initialError
+
+        return try {
+            block(refreshedAccessToken)
+        } catch (retryError: Exception) {
+            if (retryError.httpStatusCodeOrNull() == 401) {
+                authSessionManager.logout()
+            }
+            throw retryError
+        }
     }
 
     private fun ClientError<*>.toIOException(): IOException {
