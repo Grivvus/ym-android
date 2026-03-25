@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.sharp.Lock
 import androidx.compose.material.icons.sharp.LockReset
 import androidx.compose.material.icons.sharp.Password
@@ -17,16 +19,22 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,6 +47,10 @@ fun PasswordChangeDialog(
     onDismiss: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    var newPasswordVisible by rememberSaveable { mutableStateOf(false) }
+    var newPasswordConfirmVisible by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
 
     LaunchedEffect(uiState.success) {
@@ -70,13 +82,25 @@ fun PasswordChangeDialog(
                     onValueChange = viewModel::updateCurrentPassword,
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Current password") },
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (passwordVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     leadingIcon = {
                         Icon(
                             imageVector = appIcons.Lock,
                             contentDescription = "Current password"
                         )
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                            )
+                        }
                     },
                     isError = uiState.errorMessage != null
                 )
@@ -88,13 +112,25 @@ fun PasswordChangeDialog(
                     onValueChange = viewModel::updateNewPassword,
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("new password") },
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (newPasswordVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     leadingIcon = {
                         Icon(
                             imageVector = appIcons.Password,
                             contentDescription = "New password",
                         )
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = { newPasswordVisible = !newPasswordVisible }) {
+                            Icon(
+                                imageVector = if (newPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = if (newPasswordVisible) "Hide password" else "Show password"
+                            )
+                        }
                     },
                     isError = uiState.errorMessage != null
                 )
@@ -106,13 +142,27 @@ fun PasswordChangeDialog(
                     onValueChange = viewModel::updateConfirmPassword,
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Confirm password") },
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (newPasswordConfirmVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     leadingIcon = {
                         Icon(
                             imageVector = appIcons.LockReset,
                             contentDescription = "Confirm password",
                         )
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            newPasswordConfirmVisible = !newPasswordConfirmVisible
+                        }) {
+                            Icon(
+                                imageVector = if (newPasswordConfirmVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = if (newPasswordConfirmVisible) "Hide password" else "Show password"
+                            )
+                        }
                     },
                     isError = uiState.errorMessage != null
                 )
