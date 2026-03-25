@@ -31,9 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
-import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
 import sstu.grivvus.yamusic.ui.theme.appIcons
-import sstu.grivvus.yamusic.ui.theme.appIconsMirrored
 
 @Composable
 fun PasswordChangeDialog(
@@ -46,6 +44,7 @@ fun PasswordChangeDialog(
     LaunchedEffect(uiState.success) {
         if (uiState.success) {
             delay(1000)
+            viewModel.clear()
             onDismiss()
             Toast.makeText(context, "Password has change", Toast.LENGTH_SHORT).show()
         }
@@ -106,7 +105,7 @@ fun PasswordChangeDialog(
                     value = uiState.newPasswordConfirm,
                     onValueChange = viewModel::updateConfirmPassword,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Confirm password")},
+                    label = { Text("Confirm password") },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     leadingIcon = {
@@ -139,10 +138,7 @@ fun PasswordChangeDialog(
         },
         confirmButton = {
             Button(
-                onClick = {
-                    viewModel.changePassword()
-                    viewModel.updateSuccessFlag(uiState.errorMessage == null)
-                },
+                onClick = viewModel::changePassword,
                 enabled = !uiState.isLoading,
                 modifier = Modifier.widthIn(min = 100.dp)
             ) {

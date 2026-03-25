@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.sharp._360
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,6 +30,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -58,6 +60,7 @@ import coil3.compose.AsyncImage
 import sstu.grivvus.yamusic.components.BottomBar
 import sstu.grivvus.yamusic.components.ErrorSnackbar
 import sstu.grivvus.yamusic.ui.theme.YaMusicTheme
+import sstu.grivvus.yamusic.ui.theme.appIconsMirrored
 
 private data class CreatePlaylistDraft(
     val name: String = "",
@@ -145,7 +148,7 @@ fun MusicScreen(
                     },
                     actions = {
                         IconButton(onClick = { viewModel.refresh() }) {
-                            Text("Refresh")
+                            Icon(appIconsMirrored._360, contentDescription = "refresh screen")
                         }
                         if (selectedPlaylist != null) {
                             TextButton(
@@ -787,12 +790,13 @@ private fun UploadTrackDialog(
 }
 
 private fun Context.queryDisplayName(uri: Uri): String {
-    contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-        val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-        if (index >= 0 && cursor.moveToFirst()) {
-            return cursor.getString(index).orEmpty()
+    contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+        ?.use { cursor ->
+            val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (index >= 0 && cursor.moveToFirst()) {
+                return cursor.getString(index).orEmpty()
+            }
         }
-    }
     return uri.lastPathSegment.orEmpty()
 }
 

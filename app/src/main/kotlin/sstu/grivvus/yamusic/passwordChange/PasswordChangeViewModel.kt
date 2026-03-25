@@ -59,19 +59,39 @@ class PasswordChangeViewModel @Inject constructor(
 
 
     fun changePassword() = viewModelScope.launch {
+        if (_isLoading.value) return@launch
+
+        _errorMessage.value = null
+        _success.value = false
+
+        if (_currentPassword.value.isBlank()) {
+            _errorMessage.value = "current password shouldn't be empty"
+            return@launch
+        }
+
         if (_newPassword.value.length < 6) {
             _errorMessage.value = "password's length should be 6 symbols or more"
-        } else if (_newPassword.value != _newPasswordConfirm.value) {
+            return@launch
+        }
+
+        if (_newPassword.value != _newPasswordConfirm.value) {
             _errorMessage.value = "new password and confirm didn't match"
-        } else {
-            try {
-                userRepository.changePassword(
-                    _currentPassword.value,
-                    _newPassword.value,
-                )
-            } catch (e: IOException) {
-                _errorMessage.value = e.message
-            }
+            return@launch
+        }
+
+        _isLoading.value = true
+        try {
+            userRepository.changePassword(
+                _currentPassword.value,
+                _newPassword.value,
+            )
+            _success.value = true
+        } catch (e: IOException) {
+            _errorMessage.value = e.message ?: "Failed to change password"
+        } catch (_: Exception) {
+            _errorMessage.value = "Can't change password due to unexpected error"
+        } finally {
+            _isLoading.value = false
         }
     }
 
@@ -85,10 +105,6 @@ class PasswordChangeViewModel @Inject constructor(
 
     fun updateConfirmPassword(value: String) {
         _newPasswordConfirm.value = value
-    }
-
-    fun updateSuccessFlag(value: Boolean) {
-        _success.value = value
     }
 
     fun clear() {
