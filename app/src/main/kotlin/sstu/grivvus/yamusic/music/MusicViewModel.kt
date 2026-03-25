@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.data.MusicLibraryData
 import sstu.grivvus.yamusic.data.MusicRepository
 import sstu.grivvus.yamusic.data.local.LibraryTrack
+import sstu.grivvus.yamusic.data.network.SessionExpiredException
 import java.io.IOException
 import javax.inject.Inject
 
@@ -67,6 +68,8 @@ class MusicViewModel @Inject constructor(
             try {
                 val data = repository.loadLibrary(refreshFromNetwork = true)
                 applyLibraryData(data)
+            } catch (_: SessionExpiredException) {
+                return@launch
             } catch (error: Exception) {
                 val fallbackData =
                     runCatching { repository.loadLibrary(refreshFromNetwork = false) }.getOrNull()
@@ -144,6 +147,8 @@ class MusicViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isMutating = true, errorMessage = null)
             try {
                 applyLibraryData(block())
+            } catch (_: SessionExpiredException) {
+                return@launch
             } catch (error: Exception) {
                 _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
             } finally {

@@ -63,7 +63,6 @@ fun ProfileScreen(
     navigateToMusic: () -> Unit,
     navigateToLibrary: () -> Unit,
     navigateToProfile: () -> Unit,
-    onLogOut: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     var showPasswordDialog by remember { mutableStateOf(false) }
@@ -197,7 +196,7 @@ fun ProfileScreen(
                             }
                         }
                         Column {
-                            IconButton({ viewModel.logOut(); onLogOut() }) {
+                            IconButton(onClick = viewModel::logOut) {
                                 Icon(appIconsMirrored.Logout, "Logout button")
                             }
                         }

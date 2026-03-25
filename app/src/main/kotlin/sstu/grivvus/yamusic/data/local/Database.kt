@@ -37,7 +37,7 @@ object DatabaseProvider {
         if (instance == null) {
             initDB(context)
         }
-        return instance!!
+        return checkNotNull(instance) { "Database instance was not initialized" }
     }
 
     fun deleteDB(context: Context) {

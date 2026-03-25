@@ -13,7 +13,7 @@ import sstu.grivvus.yamusic.data.local.Playlist
 import sstu.grivvus.yamusic.data.local.PlaylistDao
 import sstu.grivvus.yamusic.data.local.PlaylistTrackCrossRef
 import sstu.grivvus.yamusic.data.local.PlaylistTrackDao
-import sstu.grivvus.yamusic.data.local.UserDao
+import sstu.grivvus.yamusic.data.network.AuthSessionManager
 import sstu.grivvus.yamusic.data.network.OpenApiNetworkClient
 import sstu.grivvus.yamusic.di.DefaultDispatcher
 import sstu.grivvus.yamusic.playlistCoverUri
@@ -35,8 +35,8 @@ class MusicRepository @Inject constructor(
     private val playlistDao: PlaylistDao,
     private val libraryTrackDao: LibraryTrackDao,
     private val playlistTrackDao: PlaylistTrackDao,
-    private val userDao: UserDao,
     private val networkClient: OpenApiNetworkClient,
+    private val authSessionManager: AuthSessionManager,
     @ApplicationContext private val context: Context,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher,
 ) {
@@ -311,7 +311,7 @@ class MusicRepository @Inject constructor(
     }
 
     private suspend fun requireActiveUser(): LocalUser {
-        return userDao.getActiveUser() ?: throw IOException("Active user was not found")
+        return authSessionManager.requireActiveUser()
     }
 
     private fun prepareUploadFile(sourceUri: Uri): PreparedUploadFile {

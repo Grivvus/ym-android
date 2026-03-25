@@ -5,23 +5,23 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
 import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
+import sstu.grivvus.yamusic.data.network.AuthSessionManager
 
 @HiltAndroidApp
 class MusicApplication : Application(), SingletonImageLoader.Factory {
-    override fun onCreate() {
-        super.onCreate()
-        initCoroutineExceptionHandler()
-    }
-
     override fun newImageLoader(context: PlatformContext): ImageLoader {
+        val entryPoint = EntryPointAccessors.fromApplication(
+            applicationContext,
+            MusicApplicationEntryPoint::class.java,
+        )
         val imageHttpClient = OkHttpClient.Builder()
-            .addInterceptor(AuthenticatedApiMediaInterceptor(applicationContext))
+            .addInterceptor(AuthenticatedApiMediaInterceptor(entryPoint.authSessionManager()))
             .build()
 
         return ImageLoader.Builder(context)
@@ -31,9 +31,9 @@ class MusicApplication : Application(), SingletonImageLoader.Factory {
             .build()
     }
 
-    private fun initCoroutineExceptionHandler() {
-        CoroutineScope(Dispatchers.IO).launch {
-            CoroutineExceptionHandler { _, _ -> }
-        }
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface MusicApplicationEntryPoint {
+        fun authSessionManager(): AuthSessionManager
     }
 }

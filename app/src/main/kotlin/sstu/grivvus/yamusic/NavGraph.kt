@@ -1,10 +1,14 @@
 package sstu.grivvus.yamusic
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -12,6 +16,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.CoroutineScope
 import sstu.grivvus.yamusic.components.BlankScreen
+import sstu.grivvus.yamusic.data.network.SessionState
 import sstu.grivvus.yamusic.login.LoginScreen
 import sstu.grivvus.yamusic.music.MusicScreen
 import sstu.grivvus.yamusic.music.UploadScreen
@@ -30,8 +35,30 @@ fun YaMusicNavGraph(
         NavigationActions(navController)
     }
 ) {
+    val sessionViewModel: AppSessionViewModel = hiltViewModel()
+    val sessionState by sessionViewModel.sessionState.collectAsStateWithLifecycle()
     val currentNavBackStackEntry by navController.currentBackStackEntryAsState()
-    currentNavBackStackEntry?.destination?.route ?: startDestination
+    val currentRoute = currentNavBackStackEntry?.destination?.route ?: startDestination
+    val protectedRoutes = remember {
+        setOf(
+            AppDestinations.MUSIC_ROUTE,
+            AppDestinations.PROFILE_ROUTE,
+            AppDestinations.LIBRARY_ROUTE,
+            AppDestinations.UPLOAD_ROUTE,
+            AppDestinations.PLAYER_ROUTE,
+        )
+    }
+
+    LaunchedEffect(sessionState, currentRoute, navController) {
+        if (sessionState is SessionState.Unauthenticated && currentRoute in protectedRoutes) {
+            navController.navigate(AppDestinations.LOGIN_ROUTE) {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    inclusive = true
+                }
+                launchSingleTop = true
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -77,7 +104,6 @@ fun YaMusicNavGraph(
                 { navActions.navigateToMusic() },
                 { navActions.navigateToLibrary() },
                 { navActions.navigateToProfile() },
-                { navActions.navigateToLogin() },
             )
         }
 

@@ -1,8 +1,6 @@
 package sstu.grivvus.yamusic.data.network
 
-import android.content.Context
 import android.util.Log
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -45,7 +43,7 @@ import sstu.grivvus.yamusic.openapi.infrastructure.ApiClient as GeneratedApiClie
 
 @Singleton
 class OpenApiNetworkClient @Inject constructor(
-    @ApplicationContext context: Context,
+    private val authSessionManager: AuthSessionManager,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
     data class RemoteUser(
@@ -60,7 +58,6 @@ class OpenApiNetworkClient @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
     private val generatedApiMutex = Mutex()
-    private val authSessionManager = AuthSessionManager(context)
 
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
@@ -629,7 +626,7 @@ class OpenApiNetworkClient @Inject constructor(
             block(refreshedAccessToken)
         } catch (retryError: Exception) {
             if (retryError.httpStatusCodeOrNull() == 401) {
-                authSessionManager.logout()
+                authSessionManager.markSessionExpired()
             }
             throw retryError
         }

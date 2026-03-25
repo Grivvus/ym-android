@@ -16,6 +16,7 @@ import sstu.grivvus.yamusic.data.ServerInfoRepository
 import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.ChangeServerDto
 import sstu.grivvus.yamusic.data.network.ChangeUserDto
+import sstu.grivvus.yamusic.data.network.SessionExpiredException
 import sstu.grivvus.yamusic.data.network.isServerSideError
 import java.io.IOException
 import javax.inject.Inject
@@ -109,6 +110,8 @@ class ProfileViewModel
             try {
                 userRepository.updateLocalUserFromNetwork()
                 applyCurrentUser()
+            } catch (_: SessionExpiredException) {
+                return@launch
             } catch (e: Exception) {
                 _errorMsg.value = "can't connect to the server, local data will be used"
             } finally {
@@ -137,8 +140,10 @@ class ProfileViewModel
         _serverPort.value = value
     }
 
-    fun logOut() = viewModelScope.launch {
-        userRepository.localDataSource.clearTable()
+    fun logOut() {
+        viewModelScope.launch {
+            userRepository.logout()
+        }
     }
 
     fun uploadAvatar(context: Context, uri: Uri) = viewModelScope.launch {
@@ -147,6 +152,8 @@ class ProfileViewModel
             context.contentResolver.openInputStream(uri)?.close()
             userRepository.updateCurrentUserAvatar(uri.toString())
             applyCurrentUser()
+        } catch (_: SessionExpiredException) {
+            return@launch
         } catch (e: Exception) {
             _errorMsg.value = "Failed to set avatar image"
         } finally {
@@ -155,11 +162,10 @@ class ProfileViewModel
     }
 
     fun tryToApplyChanges() = viewModelScope.launch {
-        val currentUserData = userRepository.getCurrentUser()
-        assert(currentUserData != null)
         try {
+            val currentUserData = userRepository.requireCurrentUser()
             val changeUser = ChangeUserDto(
-                currentUserData!!.username,
+                currentUserData.username,
                 if (_username.value != currentUserData.username) _username.value else null,
                 if (_email.value != currentUserData.email) _email.value else null
             )
@@ -184,6 +190,8 @@ class ProfileViewModel
             userRepository.applyChanges(changeUser)
             applyCurrentUser()
             _errorMsg.value = "Profile updated successfully"
+        } catch (_: SessionExpiredException) {
+            return@launch
         } catch (e: IOException) {
             _errorMsg.value = if (e.isServerSideError()) {
                 "Server error. Please try again later"

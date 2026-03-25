@@ -1,16 +1,13 @@
 package sstu.grivvus.yamusic
 
-import android.content.Context
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 import sstu.grivvus.yamusic.data.network.AuthSessionManager
 
 class AuthenticatedApiMediaInterceptor(
-    private val context: Context,
+    private val authSessionManager: AuthSessionManager,
 ) : Interceptor {
-    private val authSessionManager = AuthSessionManager(context)
-
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         if (!shouldAttachAccessToken(request)) {
@@ -35,7 +32,7 @@ class AuthenticatedApiMediaInterceptor(
         initialResponse.close()
         val retryResponse = chain.proceed(request.withBearerToken(refreshedAccessToken))
         if (retryResponse.code == 401) {
-            authSessionManager.logoutBlocking()
+            authSessionManager.markSessionExpiredBlocking()
         }
         return retryResponse
     }
