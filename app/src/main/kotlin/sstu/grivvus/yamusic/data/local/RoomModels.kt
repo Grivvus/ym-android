@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 
@@ -35,28 +36,32 @@ data class Tokens(
 @Entity(
     tableName = "audio_tracks",
     foreignKeys = [
-        ForeignKey(Artist::class, ["id"], ["artist_id"]),
-        ForeignKey(Album::class, ["id"], ["album_id"])
+        ForeignKey(Artist::class, ["remote_id"], ["artist_id"]),
     ],
+    indices = [Index("artist_id")],
 )
 @TypeConverters(UriConverter::class)
 data class AudioTrack(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "server_id") val servId: Long,
+    @PrimaryKey
+    @ColumnInfo(name = "remote_id")
+    val remoteId: Long,
     @ColumnInfo("artist_id") val artistId: Long,
-    @ColumnInfo("album_id") val albumId: Long,
     @ColumnInfo() val name: String,
-    @ColumnInfo() val duration: Long,
-    @ColumnInfo() val uri: Uri,
-    @ColumnInfo val localPath: String? = null,
-    @ColumnInfo val isDownloaded: Boolean = false
+    @ColumnInfo(name = "duration_ms") val durationMs: Long? = null,
+    @ColumnInfo(name = "uri_fast") val uriFast: Uri? = null,
+    @ColumnInfo(name = "uri_standard") val uriStandard: Uri? = null,
+    @ColumnInfo(name = "uri_high") val uriHigh: Uri? = null,
+    @ColumnInfo(name = "uri_lossless") val uriLossless: Uri? = null,
+    @ColumnInfo(name = "local_path") val localPath: String? = null,
+    @ColumnInfo(name = "is_downloaded") val isDownloaded: Boolean = false,
 )
 
 @Entity(tableName = "artist")
 @TypeConverters(UriConverter::class)
 data class Artist(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "remote_id") val remoteId: Long,
+    @PrimaryKey
+    @ColumnInfo(name = "remote_id")
+    val remoteId: Long,
     @ColumnInfo() val name: String,
     @ColumnInfo(name = "image_uri") val imageUri: Uri? = null,
 )
@@ -64,14 +69,18 @@ data class Artist(
 @Entity(
     tableName = "album",
     foreignKeys = [
-        ForeignKey(Artist::class, ["id"], ["artist_id"])
-    ]
+        ForeignKey(Artist::class, ["remote_id"], ["artist_id"])
+    ],
+    indices = [Index("artist_id")],
 )
+@TypeConverters(UriConverter::class)
 data class Album(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "remote_id") val remoteId: Long,
+    @PrimaryKey
+    @ColumnInfo(name = "remote_id")
+    val remoteId: Long,
     @ColumnInfo(name = "artist_id") val artistId: Long,
-    @ColumnInfo() val name: String,
+    @ColumnInfo() val name: String = "",
+    @ColumnInfo(name = "cover_uri") val coverUri: Uri? = null,
 )
 
 @Entity(tableName = "playlist")
@@ -86,27 +95,30 @@ data class Playlist(
     @ColumnInfo(name = "tracks_seeded") val tracksSeeded: Boolean = false,
 )
 
-@Entity(tableName = "library_track")
-@TypeConverters(UriConverter::class)
-data class LibraryTrack(
-    @PrimaryKey
-    @ColumnInfo(name = "remote_id")
-    val remoteId: Long,
-    @ColumnInfo() val name: String,
-    @ColumnInfo(name = "artist_id") val artistId: Long,
-    @ColumnInfo(name = "cover_uri") val coverUri: Uri? = null,
-    @ColumnInfo(name = "local_path") val localPath: String? = null,
-)
-
 @Entity(
     tableName = "playlist_track_cross_ref",
     primaryKeys = ["playlist_id", "track_id"],
     foreignKeys = [
         ForeignKey(Playlist::class, ["remote_id"], ["playlist_id"], onDelete = ForeignKey.CASCADE),
-        ForeignKey(LibraryTrack::class, ["remote_id"], ["track_id"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(AudioTrack::class, ["remote_id"], ["track_id"], onDelete = ForeignKey.CASCADE),
     ],
+    indices = [Index("track_id")],
 )
 data class PlaylistTrackCrossRef(
     @ColumnInfo(name = "playlist_id") val playlistId: Long,
     @ColumnInfo(name = "track_id") val trackId: Long,
+)
+
+@Entity(
+    tableName = "track_album_cross_ref",
+    primaryKeys = ["track_id", "album_id"],
+    foreignKeys = [
+        ForeignKey(AudioTrack::class, ["remote_id"], ["track_id"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(Album::class, ["remote_id"], ["album_id"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [Index("album_id")],
+)
+data class TrackAlbumCrossRef(
+    @ColumnInfo(name = "track_id") val trackId: Long,
+    @ColumnInfo(name = "album_id") val albumId: Long,
 )

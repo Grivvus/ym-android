@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.data.MusicLibraryData
 import sstu.grivvus.yamusic.data.MusicRepository
-import sstu.grivvus.yamusic.data.local.LibraryTrack
+import sstu.grivvus.yamusic.data.TrackBundle
 import sstu.grivvus.yamusic.data.network.SessionExpiredException
 import java.io.IOException
 import javax.inject.Inject
@@ -185,12 +185,13 @@ class MusicViewModel @Inject constructor(
         )
     }
 
-    private fun toTrackUi(track: LibraryTrack): TrackItemUi {
+    private fun toTrackUi(track: TrackBundle): TrackItemUi {
+        val primaryAlbum = track.albums.firstOrNull()
         return TrackItemUi(
-            id = track.remoteId,
-            name = track.name,
-            subtitle = track.name,
-            coverUri = track.coverUri,
+            id = track.track.remoteId,
+            name = track.track.name,
+            subtitle = primaryAlbum?.name?.takeIf { it.isNotBlank() } ?: track.track.name,
+            coverUri = primaryAlbum?.coverUri,
         )
     }
 

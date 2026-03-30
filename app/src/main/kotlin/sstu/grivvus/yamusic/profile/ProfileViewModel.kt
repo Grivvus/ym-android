@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import sstu.grivvus.yamusic.Settings
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.ServerInfoRepository
 import sstu.grivvus.yamusic.data.UserRepository
@@ -182,7 +181,6 @@ class ProfileViewModel
             // а так же не проверяю, что сервер по этим данным доступен
             serverInfoRepository.saveServerInfo(_serverHost.value, _serverPort.value)
             applyCurrentServerSettings()
-            Settings.configureApi(_serverHost.value, _serverPort.value)
 
             if (changeUser.newEmail == null && changeUser.newUsername == null) {
                 return@launch

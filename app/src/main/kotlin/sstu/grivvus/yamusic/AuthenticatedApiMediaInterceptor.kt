@@ -3,10 +3,12 @@ package sstu.grivvus.yamusic
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
+import sstu.grivvus.yamusic.data.ServerInfoRepository
 import sstu.grivvus.yamusic.data.network.AuthSessionManager
 
 class AuthenticatedApiMediaInterceptor(
     private val authSessionManager: AuthSessionManager,
+    private val serverInfoRepository: ServerInfoRepository,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
@@ -38,7 +40,7 @@ class AuthenticatedApiMediaInterceptor(
     }
 
     private fun shouldAttachAccessToken(request: Request): Boolean {
-        if (request.url.host != Settings.apiHost || request.url.port.toString() != Settings.apiPort) {
+        if (!serverInfoRepository.matchesConfiguredServer(request.url.host, request.url.port)) {
             return false
         }
 

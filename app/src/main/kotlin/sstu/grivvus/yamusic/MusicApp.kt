@@ -11,6 +11,7 @@ import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
+import sstu.grivvus.yamusic.data.ServerInfoRepository
 import sstu.grivvus.yamusic.data.network.AuthSessionManager
 
 @HiltAndroidApp
@@ -21,7 +22,12 @@ class MusicApplication : Application(), SingletonImageLoader.Factory {
             MusicApplicationEntryPoint::class.java,
         )
         val imageHttpClient = OkHttpClient.Builder()
-            .addInterceptor(AuthenticatedApiMediaInterceptor(entryPoint.authSessionManager()))
+            .addInterceptor(
+                AuthenticatedApiMediaInterceptor(
+                    authSessionManager = entryPoint.authSessionManager(),
+                    serverInfoRepository = entryPoint.serverInfoRepository(),
+                )
+            )
             .build()
 
         return ImageLoader.Builder(context)
@@ -35,5 +41,6 @@ class MusicApplication : Application(), SingletonImageLoader.Factory {
     @InstallIn(SingletonComponent::class)
     interface MusicApplicationEntryPoint {
         fun authSessionManager(): AuthSessionManager
+        fun serverInfoRepository(): ServerInfoRepository
     }
 }

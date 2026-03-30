@@ -10,7 +10,6 @@ import sstu.grivvus.yamusic.data.network.ChangeUserDto
 import sstu.grivvus.yamusic.data.network.NetworkUserCreate
 import sstu.grivvus.yamusic.data.network.NetworkUserLogin
 import sstu.grivvus.yamusic.data.network.OpenApiNetworkClient
-import sstu.grivvus.yamusic.getAvatarUrl
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
@@ -18,6 +17,7 @@ import javax.inject.Inject
 class UserRepository @Inject constructor(
     private val networkClient: OpenApiNetworkClient,
     private val authSessionManager: AuthSessionManager,
+    private val serverInfoRepository: ServerInfoRepository,
     @ApplicationContext private val context: Context,
 ) {
     suspend fun register(user: NetworkUserCreate) {
@@ -155,7 +155,7 @@ class UserRepository @Inject constructor(
     }
 
     private fun buildRemoteAvatarUri(userId: Long, cacheBust: Boolean = false): Uri {
-        val baseUrl = getAvatarUrl(userId)
+        val baseUrl = serverInfoRepository.avatarUrl(userId)
         val fullUrl = if (cacheBust) {
             "$baseUrl?ts=${System.currentTimeMillis()}"
         } else {

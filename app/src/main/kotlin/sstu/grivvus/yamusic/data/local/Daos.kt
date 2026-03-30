@@ -51,11 +51,11 @@ interface UserDao {
 
 @Dao
 interface AudioTrackDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(track: AudioTrack)
+    @Upsert
+    suspend fun upsert(track: AudioTrack)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(tracks: List<AudioTrack>)
+    @Upsert
+    suspend fun upsertAll(tracks: List<AudioTrack>)
 
     @Update
     suspend fun update(track: AudioTrack)
@@ -64,13 +64,13 @@ interface AudioTrackDao {
     suspend fun delete(track: AudioTrack)
 
     @Query("SELECT * FROM audio_tracks ORDER BY name ASC")
-    suspend fun getAllTracks(): List<AudioTrack>
+    suspend fun getAll(): List<AudioTrack>
 
 //    @Query("SELECT * FROM audio_tracks WHERE is_favorite = 1 ORDER BY title ASC")
 //    suspend fun getFavoriteTracks(): List<AudioTrack>
 
-    @Query("SELECT * FROM audio_tracks WHERE id = :trackId")
-    suspend fun getTrackById(trackId: Long): AudioTrack?
+    @Query("SELECT * FROM audio_tracks WHERE remote_id = :trackId LIMIT 1")
+    suspend fun getById(trackId: Long): AudioTrack?
 
 //    @Query("SELECT * FROM audio_tracks WHERE media_store_id = :mediaStoreId")
 //    suspend fun getTrackByMediaStoreId(mediaStoreId: Long): AudioTrack?
@@ -83,6 +83,54 @@ interface AudioTrackDao {
 
     @Query("DELETE FROM audio_tracks")
     suspend fun clearAll()
+}
+
+@Dao
+interface TrackAlbumDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(ref: TrackAlbumCrossRef)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(refs: List<TrackAlbumCrossRef>)
+
+    @Query("SELECT * FROM track_album_cross_ref")
+    suspend fun getAll(): List<TrackAlbumCrossRef>
+
+    @Query("SELECT album_id FROM track_album_cross_ref WHERE track_id = :trackId ORDER BY album_id ASC")
+    suspend fun getAlbumIdsForTrack(trackId: Long): List<Long>
+
+    @Query("DELETE FROM track_album_cross_ref WHERE track_id = :trackId")
+    suspend fun deleteForTrack(trackId: Long)
+
+    @Query("DELETE FROM track_album_cross_ref")
+    suspend fun clearAll()
+}
+
+@Dao
+interface ArtistDao {
+    @Upsert
+    suspend fun upsert(artist: Artist)
+
+    @Upsert
+    suspend fun upsertAll(artists: List<Artist>)
+
+    @Query("SELECT * FROM artist WHERE remote_id = :artistId LIMIT 1")
+    suspend fun getById(artistId: Long): Artist?
+}
+
+@Dao
+interface AlbumDao {
+    @Upsert
+    suspend fun upsert(album: Album)
+
+    @Upsert
+    suspend fun upsertAll(albums: List<Album>)
+
+    @Query("SELECT * FROM album ORDER BY name ASC")
+    suspend fun getAll(): List<Album>
+
+    @Query("SELECT * FROM album WHERE remote_id = :albumId LIMIT 1")
+    suspend fun getById(albumId: Long): Album?
 }
 
 @Dao
@@ -101,21 +149,6 @@ interface PlaylistDao {
 
     @Query("DELETE FROM playlist WHERE remote_id = :playlistId")
     suspend fun deleteById(playlistId: Long)
-}
-
-@Dao
-interface LibraryTrackDao {
-    @Upsert
-    suspend fun upsert(track: LibraryTrack)
-
-    @Upsert
-    suspend fun upsertAll(tracks: List<LibraryTrack>)
-
-    @Query("SELECT * FROM library_track ORDER BY name ASC")
-    suspend fun getAll(): List<LibraryTrack>
-
-    @Query("SELECT * FROM library_track WHERE remote_id = :trackId LIMIT 1")
-    suspend fun getById(trackId: Long): LibraryTrack?
 }
 
 @Dao

@@ -16,7 +16,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import sstu.grivvus.yamusic.Settings
+import sstu.grivvus.yamusic.data.ServerInfoRepository
 import sstu.grivvus.yamusic.data.local.LocalUser
 import sstu.grivvus.yamusic.data.local.UserDao
 import sstu.grivvus.yamusic.di.ApplicationScope
@@ -31,6 +31,7 @@ import javax.inject.Singleton
 @Singleton
 class AuthSessionManager @Inject constructor(
     private val userDao: UserDao,
+    private val serverInfoRepository: ServerInfoRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     @ApplicationScope applicationScope: CoroutineScope,
 ) {
@@ -180,7 +181,7 @@ class AuthSessionManager @Inject constructor(
     }
 
     private fun defaultBaseUrl(): String {
-        return "http://${Settings.apiHost}:${Settings.apiPort}"
+        return serverInfoRepository.currentBaseUrl()
     }
 
     private fun buildHttpErrorMessage(statusCode: Int, body: String?): String {

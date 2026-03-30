@@ -15,7 +15,7 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okio.Buffer
-import sstu.grivvus.yamusic.Settings
+import sstu.grivvus.yamusic.data.ServerInfoRepository
 import sstu.grivvus.yamusic.di.IoDispatcher
 import sstu.grivvus.yamusic.openapi.apis.DefaultApi
 import sstu.grivvus.yamusic.openapi.infrastructure.ClientError
@@ -26,7 +26,6 @@ import sstu.grivvus.yamusic.openapi.infrastructure.Success
 import sstu.grivvus.yamusic.openapi.models.PlaylistCreateResponse
 import sstu.grivvus.yamusic.openapi.models.PlaylistResponse
 import sstu.grivvus.yamusic.openapi.models.PlaylistWithTracksResponse
-import sstu.grivvus.yamusic.openapi.models.PlaylistsResponseInner
 import sstu.grivvus.yamusic.openapi.models.TokenResponse
 import sstu.grivvus.yamusic.openapi.models.TrackMetadata
 import sstu.grivvus.yamusic.openapi.models.TrackUploadSuccessResponse
@@ -44,6 +43,7 @@ import sstu.grivvus.yamusic.openapi.infrastructure.ApiClient as GeneratedApiClie
 @Singleton
 class OpenApiNetworkClient @Inject constructor(
     private val authSessionManager: AuthSessionManager,
+    private val serverInfoRepository: ServerInfoRepository,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
     data class RemoteUser(
@@ -346,7 +346,7 @@ class OpenApiNetworkClient @Inject constructor(
             }
         }
 
-    suspend fun getPlaylists(userId: Long, accessToken: String?): List<PlaylistsResponseInner> =
+    suspend fun getPlaylists(userId: Long, accessToken: String?): List<PlaylistResponse> =
         withContext(ioDispatcher) {
             val path = "/playlists"
             logRequest("GET", path, "<empty>")
@@ -585,7 +585,7 @@ class OpenApiNetworkClient @Inject constructor(
     }
 
     private fun defaultApi(): DefaultApi {
-        return defaultApi(baseUrl = "http://${Settings.apiHost}:${Settings.apiPort}")
+        return defaultApi(baseUrl = serverInfoRepository.currentBaseUrl())
     }
 
     private fun defaultApi(baseUrl: String): DefaultApi {
@@ -735,7 +735,7 @@ class OpenApiNetworkClient @Inject constructor(
     }
 
     private fun defaultBaseUrl(): String {
-        return "http://${Settings.apiHost}:${Settings.apiPort}"
+        return serverInfoRepository.currentBaseUrl()
     }
 
     private fun resolveMediaType(mimeType: String?) =

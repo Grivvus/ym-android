@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import sstu.grivvus.yamusic.Settings
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.ServerInfoRepository
 import sstu.grivvus.yamusic.data.network.OpenApiNetworkClient
@@ -68,7 +67,6 @@ constructor(
             try {
                 networkClient.ping(host, portInt)
                 serverInfoRepository.saveServerInfo(host, portValue)
-                Settings.configureApi(host, portValue)
                 onSuccess()
             } catch (e: IOException) {
                 showError("Unable to connect to server. Check host, port and /ping endpoint")

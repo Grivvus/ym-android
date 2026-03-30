@@ -10,6 +10,11 @@ plugins {
     alias(libs.plugins.openapi.generator)
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.generateKotlin", "true")
+}
+
 val openApiSpec = rootProject.layout.projectDirectory.file("openapi/openapi.yml")
 val openApiOutputDir = layout.buildDirectory.dir("generated/openapi")
 val openApiRemoteSpecUrl = providers.gradleProperty("openapi.remoteSpecUrl").orNull
@@ -162,6 +167,11 @@ val patchOpenApiGeneratedSources = tasks.register("patchOpenApiGeneratedSources"
 tasks.named("openApiGenerate") {
     dependsOn(syncOpenApiSpec)
     onlyIf { openApiSpec.asFile.exists() }
+    outputs.upToDateWhen { false }
+    outputs.doNotCacheIf("Always regenerate OpenAPI sources from the latest spec") { true }
+    doFirst {
+        delete(openApiOutputDir)
+    }
 }
 
 tasks.named("preBuild") {

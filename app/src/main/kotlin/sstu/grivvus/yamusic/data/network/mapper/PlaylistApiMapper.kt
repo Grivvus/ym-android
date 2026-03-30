@@ -3,8 +3,8 @@ package sstu.grivvus.yamusic.data.network.mapper
 import javax.inject.Inject
 import javax.inject.Singleton
 import sstu.grivvus.yamusic.data.network.model.NetworkPlaylist
+import sstu.grivvus.yamusic.openapi.models.PlaylistResponse
 import sstu.grivvus.yamusic.openapi.models.PlaylistWithTracksResponse
-import sstu.grivvus.yamusic.openapi.models.PlaylistsResponseInner
 
 @Singleton
 class PlaylistApiMapper @Inject constructor() {
@@ -12,11 +12,11 @@ class PlaylistApiMapper @Inject constructor() {
         return TODO("Map playlist details response to internal playlist model")
     }
 
-    fun mapPlaylistSummary(response: PlaylistsResponseInner): NetworkPlaylist {
+    fun mapPlaylistSummary(response: PlaylistResponse): NetworkPlaylist {
         return TODO("Map playlist list item to internal playlist model")
     }
 
-    fun mapPlaylists(response: List<PlaylistsResponseInner>): List<NetworkPlaylist> {
+    fun mapPlaylists(response: List<PlaylistResponse>): List<NetworkPlaylist> {
         return TODO("Map playlist list response to internal playlist models")
     }
 }
