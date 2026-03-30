@@ -2,6 +2,7 @@ package sstu.grivvus.yamusic.data.network.core
 
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.SerializationException
 import org.junit.Test
@@ -17,6 +18,7 @@ class DefaultApiExecutorTest {
     private val executor = DefaultApiExecutor(
         networkLogger = networkLogger,
         errorBodyParser = DefaultErrorBodyParser(),
+        ioDispatcher = UnconfinedTestDispatcher(),
     )
 
     @Test

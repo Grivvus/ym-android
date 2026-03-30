@@ -5,18 +5,16 @@ import kotlinx.coroutines.sync.withLock
 import sstu.grivvus.yamusic.data.network.auth.AuthSessionManager
 import sstu.grivvus.yamusic.data.network.auth.SessionRequiredException
 import sstu.grivvus.yamusic.openapi.apis.DefaultApi
-import timber.log.Timber
 import javax.inject.Inject
+import javax.inject.Provider
 import javax.inject.Singleton
 import sstu.grivvus.yamusic.openapi.infrastructure.ApiClient as GeneratedApiClient
 
 @Singleton
 class OpenApiGeneratedApiProvider @Inject constructor(
     private val apiBaseUrlProvider: ApiBaseUrlProvider,
-    private val authSessionManager: AuthSessionManager,
+    private val authSessionManagerProvider: Provider<AuthSessionManager>,
 ) : GeneratedApiProvider {
-    // techdebt
-    // figure-out how to remove this mutex
     private val generatedApiMutex = Mutex()
 
     override suspend fun <T> withPublicApi(block: suspend (DefaultApi) -> T): T {
@@ -24,7 +22,8 @@ class OpenApiGeneratedApiProvider @Inject constructor(
     }
 
     override suspend fun <T> withAuthorizedApi(block: suspend (DefaultApi) -> T): T {
-        val accessToken = authSessionManager.resolveAccessToken()
+        val accessToken = authSessionManagerProvider.get()
+            .resolveAccessToken()
             ?.takeIf { it.isNotBlank() }
             ?: throw SessionRequiredException()
         return withGeneratedApi(accessToken = accessToken, block = block)
@@ -35,7 +34,6 @@ class OpenApiGeneratedApiProvider @Inject constructor(
         block: suspend (DefaultApi) -> T,
     ): T {
         return generatedApiMutex.withLock {
-            Timber.tag("FIX").w("used global mutex, find out how to remove it")
             val previousAccessToken = GeneratedApiClient.accessToken
             GeneratedApiClient.accessToken = accessToken
             try {

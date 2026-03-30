@@ -1,12 +1,14 @@
 package sstu.grivvus.yamusic.data.network.core
 
 import com.google.common.truth.Truth.assertThat
+import javax.inject.Provider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
+import sstu.grivvus.yamusic.data.local.LocalUser
 import sstu.grivvus.yamusic.data.network.auth.AuthSessionManager
 import sstu.grivvus.yamusic.data.network.auth.SessionEndReason
 import sstu.grivvus.yamusic.data.network.auth.SessionRequiredException
@@ -26,7 +28,7 @@ class OpenApiGeneratedApiProviderTest {
         GeneratedApiClient.accessToken = "previous-token"
         val provider = OpenApiGeneratedApiProvider(
             apiBaseUrlProvider = FixedApiBaseUrlProvider("http://example.com:8080"),
-            authSessionManager = FakeAuthSessionManager(accessToken = "unused"),
+            authSessionManagerProvider = authSessionManagerProvider("unused"),
         )
 
         val baseUrl = provider.withPublicApi { api ->
@@ -43,7 +45,7 @@ class OpenApiGeneratedApiProviderTest {
         GeneratedApiClient.accessToken = "previous-token"
         val provider = OpenApiGeneratedApiProvider(
             apiBaseUrlProvider = FixedApiBaseUrlProvider("http://music.local"),
-            authSessionManager = FakeAuthSessionManager(accessToken = "fresh-token"),
+            authSessionManagerProvider = authSessionManagerProvider("fresh-token"),
         )
 
         val observedToken = provider.withAuthorizedApi { api ->
@@ -60,7 +62,7 @@ class OpenApiGeneratedApiProviderTest {
         GeneratedApiClient.accessToken = "previous-token"
         val provider = OpenApiGeneratedApiProvider(
             apiBaseUrlProvider = FixedApiBaseUrlProvider("http://music.local"),
-            authSessionManager = FakeAuthSessionManager(accessToken = null),
+            authSessionManagerProvider = authSessionManagerProvider(null),
         )
 
         val error = expectThrows<SessionRequiredException> {
@@ -76,7 +78,7 @@ class OpenApiGeneratedApiProviderTest {
         GeneratedApiClient.accessToken = "previous-token"
         val provider = OpenApiGeneratedApiProvider(
             apiBaseUrlProvider = FixedApiBaseUrlProvider("http://music.local"),
-            authSessionManager = FakeAuthSessionManager(accessToken = "fresh-token"),
+            authSessionManagerProvider = authSessionManagerProvider("fresh-token"),
         )
 
         val error = expectThrows<IllegalStateException> {
@@ -93,6 +95,10 @@ class OpenApiGeneratedApiProviderTest {
         private val baseUrl: String,
     ) : ApiBaseUrlProvider {
         override fun baseUrl(): String = baseUrl
+    }
+
+    private fun authSessionManagerProvider(accessToken: String?): Provider<AuthSessionManager> {
+        return Provider { FakeAuthSessionManager(accessToken = accessToken) }
     }
 
     private class FakeAuthSessionManager(
@@ -116,6 +122,14 @@ class OpenApiGeneratedApiProviderTest {
         override suspend fun resolveAccessToken(): String? = accessToken
 
         override suspend fun refreshAfterUnauthorized(attemptedAccessToken: String?): String? = null
+
+        override suspend fun getCurrentUser(): LocalUser? = null
+
+        override suspend fun requireCurrentUser(): LocalUser {
+            throw UnsupportedOperationException("Not used in this test")
+        }
+
+        override suspend fun updateCurrentUser(user: LocalUser) = Unit
 
         override suspend fun clearSession(reason: SessionEndReason) {
             accessToken = null

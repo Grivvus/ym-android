@@ -15,7 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import sstu.grivvus.yamusic.components.BlankScreen
-import sstu.grivvus.yamusic.data.network.SessionState
+import sstu.grivvus.yamusic.data.network.auth.SessionState
 import sstu.grivvus.yamusic.login.LoginScreen
 import sstu.grivvus.yamusic.music.MusicScreen
 import sstu.grivvus.yamusic.music.PlayerPlaceholderScreen

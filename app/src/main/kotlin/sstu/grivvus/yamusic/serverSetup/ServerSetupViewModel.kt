@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.ServerInfoRepository
-import sstu.grivvus.yamusic.data.network.OpenApiNetworkClient
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import sstu.grivvus.yamusic.data.network.remote.server.ServerProbeRemoteDataSource
 import java.io.IOException
 import javax.inject.Inject
 
@@ -28,7 +28,7 @@ class ServerSetupViewModel
 @Inject
 constructor(
     private val serverInfoRepository: ServerInfoRepository,
-    private val networkClient: OpenApiNetworkClient,
+    private val serverProbeRemoteDataSource: ServerProbeRemoteDataSource,
 ) : ViewModel() {
     private val _host: MutableStateFlow<String> = MutableStateFlow("10.0.2.2")
     private val _port: MutableStateFlow<String> = MutableStateFlow("8000")
@@ -65,7 +65,7 @@ constructor(
 
             _isLoading.value = true
             try {
-                networkClient.ping(host, portInt)
+                serverProbeRemoteDataSource.ping(host, portInt)
                 serverInfoRepository.saveServerInfo(host, portValue)
                 onSuccess()
             } catch (e: IOException) {

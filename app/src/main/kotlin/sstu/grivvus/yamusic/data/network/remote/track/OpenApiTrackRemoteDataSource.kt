@@ -15,18 +15,45 @@ class OpenApiTrackRemoteDataSource @Inject constructor(
     private val trackApiMapper: TrackApiMapper,
 ) : TrackRemoteDataSource {
     override suspend fun getMyTracks(): List<NetworkTrack> {
-        return TODO("Implement track listing via generated OpenAPI client")
+        return generatedApiProvider.withAuthorizedApi { api ->
+            trackApiMapper.mapTracks(
+                apiExecutor.execute {
+                    api.getTracksWithHttpInfo()
+                },
+            )
+        }
     }
 
     override suspend fun getTrack(trackId: Long): NetworkTrack {
-        return TODO("Implement track details via generated OpenAPI client")
+        return generatedApiProvider.withAuthorizedApi { api ->
+            trackApiMapper.mapTrack(
+                apiExecutor.execute {
+                    api.getTrackMetaWithHttpInfo(trackId.toInt())
+                },
+            )
+        }
     }
 
     override suspend fun uploadTrack(name: String, artistId: Long, albumId: Long, track: UploadPart): Long {
-        return TODO("Implement track upload via generated OpenAPI client")
+        return generatedApiProvider.withAuthorizedApi { api ->
+            apiExecutor.execute {
+                api.uploadTrackWithHttpInfo(
+                    name = name,
+                    artistId = artistId.toInt(),
+                    track = track.file,
+                    albumId = albumId.toInt(),
+                    isSingle = null,
+                    isGloballyAvailable = null,
+                )
+            }.trackId.toLong()
+        }
     }
 
     override suspend fun deleteTrack(trackId: Long) {
-        TODO("Implement track deletion via generated OpenAPI client")
+        generatedApiProvider.withAuthorizedApi { api ->
+            apiExecutor.executeUnit {
+                api.deleteTrackWithHttpInfo(trackId.toInt())
+            }
+        }
     }
 }

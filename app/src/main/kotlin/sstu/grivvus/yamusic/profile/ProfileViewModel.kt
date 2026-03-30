@@ -15,7 +15,7 @@ import sstu.grivvus.yamusic.data.ServerInfoRepository
 import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.ChangeServerDto
 import sstu.grivvus.yamusic.data.network.ChangeUserDto
-import sstu.grivvus.yamusic.data.network.SessionExpiredException
+import sstu.grivvus.yamusic.data.network.auth.SessionExpiredException
 import sstu.grivvus.yamusic.data.network.isServerSideError
 import java.io.IOException
 import javax.inject.Inject

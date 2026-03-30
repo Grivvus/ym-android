@@ -2,8 +2,9 @@ package sstu.grivvus.yamusic
 
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
-import sstu.grivvus.yamusic.data.network.SessionEndReason
-import sstu.grivvus.yamusic.data.network.SessionState
+import sstu.grivvus.yamusic.data.network.auth.SessionEndReason
+import sstu.grivvus.yamusic.data.network.auth.SessionState
+import sstu.grivvus.yamusic.data.network.model.NetworkSession
 
 class NavGraphTest {
     @Test
@@ -30,7 +31,13 @@ class NavGraphTest {
     fun shouldRedirectToLogin_returnsFalseForAuthenticatedProtectedRoute() {
         assertThat(
             shouldRedirectToLogin(
-                sessionState = SessionState.Authenticated(userId = 42L),
+                sessionState = SessionState.Authenticated(
+                    session = NetworkSession(
+                        userId = 42L,
+                        accessToken = "token",
+                        refreshToken = "refresh",
+                    ),
+                ),
                 currentRoute = AppDestinations.PROFILE_ROUTE,
             )
         ).isFalse()

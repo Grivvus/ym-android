@@ -4,6 +4,9 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.io.IOException
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import sstu.grivvus.yamusic.data.local.Album
@@ -12,20 +15,18 @@ import sstu.grivvus.yamusic.data.local.Artist
 import sstu.grivvus.yamusic.data.local.ArtistDao
 import sstu.grivvus.yamusic.data.local.AudioTrack
 import sstu.grivvus.yamusic.data.local.AudioTrackDao
-import sstu.grivvus.yamusic.data.local.LocalUser
 import sstu.grivvus.yamusic.data.local.Playlist
 import sstu.grivvus.yamusic.data.local.PlaylistDao
 import sstu.grivvus.yamusic.data.local.PlaylistTrackCrossRef
 import sstu.grivvus.yamusic.data.local.PlaylistTrackDao
 import sstu.grivvus.yamusic.data.local.TrackAlbumCrossRef
 import sstu.grivvus.yamusic.data.local.TrackAlbumDao
-import sstu.grivvus.yamusic.data.network.AuthSessionManager
-import sstu.grivvus.yamusic.data.network.OpenApiNetworkClient
+import sstu.grivvus.yamusic.data.network.model.NetworkTrack
+import sstu.grivvus.yamusic.data.network.model.TrackQuality
+import sstu.grivvus.yamusic.data.network.model.UploadPart
+import sstu.grivvus.yamusic.data.network.remote.playlist.PlaylistRemoteDataSource
+import sstu.grivvus.yamusic.data.network.remote.track.TrackRemoteDataSource
 import sstu.grivvus.yamusic.di.DefaultDispatcher
-import sstu.grivvus.yamusic.openapi.models.TrackMetadata
-import java.io.File
-import java.io.IOException
-import javax.inject.Inject
 
 data class TrackBundle(
     val track: AudioTrack,
@@ -49,8 +50,8 @@ class MusicRepository @Inject constructor(
     private val albumDao: AlbumDao,
     private val trackAlbumDao: TrackAlbumDao,
     private val playlistTrackDao: PlaylistTrackDao,
-    private val networkClient: OpenApiNetworkClient,
-    private val authSessionManager: AuthSessionManager,
+    private val playlistRemoteDataSource: PlaylistRemoteDataSource,
+    private val trackRemoteDataSource: TrackRemoteDataSource,
     private val serverInfoRepository: ServerInfoRepository,
     @ApplicationContext private val context: Context,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher,
@@ -65,29 +66,22 @@ class MusicRepository @Inject constructor(
 
     suspend fun createPlaylist(name: String, coverUri: Uri?): MusicLibraryData =
         withContext(dispatcher) {
-            val user = requireActiveUser()
             val preparedCover = coverUri?.let(::prepareUploadFile)
             try {
-                val playlistId = networkClient.createPlaylist(
-                    userId = user.remoteId,
-                    accessToken = user.access,
-                    playlistName = name,
-                    coverFile = preparedCover?.file,
-                    coverMimeType = preparedCover?.mimeType,
+                val playlistId = playlistRemoteDataSource.createPlaylist(
+                    name = name,
+                    cover = preparedCover?.toUploadPart(),
                 )
                 playlistDao.upsert(
                     Playlist(
                         remoteId = playlistId,
                         name = name,
                         coverUri = preparedCover?.let {
-                            serverInfoRepository.playlistCoverUri(
-                                playlistId,
-                                cacheBust = true
-                            )
+                            serverInfoRepository.playlistCoverUri(playlistId, cacheBust = true)
                         },
                         nameIsLocalOverride = false,
                         tracksSeeded = true,
-                    )
+                    ),
                 )
                 buildLocalState()
             } finally {
@@ -96,12 +90,7 @@ class MusicRepository @Inject constructor(
         }
 
     suspend fun deletePlaylist(playlistId: Long): MusicLibraryData = withContext(dispatcher) {
-        val user = requireActiveUser()
-        networkClient.deletePlaylist(
-            userId = user.remoteId,
-            accessToken = user.access,
-            playlistId = playlistId,
-        )
+        playlistRemoteDataSource.deletePlaylist(playlistId)
         playlistDao.deleteById(playlistId)
         buildLocalState()
     }
@@ -110,44 +99,34 @@ class MusicRepository @Inject constructor(
         withContext(dispatcher) {
             val currentPlaylist = playlistDao.getById(playlistId)
                 ?: throw IOException("Playlist was not found")
-            val user = requireActiveUser()
-            val updatedPlaylist = networkClient.updatePlaylist(
-                userId = user.remoteId,
-                accessToken = user.access,
-                playlistId = playlistId,
-                playlistName = newName,
-            )
+            val updatedPlaylist = playlistRemoteDataSource.updatePlaylist(playlistId, newName)
             playlistTrackDao.deleteForPlaylist(playlistId)
             playlistTrackDao.insertAll(
-                updatedPlaylist.tracks.map { trackId ->
+                updatedPlaylist.trackIds.map { trackId ->
                     PlaylistTrackCrossRef(
                         playlistId = playlistId,
-                        trackId = trackId.toLong(),
+                        trackId = trackId,
                     )
-                }
+                },
             )
             playlistDao.upsert(
                 currentPlaylist.copy(
-                    name = updatedPlaylist.playlistName,
+                    name = updatedPlaylist.name,
                     coverUri = updatedPlaylist.coverUrl?.toUri() ?: currentPlaylist.coverUri,
                     nameIsLocalOverride = false,
                     tracksSeeded = true,
-                )
+                ),
             )
             buildLocalState()
         }
 
     suspend fun uploadPlaylistCover(playlistId: Long, coverUri: Uri): MusicLibraryData =
         withContext(dispatcher) {
-            val user = requireActiveUser()
             val preparedCover = prepareUploadFile(coverUri)
             try {
-                networkClient.uploadPlaylistCover(
-                    userId = user.remoteId,
-                    accessToken = user.access,
+                playlistRemoteDataSource.uploadCover(
                     playlistId = playlistId,
-                    coverFile = preparedCover.file,
-                    coverMimeType = preparedCover.mimeType,
+                    cover = preparedCover.toUploadPart(),
                 )
             } finally {
                 preparedCover.file.delete()
@@ -158,7 +137,7 @@ class MusicRepository @Inject constructor(
             playlistDao.upsert(
                 playlist.copy(
                     coverUri = serverInfoRepository.playlistCoverUri(playlistId, cacheBust = true),
-                )
+                ),
             )
             buildLocalState()
         }
@@ -167,21 +146,18 @@ class MusicRepository @Inject constructor(
         playlistId: Long,
         trackIds: Collection<Long>,
     ): MusicLibraryData = withContext(dispatcher) {
-        val user = requireActiveUser()
         val playlist = playlistDao.getById(playlistId)
             ?: throw IOException("Playlist was not found")
         trackIds.forEach { trackId ->
-            networkClient.addTrackToPlaylist(
-                userId = user.remoteId,
-                accessToken = user.access,
-                playlistId = playlistId,
-                trackId = trackId,
-            )
+            playlistRemoteDataSource.addTrack(playlistId, trackId)
         }
         playlistTrackDao.insertAll(
             trackIds.map { trackId ->
-                PlaylistTrackCrossRef(playlistId = playlistId, trackId = trackId)
-            }
+                PlaylistTrackCrossRef(
+                    playlistId = playlistId,
+                    trackId = trackId,
+                )
+            },
         )
         if (!playlist.tracksSeeded) {
             playlistDao.upsert(playlist.copy(tracksSeeded = true))
@@ -196,23 +172,19 @@ class MusicRepository @Inject constructor(
         artistId: Long,
         albumId: Long,
     ): MusicLibraryData = withContext(dispatcher) {
-        val user = requireActiveUser()
         val preparedTrack = prepareUploadFile(trackUri)
         try {
-            val trackId = networkClient.uploadTrack(
-                userId = user.remoteId,
-                accessToken = user.access,
+            val trackId = trackRemoteDataSource.uploadTrack(
                 name = title,
                 artistId = artistId,
                 albumId = albumId,
-                trackFile = preparedTrack.file,
-                trackMimeType = preparedTrack.mimeType,
+                track = preparedTrack.toUploadPart(),
             )
             artistDao.upsert(
                 Artist(
                     remoteId = artistId,
                     name = "",
-                )
+                ),
             )
             val existingAlbum = albumDao.getById(albumId)
             albumDao.upsert(
@@ -221,29 +193,24 @@ class MusicRepository @Inject constructor(
                     artistId = artistId,
                     name = existingAlbum?.name.orEmpty(),
                     coverUri = existingAlbum?.coverUri,
-                )
+                ),
             )
             audioTrackDao.upsert(
                 AudioTrack(
                     remoteId = trackId,
                     name = title,
                     artistId = artistId,
-                )
+                ),
             )
             trackAlbumDao.insert(TrackAlbumCrossRef(trackId = trackId, albumId = albumId))
             val playlist = playlistDao.getById(playlistId)
                 ?: throw IOException("Playlist was not found")
-            networkClient.addTrackToPlaylist(
-                userId = user.remoteId,
-                accessToken = user.access,
-                playlistId = playlistId,
-                trackId = trackId,
-            )
+            playlistRemoteDataSource.addTrack(playlistId, trackId)
             playlistTrackDao.insert(
                 PlaylistTrackCrossRef(
                     playlistId = playlistId,
-                    trackId = trackId
-                )
+                    trackId = trackId,
+                ),
             )
             if (!playlist.tracksSeeded) {
                 playlistDao.upsert(playlist.copy(tracksSeeded = true))
@@ -255,11 +222,7 @@ class MusicRepository @Inject constructor(
     }
 
     private suspend fun syncRemoteState() {
-        val user = requireActiveUser()
-        val remoteTracks = networkClient.getTracks(
-            userId = user.remoteId,
-            accessToken = user.access,
-        )
+        val remoteTracks = trackRemoteDataSource.getMyTracks()
         val existingTracks = audioTrackDao.getAll().associateBy { it.remoteId }
         val existingAlbums = albumDao.getAll().associateBy { it.remoteId }
 
@@ -267,11 +230,11 @@ class MusicRepository @Inject constructor(
             remoteTracks
                 .map { track ->
                     Artist(
-                        remoteId = track.artistId.toLong(),
+                        remoteId = track.artistId,
                         name = "",
                     )
                 }
-                .distinctBy { it.remoteId }
+                .distinctBy { it.remoteId },
         )
 
         albumDao.upsertAll(
@@ -279,50 +242,47 @@ class MusicRepository @Inject constructor(
                 .map { track ->
                     track.toAlbum(existingAlbums = existingAlbums)
                 }
-                .distinctBy { it.remoteId }
+                .distinctBy { it.remoteId },
         )
 
         audioTrackDao.upsertAll(
             remoteTracks.map { track ->
-                val existingTrack = existingTracks[track.trackId.toLong()]
+                val existingTrack = existingTracks[track.id]
                 AudioTrack(
-                    remoteId = track.trackId.toLong(),
+                    remoteId = track.id,
                     name = track.name,
-                    artistId = track.artistId.toLong(),
+                    artistId = track.artistId,
                     durationMs = existingTrack?.durationMs,
-                    uriFast = track.trackFastPreset?.toUri() ?: existingTrack?.uriFast,
-                    uriStandard = track.trackStandardPreset?.toUri() ?: existingTrack?.uriStandard,
-                    uriHigh = track.trackHighPreset?.toUri() ?: existingTrack?.uriHigh,
-                    uriLossless = track.trackLosslessPreset?.toUri() ?: existingTrack?.uriLossless,
+                    uriFast = track.qualityPresets[TrackQuality.FAST]?.toUri()
+                        ?: existingTrack?.uriFast,
+                    uriStandard = track.qualityPresets[TrackQuality.STANDARD]?.toUri()
+                        ?: existingTrack?.uriStandard,
+                    uriHigh = track.qualityPresets[TrackQuality.HIGH]?.toUri()
+                        ?: existingTrack?.uriHigh,
+                    uriLossless = track.qualityPresets[TrackQuality.LOSSLESS]?.toUri()
+                        ?: existingTrack?.uriLossless,
                     localPath = existingTrack?.localPath,
                     isDownloaded = existingTrack?.isDownloaded ?: false,
                 )
-            }
+            },
         )
 
         trackAlbumDao.clearAll()
         trackAlbumDao.insertAll(
             remoteTracks.map { track ->
                 TrackAlbumCrossRef(
-                    trackId = track.trackId.toLong(),
-                    albumId = track.albumId.toLong(),
+                    trackId = track.id,
+                    albumId = track.albumId,
                 )
-            }
+            },
         )
 
-        val remotePlaylistSummaries = networkClient.getPlaylists(
-            userId = user.remoteId,
-            accessToken = user.access,
-        )
+        val remotePlaylistSummaries = playlistRemoteDataSource.getMyPlaylists()
         val remotePlaylists = remotePlaylistSummaries.map { summary ->
-            networkClient.getPlaylist(
-                userId = user.remoteId,
-                accessToken = user.access,
-                playlistId = summary.playlistId.toLong(),
-            )
+            playlistRemoteDataSource.getPlaylist(summary.id)
         }
         val existingPlaylists = playlistDao.getAll().associateBy { it.remoteId }
-        val remoteIds = remotePlaylistSummaries.map { it.playlistId.toLong() }.toSet()
+        val remoteIds = remotePlaylistSummaries.map { it.id }.toSet()
 
         existingPlaylists.values
             .filterNot { it.remoteId in remoteIds }
@@ -332,34 +292,34 @@ class MusicRepository @Inject constructor(
 
         playlistDao.upsertAll(
             remotePlaylistSummaries.map { remotePlaylist ->
-                val existingPlaylist = existingPlaylists[remotePlaylist.playlistId.toLong()]
+                val existingPlaylist = existingPlaylists[remotePlaylist.id]
                 Playlist(
-                    remoteId = remotePlaylist.playlistId.toLong(),
-                    name = remotePlaylist.playlistName,
+                    remoteId = remotePlaylist.id,
+                    name = remotePlaylist.name,
                     coverUri = existingPlaylist?.coverUri,
                     nameIsLocalOverride = false,
                     tracksSeeded = existingPlaylist?.tracksSeeded ?: false,
                 )
-            }
+            },
         )
 
         remotePlaylists.forEach { remotePlaylist ->
-            val playlistId = remotePlaylist.playlistId.toLong()
+            val playlistId = remotePlaylist.id
             val localPlaylist = playlistDao.getById(playlistId) ?: return@forEach
             playlistTrackDao.deleteForPlaylist(playlistId)
             playlistTrackDao.insertAll(
-                remotePlaylist.tracks.map { trackId ->
+                remotePlaylist.trackIds.map { trackId ->
                     PlaylistTrackCrossRef(
                         playlistId = playlistId,
-                        trackId = trackId.toLong(),
+                        trackId = trackId,
                     )
-                }
+                },
             )
             playlistDao.upsert(
                 localPlaylist.copy(
                     coverUri = remotePlaylist.coverUrl?.toUri() ?: localPlaylist.coverUri,
                     tracksSeeded = true,
-                )
+                ),
             )
         }
     }
@@ -381,20 +341,16 @@ class MusicRepository @Inject constructor(
         }
         val trackMap = libraryTracks.associateBy { it.track.remoteId }
         val playlists = playlistDao.getAll().map { playlist ->
-            val tracks =
+            val tracksForPlaylist =
                 playlistTrackDao.getTrackIdsForPlaylist(playlist.remoteId).mapNotNull { trackId ->
                     trackMap[trackId]
                 }
-            PlaylistBundle(playlist = playlist, tracks = tracks)
+            PlaylistBundle(playlist = playlist, tracks = tracksForPlaylist)
         }
         return MusicLibraryData(
             playlists = playlists,
             libraryTracks = libraryTracks,
         )
-    }
-
-    private suspend fun requireActiveUser(): LocalUser {
-        return authSessionManager.requireActiveUser()
     }
 
     private fun prepareUploadFile(sourceUri: Uri): PreparedUploadFile {
@@ -424,13 +380,20 @@ class MusicRepository @Inject constructor(
         val mimeType: String?,
     )
 
-    private fun TrackMetadata.toAlbum(
+    private fun PreparedUploadFile.toUploadPart(): UploadPart {
+        return UploadPart(
+            file = file,
+            mimeType = mimeType,
+        )
+    }
+
+    private fun NetworkTrack.toAlbum(
         existingAlbums: Map<Long, Album>,
     ): Album {
-        val existingAlbum = existingAlbums[albumId.toLong()]
+        val existingAlbum = existingAlbums[albumId]
         return Album(
-            remoteId = albumId.toLong(),
-            artistId = artistId.toLong(),
+            remoteId = albumId,
+            artistId = artistId,
             name = existingAlbum?.name.orEmpty(),
             coverUri = coverUrl?.toUri() ?: existingAlbum?.coverUri,
         )

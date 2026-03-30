@@ -45,10 +45,7 @@ class AuthenticatedApiMediaInterceptor(
         }
 
         val path = request.url.encodedPath
-        return USER_AVATAR_PATH.matches(path) ||
-                PLAYLIST_COVER_PATH.matches(path) ||
-                ARTIST_IMAGE_PATH.matches(path) ||
-                ALBUM_COVER_PATH.matches(path)
+        return PUBLIC_PATHS.none { it.matches(path) }
     }
 
     private fun Request.withBearerToken(accessToken: String?): Request {
@@ -66,9 +63,11 @@ class AuthenticatedApiMediaInterceptor(
     }
 
     private companion object {
-        val USER_AVATAR_PATH = Regex("^/users/\\d+/avatar$")
-        val PLAYLIST_COVER_PATH = Regex("^/playlists/\\d+/cover$")
-        val ARTIST_IMAGE_PATH = Regex("^/artists/\\d+/image$")
-        val ALBUM_COVER_PATH = Regex("^/albums/\\d+/cover$")
+        val PUBLIC_PATHS = listOf(
+            Regex("^/ping$"),
+            Regex("^/auth/login$"),
+            Regex("^/auth/register$"),
+            Regex("^/auth/refresh$"),
+        )
     }
 }

@@ -5,38 +5,56 @@ import android.net.Uri
 import androidx.core.net.toUri
 import dagger.hilt.android.qualifiers.ApplicationContext
 import sstu.grivvus.yamusic.data.local.LocalUser
-import sstu.grivvus.yamusic.data.network.AuthSessionManager
 import sstu.grivvus.yamusic.data.network.ChangeUserDto
 import sstu.grivvus.yamusic.data.network.NetworkUserCreate
 import sstu.grivvus.yamusic.data.network.NetworkUserLogin
-import sstu.grivvus.yamusic.data.network.OpenApiNetworkClient
+import sstu.grivvus.yamusic.data.network.auth.AuthSessionManager
+import sstu.grivvus.yamusic.data.network.model.UploadPart
+import sstu.grivvus.yamusic.data.network.remote.auth.AuthRemoteDataSource
+import sstu.grivvus.yamusic.data.network.remote.user.UserRemoteDataSource
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
 
 class UserRepository @Inject constructor(
-    private val networkClient: OpenApiNetworkClient,
+    private val authRemoteDataSource: AuthRemoteDataSource,
+    private val userRemoteDataSource: UserRemoteDataSource,
     private val authSessionManager: AuthSessionManager,
     private val serverInfoRepository: ServerInfoRepository,
     @ApplicationContext private val context: Context,
 ) {
     suspend fun register(user: NetworkUserCreate) {
-        val data = networkClient.register(user)
-        authSessionManager.startSession(
+        val session = authRemoteDataSource.register(
+            username = user.username,
+            email = user.email,
+            password = user.password,
+        )
+        authSessionManager.startSession(session)
+        authSessionManager.updateCurrentUser(
             LocalUser(
-                data.userId.toLong(), user.username, user.email,
-                data.accessToken, data.refreshToken
-            )
+                remoteId = session.userId,
+                username = user.username,
+                email = user.email,
+                access = session.accessToken,
+                refresh = session.refreshToken,
+            ),
         )
     }
 
     suspend fun login(user: NetworkUserLogin) {
-        val data = networkClient.login(user)
-        authSessionManager.startSession(
+        val session = authRemoteDataSource.login(
+            username = user.username,
+            password = user.password,
+        )
+        authSessionManager.startSession(session)
+        authSessionManager.updateCurrentUser(
             LocalUser(
-                data.userId.toLong(), user.username, null,
-                data.accessToken, data.refreshToken,
-            )
+                remoteId = session.userId,
+                username = user.username,
+                email = null,
+                access = session.accessToken,
+                refresh = session.refreshToken,
+            ),
         )
     }
 
@@ -44,21 +62,15 @@ class UserRepository @Inject constructor(
         if (newPassword.length < 6) {
             throw IOException("password's length should be 6 symbols or more")
         }
-        val localUser = authSessionManager.requireActiveUser()
-        networkClient.changePassword(
-            userId = localUser.remoteId,
+        userRemoteDataSource.changePassword(
             currentPassword = currentPassword,
             newPassword = newPassword,
-            accessToken = localUser.access,
         )
     }
 
     suspend fun updateLocalUserFromNetwork() {
-        val localUser = authSessionManager.requireActiveUser()
-        val remoteUser = networkClient.getUserById(
-            userId = localUser.remoteId,
-            accessToken = localUser.access,
-        )
+        val localUser = authSessionManager.requireCurrentUser()
+        val remoteUser = userRemoteDataSource.getCurrentUser()
         authSessionManager.updateCurrentUser(
             LocalUser(
                 remoteId = localUser.remoteId,
@@ -72,11 +84,11 @@ class UserRepository @Inject constructor(
     }
 
     suspend fun getCurrentUser(): LocalUser? {
-        return authSessionManager.getActiveUser()
+        return authSessionManager.getCurrentUser()
     }
 
     suspend fun requireCurrentUser(): LocalUser {
-        return authSessionManager.requireActiveUser()
+        return authSessionManager.requireCurrentUser()
     }
 
     suspend fun logout() {
@@ -84,14 +96,15 @@ class UserRepository @Inject constructor(
     }
 
     suspend fun updateCurrentUserAvatar(uriStr: String) {
-        val currentUser = authSessionManager.requireActiveUser()
+        val currentUser = authSessionManager.requireCurrentUser()
         val selectedAvatarUri = uriStr.toUri()
         val tempFile = createTempAvatarFile(selectedAvatarUri)
         try {
-            networkClient.uploadUserAvatar(
-                userId = currentUser.remoteId,
-                avatarFile = tempFile,
-                accessToken = currentUser.access,
+            userRemoteDataSource.uploadAvatar(
+                UploadPart(
+                    file = tempFile,
+                    mimeType = context.contentResolver.getType(selectedAvatarUri),
+                ),
             )
             authSessionManager.updateCurrentUser(
                 LocalUser(
@@ -107,15 +120,13 @@ class UserRepository @Inject constructor(
     }
 
     suspend fun applyChanges(user: ChangeUserDto) {
-        val localUser = authSessionManager.requireActiveUser()
+        val localUser = authSessionManager.requireCurrentUser()
         val targetUsername = user.newUsername ?: localUser.username
         val targetEmail = user.newEmail ?: (localUser.email ?: "")
 
-        val remoteUser = networkClient.changeUser(
-            userId = localUser.remoteId,
+        val remoteUser = userRemoteDataSource.updateCurrentUser(
             newUsername = targetUsername,
             newEmail = targetEmail,
-            accessToken = localUser.access,
         )
 
         val newUserData = LocalUser(

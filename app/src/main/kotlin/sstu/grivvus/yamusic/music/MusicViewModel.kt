@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.data.MusicLibraryData
 import sstu.grivvus.yamusic.data.MusicRepository
 import sstu.grivvus.yamusic.data.TrackBundle
-import sstu.grivvus.yamusic.data.network.SessionExpiredException
+import sstu.grivvus.yamusic.data.network.auth.SessionExpiredException
 import java.io.IOException
 import javax.inject.Inject
 

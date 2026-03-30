@@ -3,7 +3,10 @@ package sstu.grivvus.yamusic.data.network.core
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
+import sstu.grivvus.yamusic.di.IoDispatcher
 import sstu.grivvus.yamusic.openapi.infrastructure.ApiResponse
 import sstu.grivvus.yamusic.openapi.infrastructure.ClientError
 import sstu.grivvus.yamusic.openapi.infrastructure.ClientException
@@ -17,6 +20,7 @@ import sstu.grivvus.yamusic.openapi.infrastructure.Success
 class DefaultApiExecutor @Inject constructor(
     private val networkLogger: NetworkLogger,
     private val errorBodyParser: ErrorBodyParser,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : ApiExecutor {
     override suspend fun <T : Any> execute(block: suspend () -> ApiResponse<T?>): T {
         return executeRaw {
@@ -71,33 +75,35 @@ class DefaultApiExecutor @Inject constructor(
     }
 
     override suspend fun <T> executeRaw(block: suspend () -> T): T {
-        return try {
-            block()
-        } catch (error: ApiException) {
-            networkLogger.logError("API", "core", error)
-            throw error
-        } catch (error: ClientException) {
-            val apiException = toClientApiException(error)
-            networkLogger.logError("API", "core", apiException)
-            throw apiException
-        } catch (error: ServerException) {
-            val apiException = toServerApiException(error)
-            networkLogger.logError("API", "core", apiException)
-            throw apiException
-        } catch (error: SerializationException) {
-            val apiException = SerializationApiException(
-                message = error.message ?: "Failed to serialize or deserialize API payload",
-                cause = error,
-            )
-            networkLogger.logError("API", "core", apiException)
-            throw apiException
-        } catch (error: IOException) {
-            val apiException = NetworkUnavailableException(
-                message = error.message ?: "Network request failed",
-                cause = error,
-            )
-            networkLogger.logError("API", "core", apiException)
-            throw apiException
+        return withContext(ioDispatcher) {
+            try {
+                block()
+            } catch (error: ApiException) {
+                networkLogger.logError("API", "core", error)
+                throw error
+            } catch (error: ClientException) {
+                val apiException = toClientApiException(error)
+                networkLogger.logError("API", "core", apiException)
+                throw apiException
+            } catch (error: ServerException) {
+                val apiException = toServerApiException(error)
+                networkLogger.logError("API", "core", apiException)
+                throw apiException
+            } catch (error: SerializationException) {
+                val apiException = SerializationApiException(
+                    message = error.message ?: "Failed to serialize or deserialize API payload",
+                    cause = error,
+                )
+                networkLogger.logError("API", "core", apiException)
+                throw apiException
+            } catch (error: IOException) {
+                val apiException = NetworkUnavailableException(
+                    message = error.message ?: "Network request failed",
+                    cause = error,
+                )
+                networkLogger.logError("API", "core", apiException)
+                throw apiException
+            }
         }
     }
 
