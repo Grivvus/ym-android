@@ -25,6 +25,22 @@ import sstu.grivvus.yamusic.register.RegistrationScreen
 import sstu.grivvus.yamusic.serverSetup.ServerSetup
 import sstu.grivvus.yamusic.startup.StartupScreen
 
+internal fun appProtectedRoutes(): Set<String> = setOf(
+    AppDestinations.MUSIC_ROUTE,
+    AppDestinations.PROFILE_ROUTE,
+    AppDestinations.LIBRARY_ROUTE,
+    AppDestinations.UPLOAD_ROUTE,
+    AppDestinations.PLAYER_ROUTE,
+)
+
+internal fun shouldRedirectToLogin(
+    sessionState: SessionState,
+    currentRoute: String?,
+    protectedRoutes: Set<String> = appProtectedRoutes(),
+): Boolean {
+    return sessionState is SessionState.Unauthenticated && currentRoute in protectedRoutes
+}
+
 @Composable
 fun YaMusicNavGraph(
     modifier: Modifier = Modifier,
@@ -38,18 +54,10 @@ fun YaMusicNavGraph(
     val sessionState by sessionViewModel.sessionState.collectAsStateWithLifecycle()
     val currentNavBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentNavBackStackEntry?.destination?.route ?: startDestination
-    val protectedRoutes = remember {
-        setOf(
-            AppDestinations.MUSIC_ROUTE,
-            AppDestinations.PROFILE_ROUTE,
-            AppDestinations.LIBRARY_ROUTE,
-            AppDestinations.UPLOAD_ROUTE,
-            AppDestinations.PLAYER_ROUTE,
-        )
-    }
+    val protectedRoutes = remember { appProtectedRoutes() }
 
     LaunchedEffect(sessionState, currentRoute, navController) {
-        if (sessionState is SessionState.Unauthenticated && currentRoute in protectedRoutes) {
+        if (shouldRedirectToLogin(sessionState, currentRoute, protectedRoutes)) {
             navActions.navigateToLoginClearingBackStack()
         }
     }
