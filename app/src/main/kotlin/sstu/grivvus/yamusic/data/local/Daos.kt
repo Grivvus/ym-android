@@ -25,6 +25,9 @@ interface UserDao {
     @Insert
     suspend fun insert(user: LocalUser)
 
+    @Upsert
+    suspend fun upsert(user: LocalUser)
+
     @Query(
         "UPDATE user SET access_token = :newAccess, refresh_token = :newRefresh WHERE remote_id = :id"
     )

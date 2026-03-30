@@ -55,7 +55,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import sstu.grivvus.yamusic.components.BottomBar
 import sstu.grivvus.yamusic.components.ErrorSnackbar
@@ -801,7 +800,7 @@ private fun Context.queryDisplayName(uri: Uri): String {
 }
 
 @Composable
-fun UploadScreen(navController: NavController) {
+fun UploadScreen(onBack: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -811,7 +810,29 @@ fun UploadScreen(navController: NavController) {
     ) {
         Text("Upload route is no longer used", style = MaterialTheme.typography.titleSmall)
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = { navController.popBackStack() }) {
+        Button(onClick = onBack) {
+            Text("Back")
+        }
+    }
+}
+
+@Composable
+fun PlayerPlaceholderScreen(
+    trackId: Long,
+    onBack: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("Player screen is not implemented yet", style = MaterialTheme.typography.titleSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("Track ID: $trackId")
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(onClick = onBack) {
             Text("Back")
         }
     }

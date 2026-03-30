@@ -189,7 +189,7 @@ class MusicViewModel @Inject constructor(
         return TrackItemUi(
             id = track.remoteId,
             name = track.name,
-            subtitle = "Artist #${track.artistId}",
+            subtitle = track.name,
             coverUri = track.coverUri,
         )
     }
