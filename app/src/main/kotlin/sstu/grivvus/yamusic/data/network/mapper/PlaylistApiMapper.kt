@@ -1,22 +1,25 @@
 package sstu.grivvus.yamusic.data.network.mapper
 
-import javax.inject.Inject
-import javax.inject.Singleton
 import sstu.grivvus.yamusic.data.network.model.NetworkPlaylist
 import sstu.grivvus.yamusic.openapi.models.PlaylistResponse
 import sstu.grivvus.yamusic.openapi.models.PlaylistWithTracksResponse
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class PlaylistApiMapper @Inject constructor() {
     fun mapPlaylist(response: PlaylistWithTracksResponse): NetworkPlaylist {
-        return TODO("Map playlist details response to internal playlist model")
+        return NetworkPlaylist(
+            id = response.playlistId.toLong(), name = response.playlistName,
+            trackIds = response.tracks.map { it.toLong() }, coverUrl = response.coverUrl,
+        )
     }
 
     fun mapPlaylistSummary(response: PlaylistResponse): NetworkPlaylist {
-        return TODO("Map playlist list item to internal playlist model")
+        return NetworkPlaylist(id = response.playlistId.toLong(), name = response.playlistName)
     }
 
     fun mapPlaylists(response: List<PlaylistResponse>): List<NetworkPlaylist> {
-        return TODO("Map playlist list response to internal playlist models")
+        return response.map { mapPlaylistSummary(it) }
     }
 }

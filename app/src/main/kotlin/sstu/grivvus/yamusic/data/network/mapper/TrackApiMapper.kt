@@ -1,17 +1,39 @@
 package sstu.grivvus.yamusic.data.network.mapper
 
+import sstu.grivvus.yamusic.data.network.model.NetworkTrack
+import sstu.grivvus.yamusic.data.network.model.TrackQuality
+import sstu.grivvus.yamusic.openapi.models.TrackMetadata
 import javax.inject.Inject
 import javax.inject.Singleton
-import sstu.grivvus.yamusic.data.network.model.NetworkTrack
-import sstu.grivvus.yamusic.openapi.models.TrackMetadata
 
 @Singleton
 class TrackApiMapper @Inject constructor() {
     fun mapTrack(response: TrackMetadata): NetworkTrack {
-        return TODO("Map generated track response to internal track model")
+        return NetworkTrack(
+            id = response.trackId.toLong(), name = response.name,
+            artistId = response.artistId.toLong(), albumId = response.albumId.toLong(),
+            coverUrl = response.coverUrl,
+            qualityPresets = response.toQualityPresets(),
+        )
     }
 
     fun mapTracks(response: List<TrackMetadata>): List<NetworkTrack> {
-        return TODO("Map track list response to internal track models")
+        return response.map { mapTrack(it) }
+    }
+
+    private fun TrackMetadata.toQualityPresets(): Map<TrackQuality, String> {
+        return listOfNotNull(
+            trackFastPreset?.let { PRESET_FAST to it },
+            trackStandardPreset?.let { PRESET_STANDARD to it },
+            trackHighPreset?.let { PRESET_HIGH to it },
+            trackLosslessPreset?.let { PRESET_LOSSLESS to it },
+        ).toMap()
+    }
+
+    private companion object {
+        val PRESET_FAST = TrackQuality.FAST
+        val PRESET_STANDARD = TrackQuality.STANDARD
+        val PRESET_HIGH = TrackQuality.HIGH
+        val PRESET_LOSSLESS = TrackQuality.LOSSLESS
     }
 }
