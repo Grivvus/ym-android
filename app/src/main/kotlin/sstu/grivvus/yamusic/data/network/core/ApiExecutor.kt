@@ -1,7 +1,11 @@
 package sstu.grivvus.yamusic.data.network.core
 
-interface ApiExecutor {
-    suspend fun <T> execute(block: suspend () -> T): T
+import sstu.grivvus.yamusic.openapi.infrastructure.ApiResponse
 
-    suspend fun executeUnit(block: suspend () -> Unit)
+interface ApiExecutor {
+    suspend fun <T : Any> execute(block: suspend () -> ApiResponse<T?>): T
+
+    suspend fun executeUnit(block: suspend () -> ApiResponse<Unit?>)
+
+    suspend fun <T> executeRaw(block: suspend () -> T): T
 }

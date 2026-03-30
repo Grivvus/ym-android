@@ -1,0 +1,147 @@
+package sstu.grivvus.yamusic.data.network.core
+
+import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.test.runTest
+import org.junit.After
+import org.junit.Test
+import sstu.grivvus.yamusic.data.network.auth.AuthSessionManager
+import sstu.grivvus.yamusic.data.network.auth.SessionEndReason
+import sstu.grivvus.yamusic.data.network.auth.SessionRequiredException
+import sstu.grivvus.yamusic.data.network.auth.SessionState
+import sstu.grivvus.yamusic.data.network.model.NetworkSession
+import sstu.grivvus.yamusic.openapi.infrastructure.ApiClient as GeneratedApiClient
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class OpenApiGeneratedApiProviderTest {
+    @After
+    fun tearDown() {
+        GeneratedApiClient.accessToken = null
+    }
+
+    @Test
+    fun withPublicApi_usesConfiguredBaseUrlAndRestoresPreviousToken() = runTest {
+        GeneratedApiClient.accessToken = "previous-token"
+        val provider = OpenApiGeneratedApiProvider(
+            apiBaseUrlProvider = FixedApiBaseUrlProvider("http://example.com:8080"),
+            authSessionManager = FakeAuthSessionManager(accessToken = "unused"),
+        )
+
+        val baseUrl = provider.withPublicApi { api ->
+            assertThat(GeneratedApiClient.accessToken).isNull()
+            api.baseUrl
+        }
+
+        assertThat(baseUrl).isEqualTo("http://example.com:8080")
+        assertThat(GeneratedApiClient.accessToken).isEqualTo("previous-token")
+    }
+
+    @Test
+    fun withAuthorizedApi_setsResolvedAccessTokenForTheDurationOfCall() = runTest {
+        GeneratedApiClient.accessToken = "previous-token"
+        val provider = OpenApiGeneratedApiProvider(
+            apiBaseUrlProvider = FixedApiBaseUrlProvider("http://music.local"),
+            authSessionManager = FakeAuthSessionManager(accessToken = "fresh-token"),
+        )
+
+        val observedToken = provider.withAuthorizedApi { api ->
+            assertThat(api.baseUrl).isEqualTo("http://music.local")
+            GeneratedApiClient.accessToken
+        }
+
+        assertThat(observedToken).isEqualTo("fresh-token")
+        assertThat(GeneratedApiClient.accessToken).isEqualTo("previous-token")
+    }
+
+    @Test
+    fun withAuthorizedApi_withoutActiveToken_throwsSessionRequiredException() = runTest {
+        GeneratedApiClient.accessToken = "previous-token"
+        val provider = OpenApiGeneratedApiProvider(
+            apiBaseUrlProvider = FixedApiBaseUrlProvider("http://music.local"),
+            authSessionManager = FakeAuthSessionManager(accessToken = null),
+        )
+
+        val error = expectThrows<SessionRequiredException> {
+            provider.withAuthorizedApi { error("Should not be called") }
+        }
+
+        assertThat(error).isInstanceOf(SessionRequiredException::class.java)
+        assertThat(GeneratedApiClient.accessToken).isEqualTo("previous-token")
+    }
+
+    @Test
+    fun withAuthorizedApi_restoresPreviousTokenAfterFailure() = runTest {
+        GeneratedApiClient.accessToken = "previous-token"
+        val provider = OpenApiGeneratedApiProvider(
+            apiBaseUrlProvider = FixedApiBaseUrlProvider("http://music.local"),
+            authSessionManager = FakeAuthSessionManager(accessToken = "fresh-token"),
+        )
+
+        val error = expectThrows<IllegalStateException> {
+            provider.withAuthorizedApi<Unit> {
+                throw IllegalStateException("boom")
+            }
+        }
+
+        assertThat(error.message).isEqualTo("boom")
+        assertThat(GeneratedApiClient.accessToken).isEqualTo("previous-token")
+    }
+
+    private class FixedApiBaseUrlProvider(
+        private val baseUrl: String,
+    ) : ApiBaseUrlProvider {
+        override fun baseUrl(): String = baseUrl
+    }
+
+    private class FakeAuthSessionManager(
+        private var accessToken: String?,
+    ) : AuthSessionManager {
+        private val internalState = MutableStateFlow<SessionState>(SessionState.Initializing)
+
+        override val sessionState: StateFlow<SessionState> = internalState
+
+        override suspend fun startSession(session: NetworkSession) {
+            accessToken = session.accessToken
+            internalState.value = SessionState.Authenticated(session)
+        }
+
+        override suspend fun currentSessionOrNull(): NetworkSession? = null
+
+        override suspend fun requireSession(): NetworkSession {
+            throw UnsupportedOperationException("Not used in this test")
+        }
+
+        override suspend fun resolveAccessToken(): String? = accessToken
+
+        override suspend fun refreshAfterUnauthorized(attemptedAccessToken: String?): String? = null
+
+        override suspend fun clearSession(reason: SessionEndReason) {
+            accessToken = null
+            internalState.value = SessionState.Unauthenticated(reason)
+        }
+
+        override suspend fun markSessionExpired() {
+            clearSession(SessionEndReason.EXPIRED)
+        }
+
+        override suspend fun logout() {
+            clearSession(SessionEndReason.LOGOUT)
+        }
+    }
+
+    private suspend inline fun <reified T : Throwable> expectThrows(
+        block: suspend () -> Unit,
+    ): T {
+        try {
+            block()
+        } catch (error: Throwable) {
+            if (error is T) {
+                return error
+            }
+            throw error
+        }
+        throw AssertionError("Expected ${T::class.simpleName} to be thrown")
+    }
+}
