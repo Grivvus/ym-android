@@ -1,7 +1,5 @@
 package sstu.grivvus.yamusic.data.network.auth
 
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +15,8 @@ import sstu.grivvus.yamusic.data.network.core.ApiException
 import sstu.grivvus.yamusic.data.network.model.NetworkSession
 import sstu.grivvus.yamusic.di.ApplicationScope
 import sstu.grivvus.yamusic.di.IoDispatcher
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class DefaultAuthSessionManager @Inject constructor(
@@ -91,7 +91,7 @@ class DefaultAuthSessionManager @Inject constructor(
             } catch (error: ApiException) {
                 if (error.statusCode == 401) {
                     markSessionExpired()
-                    null
+                    return@withLock null
                 } else {
                     throw error
                 }

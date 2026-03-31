@@ -3,6 +3,7 @@ package sstu.grivvus.yamusic.data.network.core
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import sstu.grivvus.yamusic.data.network.auth.AuthSessionManager
+import sstu.grivvus.yamusic.data.network.auth.SessionExpiredException
 import sstu.grivvus.yamusic.data.network.auth.SessionRequiredException
 import sstu.grivvus.yamusic.openapi.apis.DefaultApi
 import javax.inject.Inject
@@ -26,7 +27,17 @@ class OpenApiGeneratedApiProvider @Inject constructor(
             .resolveAccessToken()
             ?.takeIf { it.isNotBlank() }
             ?: throw SessionRequiredException()
-        return withGeneratedApi(accessToken = accessToken, block = block)
+        return try {
+            withGeneratedApi(accessToken = accessToken, block = block)
+        } catch (e: UnauthorizedApiException) {
+            // retry after first 401
+            val refreshedAccessToken = authSessionManagerProvider.get()
+                .refreshAfterUnauthorized(accessToken)
+                ?.takeIf { it.isNotBlank() }
+                ?: throw SessionExpiredException()
+
+            withGeneratedApi(refreshedAccessToken, block)
+        }
     }
 
     private suspend fun <T> withGeneratedApi(

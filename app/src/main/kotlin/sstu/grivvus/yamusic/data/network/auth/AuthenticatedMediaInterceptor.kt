@@ -1,12 +1,12 @@
 package sstu.grivvus.yamusic.data.network.auth
 
-import javax.inject.Inject
-import okhttp3.Interceptor
+import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
-import kotlinx.coroutines.runBlocking
 import sstu.grivvus.yamusic.data.network.core.ApiBaseUrlProvider
+import javax.inject.Inject
 
 class AuthenticatedMediaInterceptor @Inject constructor(
     private val apiBaseUrlProvider: ApiBaseUrlProvider,
@@ -33,9 +33,9 @@ class AuthenticatedMediaInterceptor @Inject constructor(
                     attemptedAccessToken = initialAuthorization.bearerTokenOrNull(),
                 )
             }?.let { "Bearer $it" }
-        } catch (error: Exception) {
+        } catch (e: Exception) {
             initialResponse.close()
-            throw error
+            throw e
         } ?: return initialResponse
 
         initialResponse.close()
