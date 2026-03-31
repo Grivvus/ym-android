@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "d29b6f2fe593ecd616851bdcc7ca9e57",
+    "identityHash": "91b6ac086abdad16ac56532db9dc6a8d",
     "entities": [
       {
         "tableName": "user",
@@ -253,11 +253,17 @@
       },
       {
         "tableName": "playlist",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`remote_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `cover_uri` TEXT, `name_is_local_override` INTEGER NOT NULL, `tracks_seeded` INTEGER NOT NULL, PRIMARY KEY(`remote_id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`remote_id` INTEGER NOT NULL, `owner_remote_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `cover_uri` TEXT, `name_is_local_override` INTEGER NOT NULL, `tracks_seeded` INTEGER NOT NULL, PRIMARY KEY(`remote_id`))",
         "fields": [
           {
             "fieldPath": "remoteId",
             "columnName": "remote_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerRemoteId",
+            "columnName": "owner_remote_id",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -415,7 +421,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd29b6f2fe593ecd616851bdcc7ca9e57')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '91b6ac086abdad16ac56532db9dc6a8d')"
     ]
   }
 }

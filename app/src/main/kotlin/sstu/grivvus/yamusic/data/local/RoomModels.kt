@@ -87,8 +87,8 @@ data class Album(
 @TypeConverters(UriConverter::class)
 data class Playlist(
     @PrimaryKey
-    @ColumnInfo(name = "remote_id")
-    val remoteId: Long,
+    @ColumnInfo(name = "remote_id") val remoteId: Long,
+    @ColumnInfo(name = "owner_remote_id") val ownerRemoteId: Long,
     @ColumnInfo() val name: String,
     @ColumnInfo(name = "cover_uri") val coverUri: Uri? = null,
     @ColumnInfo(name = "name_is_local_override") val nameIsLocalOverride: Boolean = false,

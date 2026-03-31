@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.data.MusicLibraryData
 import sstu.grivvus.yamusic.data.MusicRepository
+import sstu.grivvus.yamusic.data.PlaylistCreationConflict
 import sstu.grivvus.yamusic.data.TrackBundle
 import sstu.grivvus.yamusic.data.network.auth.SessionExpiredException
 import java.io.IOException
@@ -149,8 +150,10 @@ class MusicViewModel @Inject constructor(
                 applyLibraryData(block())
             } catch (_: SessionExpiredException) {
                 return@launch
-            } catch (error: Exception) {
-                _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
+            } catch (e: PlaylistCreationConflict) {
+                _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isMutating = false)
             }

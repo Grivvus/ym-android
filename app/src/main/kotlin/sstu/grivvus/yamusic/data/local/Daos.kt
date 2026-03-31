@@ -147,6 +147,9 @@ interface PlaylistDao {
     @Query("SELECT * FROM playlist WHERE remote_id = :playlistId LIMIT 1")
     suspend fun getById(playlistId: Long): Playlist?
 
+    @Query("SELECT * FROM playlist WHERE owner_remote_id = :ownerRemoteId AND name = :name LIMIT 1")
+    suspend fun getByUserAndName(ownerRemoteId: Long, name: String): Playlist?
+
     @Query("DELETE FROM playlist WHERE remote_id = :playlistId")
     suspend fun deleteById(playlistId: Long)
 }

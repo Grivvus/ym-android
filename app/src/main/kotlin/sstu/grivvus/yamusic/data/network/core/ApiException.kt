@@ -9,18 +9,30 @@ sealed class ApiException(
     cause: Throwable? = null,
 ) : IOException(message, cause)
 
-class UnauthorizedApiException(
-    override val message: String = "Unauthorized",
-    override val rawBody: String? = null,
-    cause: Throwable? = null,
-) : ApiException(statusCode = 401, message = message, rawBody = rawBody, cause = cause)
-
 class ClientApiException(
     override val statusCode: Int,
     override val message: String,
     override val rawBody: String? = null,
     cause: Throwable? = null,
 ) : ApiException(statusCode = statusCode, message = message, rawBody = rawBody, cause = cause)
+
+class UnauthorizedApiException(
+    override val message: String = "Unauthorized",
+    override val rawBody: String? = null,
+    cause: Throwable? = null,
+) : ApiException(statusCode = 401, message = message, rawBody = rawBody, cause = cause)
+
+class NotFoundApiException(
+    override val message: String = "Not found",
+    override val rawBody: String? = null,
+    cause: Throwable? = null,
+) : ApiException(statusCode = 404, message = message, rawBody = rawBody, cause = cause)
+
+class ConflictApiException(
+    override val message: String = "Conflict",
+    override val rawBody: String? = null,
+    cause: Throwable? = null,
+) : ApiException(statusCode = 409, message = message, rawBody = rawBody, cause = cause)
 
 class ServerApiException(
     override val statusCode: Int,

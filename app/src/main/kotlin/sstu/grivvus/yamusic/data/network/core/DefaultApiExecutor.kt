@@ -1,8 +1,5 @@
 package sstu.grivvus.yamusic.data.network.core
 
-import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
@@ -15,6 +12,9 @@ import sstu.grivvus.yamusic.openapi.infrastructure.Redirection
 import sstu.grivvus.yamusic.openapi.infrastructure.ServerError
 import sstu.grivvus.yamusic.openapi.infrastructure.ServerException
 import sstu.grivvus.yamusic.openapi.infrastructure.Success
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class DefaultApiExecutor @Inject constructor(
@@ -110,17 +110,35 @@ class DefaultApiExecutor @Inject constructor(
     private fun ClientError<*>.toApiException(): ApiException {
         val rawBody = body?.toString()
         val parsedMessage = parseErrorMessageOrThrow(rawBody = rawBody, statusCode = statusCode)
-        return if (statusCode == 401) {
-            UnauthorizedApiException(
-                message = parsedMessage ?: message?.ifBlank { null } ?: "Unauthorized",
-                rawBody = rawBody,
-            )
-        } else {
-            ClientApiException(
-                statusCode = statusCode,
-                message = parsedMessage ?: message?.ifBlank { null } ?: "Client request failed",
-                rawBody = rawBody,
-            )
+        return when (statusCode) {
+            401 -> {
+                UnauthorizedApiException(
+                    message = parsedMessage ?: message?.ifBlank { null } ?: "Unauthorized",
+                    rawBody = rawBody,
+                )
+            }
+
+            404 -> {
+                NotFoundApiException(
+                    message = parsedMessage ?: message?.ifBlank { null } ?: "Not Found",
+                    rawBody = rawBody,
+                )
+            }
+
+            409 -> {
+                ConflictApiException(
+                    message = parsedMessage ?: message?.ifBlank { null } ?: "Conflict",
+                    rawBody = rawBody,
+                )
+            }
+
+            else -> {
+                ClientApiException(
+                    statusCode = statusCode,
+                    message = parsedMessage ?: message?.ifBlank { null } ?: "Client request failed",
+                    rawBody = rawBody,
+                )
+            }
         }
     }
 
@@ -140,19 +158,38 @@ class DefaultApiExecutor @Inject constructor(
             rawBody = rawBody,
             statusCode = error.statusCode,
         )
-        return if (error.statusCode == 401) {
-            UnauthorizedApiException(
+        return when (error.statusCode) {
+            401 -> UnauthorizedApiException(
                 message = parsedMessage ?: error.message?.ifBlank { null } ?: "Unauthorized",
                 rawBody = rawBody,
                 cause = error,
             )
-        } else {
-            ClientApiException(
-                statusCode = error.statusCode.coerceAtLeast(0),
-                message = parsedMessage ?: error.message?.ifBlank { null } ?: "Client request failed",
-                rawBody = rawBody,
-                cause = error,
-            )
+
+            404 -> {
+                NotFoundApiException(
+                    message = parsedMessage ?: error.message?.ifBlank { null } ?: "Not Found",
+                    rawBody = rawBody,
+                    cause = error,
+                )
+            }
+
+            409 -> {
+                ConflictApiException(
+                    message = parsedMessage ?: error.message?.ifBlank { null } ?: "Conflict",
+                    rawBody = rawBody,
+                    cause = error,
+                )
+            }
+
+            else -> {
+                ClientApiException(
+                    statusCode = error.statusCode.coerceAtLeast(0),
+                    message = parsedMessage ?: error.message?.ifBlank { null }
+                    ?: "Client request failed",
+                    rawBody = rawBody,
+                    cause = error,
+                )
+            }
         }
     }
 

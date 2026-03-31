@@ -4,9 +4,6 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
-import java.io.IOException
-import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import sstu.grivvus.yamusic.data.local.Album
@@ -21,12 +18,18 @@ import sstu.grivvus.yamusic.data.local.PlaylistTrackCrossRef
 import sstu.grivvus.yamusic.data.local.PlaylistTrackDao
 import sstu.grivvus.yamusic.data.local.TrackAlbumCrossRef
 import sstu.grivvus.yamusic.data.local.TrackAlbumDao
+import sstu.grivvus.yamusic.data.network.auth.AuthSessionManager
+import sstu.grivvus.yamusic.data.network.core.ConflictApiException
 import sstu.grivvus.yamusic.data.network.model.NetworkTrack
 import sstu.grivvus.yamusic.data.network.model.TrackQuality
 import sstu.grivvus.yamusic.data.network.model.UploadPart
 import sstu.grivvus.yamusic.data.network.remote.playlist.PlaylistRemoteDataSource
 import sstu.grivvus.yamusic.data.network.remote.track.TrackRemoteDataSource
 import sstu.grivvus.yamusic.di.DefaultDispatcher
+import timber.log.Timber
+import java.io.File
+import java.io.IOException
+import javax.inject.Inject
 
 data class TrackBundle(
     val track: AudioTrack,
@@ -43,6 +46,10 @@ data class MusicLibraryData(
     val libraryTracks: List<TrackBundle>,
 )
 
+class PlaylistCreationConflict(
+    val msg: String = "playlist with this name already exists",
+) : Exception(msg)
+
 class MusicRepository @Inject constructor(
     private val playlistDao: PlaylistDao,
     private val audioTrackDao: AudioTrackDao,
@@ -53,6 +60,7 @@ class MusicRepository @Inject constructor(
     private val playlistRemoteDataSource: PlaylistRemoteDataSource,
     private val trackRemoteDataSource: TrackRemoteDataSource,
     private val serverInfoRepository: ServerInfoRepository,
+    private val authSessionManager: AuthSessionManager,
     @ApplicationContext private val context: Context,
     @DefaultDispatcher private val dispatcher: CoroutineDispatcher,
 ) {
@@ -67,6 +75,11 @@ class MusicRepository @Inject constructor(
     suspend fun createPlaylist(name: String, coverUri: Uri?): MusicLibraryData =
         withContext(dispatcher) {
             val preparedCover = coverUri?.let(::prepareUploadFile)
+            val playlist =
+                playlistDao.getByUserAndName(authSessionManager.requireCurrentUser().remoteId, name)
+            if (playlist != null) {
+                throw PlaylistCreationConflict("Playlist with this name already exists")
+            }
             try {
                 val playlistId = playlistRemoteDataSource.createPlaylist(
                     name = name,
@@ -79,11 +92,14 @@ class MusicRepository @Inject constructor(
                         coverUri = preparedCover?.let {
                             serverInfoRepository.playlistCoverUri(playlistId, cacheBust = true)
                         },
+                        ownerRemoteId = authSessionManager.requireCurrentUser().remoteId,
                         nameIsLocalOverride = false,
                         tracksSeeded = true,
                     ),
                 )
                 buildLocalState()
+            } catch (e: ConflictApiException) {
+                throw PlaylistCreationConflict(e.message)
             } finally {
                 preparedCover?.file?.delete()
             }
@@ -229,6 +245,7 @@ class MusicRepository @Inject constructor(
         artistDao.upsertAll(
             remoteTracks
                 .map { track ->
+                    Timber.tag("TECHDEBT").w("не подтянул имя артиста")
                     Artist(
                         remoteId = track.artistId,
                         name = "",
@@ -298,6 +315,7 @@ class MusicRepository @Inject constructor(
                     name = remotePlaylist.name,
                     coverUri = existingPlaylist?.coverUri,
                     nameIsLocalOverride = false,
+                    ownerRemoteId = authSessionManager.requireCurrentUser().remoteId,
                     tracksSeeded = existingPlaylist?.tracksSeeded ?: false,
                 )
             },
