@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
-import sstu.grivvus.yamusic.data.network.NetworkUserCreate
 import sstu.grivvus.yamusic.data.network.core.ApiException
 import timber.log.Timber
 import javax.inject.Inject
@@ -65,11 +64,8 @@ class RegisterViewModel
             } else {
                 try {
                     userRepository.register(
-                        NetworkUserCreate(
-                            _username.value,
-                            null,
-                            _password.value
-                        )
+                        _username.value,
+                        _password.value
                     )
                     onSuccess()
                 } catch (e: ApiException) {

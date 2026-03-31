@@ -14,7 +14,6 @@ import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.ServerInfoRepository
 import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.ChangeServerDto
-import sstu.grivvus.yamusic.data.network.ChangeUserDto
 import sstu.grivvus.yamusic.data.network.auth.SessionExpiredException
 import sstu.grivvus.yamusic.data.network.core.ApiException
 import javax.inject.Inject
@@ -162,16 +161,14 @@ class ProfileViewModel
     fun tryToApplyChanges() = viewModelScope.launch {
         try {
             val currentUserData = userRepository.requireCurrentUser()
-            val changeUser = ChangeUserDto(
-                currentUserData.username,
-                if (_username.value != currentUserData.username) _username.value else null,
-                if (_email.value != currentUserData.email) _email.value else null
-            )
+            val newUsername =
+                if (_username.value != currentUserData.username) _username.value else null
+            val newEmail = if (_email.value != currentUserData.email) _email.value else null
             val changeServer = ChangeServerDto(
                 if (_serverHost.value != serverInfoRepository.getServerInfo()?.host) _serverHost.value else null,
                 if (_serverPort.value != serverInfoRepository.getServerInfo()?.port) _serverPort.value else null
             )
-            if (changeUser.newEmail == null && changeUser.newUsername == null && changeServer.host == null && changeServer.port == null) {
+            if (newEmail == null && newUsername == null && changeServer.host == null && changeServer.port == null) {
                 _errorMsg.value = "Nothing that can be saved"
                 return@launch
             }
@@ -181,10 +178,10 @@ class ProfileViewModel
             serverInfoRepository.saveServerInfo(_serverHost.value, _serverPort.value)
             applyCurrentServerSettings()
 
-            if (changeUser.newEmail == null && changeUser.newUsername == null) {
+            if (newEmail == null && newUsername == null) {
                 return@launch
             }
-            userRepository.applyChanges(changeUser)
+            userRepository.applyChanges(newUsername, newEmail)
             applyCurrentUser()
             _errorMsg.value = "Profile updated successfully"
         } catch (_: SessionExpiredException) {

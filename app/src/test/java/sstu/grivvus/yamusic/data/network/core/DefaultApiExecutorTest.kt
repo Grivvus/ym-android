@@ -69,7 +69,7 @@ class DefaultApiExecutorTest {
 
     @Test
     fun executeRaw_clientException_mapsNestedClientErrorBody() = runTest {
-        val error = expectThrows<ClientApiException> {
+        val error = expectThrows<NotFoundApiException> {
             executor.executeRaw<Unit> {
                 throw ClientException(
                     message = "Client error : 404 Not Found",

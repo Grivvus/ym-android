@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
-import sstu.grivvus.yamusic.data.network.NetworkUserLogin
 import sstu.grivvus.yamusic.data.network.core.ApiException
 import timber.log.Timber
 import javax.inject.Inject
@@ -59,7 +58,7 @@ constructor(
                 }
             } else {
                 try {
-                    userRepository.login(NetworkUserLogin(_username.value, _password.value))
+                    userRepository.login(_username.value, _password.value)
                     onSuccess()
                 } catch (e: ApiException) {
                     _showError.value = true

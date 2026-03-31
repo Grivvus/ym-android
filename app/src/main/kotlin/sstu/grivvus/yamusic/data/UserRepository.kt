@@ -5,9 +5,6 @@ import android.net.Uri
 import androidx.core.net.toUri
 import dagger.hilt.android.qualifiers.ApplicationContext
 import sstu.grivvus.yamusic.data.local.LocalUser
-import sstu.grivvus.yamusic.data.network.ChangeUserDto
-import sstu.grivvus.yamusic.data.network.NetworkUserCreate
-import sstu.grivvus.yamusic.data.network.NetworkUserLogin
 import sstu.grivvus.yamusic.data.network.auth.AuthSessionManager
 import sstu.grivvus.yamusic.data.network.model.UploadPart
 import sstu.grivvus.yamusic.data.network.remote.auth.AuthRemoteDataSource
@@ -23,34 +20,34 @@ class UserRepository @Inject constructor(
     private val serverInfoRepository: ServerInfoRepository,
     @ApplicationContext private val context: Context,
 ) {
-    suspend fun register(user: NetworkUserCreate) {
+    suspend fun register(username: String, password: String, email: String? = null) {
         val session = authRemoteDataSource.register(
-            username = user.username,
-            email = user.email,
-            password = user.password,
+            username = username,
+            email = email,
+            password = password,
         )
         authSessionManager.startSession(session)
         authSessionManager.updateCurrentUser(
             LocalUser(
                 remoteId = session.userId,
-                username = user.username,
-                email = user.email,
+                username = username,
+                email = email,
                 access = session.accessToken,
                 refresh = session.refreshToken,
             ),
         )
     }
 
-    suspend fun login(user: NetworkUserLogin) {
+    suspend fun login(username: String, password: String) {
         val session = authRemoteDataSource.login(
-            username = user.username,
-            password = user.password,
+            username = username,
+            password = password,
         )
         authSessionManager.startSession(session)
         authSessionManager.updateCurrentUser(
             LocalUser(
                 remoteId = session.userId,
-                username = user.username,
+                username = username,
                 email = null,
                 access = session.accessToken,
                 refresh = session.refreshToken,
@@ -119,10 +116,10 @@ class UserRepository @Inject constructor(
         }
     }
 
-    suspend fun applyChanges(user: ChangeUserDto) {
+    suspend fun applyChanges(newUsername: String?, newEmail: String?) {
         val localUser = authSessionManager.requireCurrentUser()
-        val targetUsername = user.newUsername ?: localUser.username
-        val targetEmail = user.newEmail ?: (localUser.email ?: "")
+        val targetUsername = newUsername ?: localUser.username
+        val targetEmail = newEmail ?: (localUser.email ?: "")
 
         val remoteUser = userRemoteDataSource.updateCurrentUser(
             newUsername = targetUsername,
