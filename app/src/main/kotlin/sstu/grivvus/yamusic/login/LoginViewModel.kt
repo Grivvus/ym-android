@@ -63,7 +63,7 @@ constructor(
                     onSuccess()
                 } catch (e: ApiException) {
                     _showError.value = true
-                    if (e.statusCode != null && e.statusCode!! == 400) {
+                    if (e.statusCode != null && e.statusCode!! >= 400 && e.statusCode!! < 500) {
                         _errorMessage.value = "Wrong login or password"
                     } else {
                         _errorMessage.value = "Can't proceed login due to server error"
@@ -71,7 +71,7 @@ constructor(
                 } catch (e: Exception) {
                     Timber.tag("NetworkError").e(e)
                     _showError.value = true
-                    _errorMessage.value = "Can't proceed login due to server error"
+                    _errorMessage.value = "Can't proceed login due to unknown server error"
                 }
             }
         }
