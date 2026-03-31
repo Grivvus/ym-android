@@ -11,6 +11,7 @@ import org.junit.Test
 import sstu.grivvus.yamusic.data.local.LocalUser
 import sstu.grivvus.yamusic.data.network.auth.AuthSessionManager
 import sstu.grivvus.yamusic.data.network.auth.SessionEndReason
+import sstu.grivvus.yamusic.data.network.auth.SessionExpiredException
 import sstu.grivvus.yamusic.data.network.auth.SessionRequiredException
 import sstu.grivvus.yamusic.data.network.auth.SessionState
 import sstu.grivvus.yamusic.data.network.model.NetworkSession
@@ -91,6 +92,64 @@ class OpenApiGeneratedApiProviderTest {
         assertThat(GeneratedApiClient.accessToken).isEqualTo("previous-token")
     }
 
+    @Test
+    fun withAuthorizedApi_onUnauthorized_refreshesTokenAndRetriesOnce() = runTest {
+        GeneratedApiClient.accessToken = "previous-token"
+        val authSessionManager = FakeAuthSessionManager(
+            accessToken = "stale-token",
+            refreshedAccessToken = "fresh-token",
+        )
+        val provider = OpenApiGeneratedApiProvider(
+            apiBaseUrlProvider = FixedApiBaseUrlProvider("http://music.local"),
+            authSessionManagerProvider = Provider { authSessionManager },
+        )
+        var invocationCount = 0
+
+        val observedToken = provider.withAuthorizedApi { api ->
+            invocationCount += 1
+            assertThat(api.baseUrl).isEqualTo("http://music.local")
+            when (invocationCount) {
+                1 -> {
+                    assertThat(GeneratedApiClient.accessToken).isEqualTo("stale-token")
+                    throw UnauthorizedApiException(message = "expired")
+                }
+
+                2 -> GeneratedApiClient.accessToken
+                else -> error("Unexpected retry count: $invocationCount")
+            }
+        }
+
+        assertThat(observedToken).isEqualTo("fresh-token")
+        assertThat(invocationCount).isEqualTo(2)
+        assertThat(authSessionManager.refreshInvocationCount).isEqualTo(1)
+        assertThat(authSessionManager.lastAttemptedAccessToken).isEqualTo("stale-token")
+        assertThat(GeneratedApiClient.accessToken).isEqualTo("previous-token")
+    }
+
+    @Test
+    fun withAuthorizedApi_whenRefreshFails_throwsSessionExpiredException() = runTest {
+        GeneratedApiClient.accessToken = "previous-token"
+        val authSessionManager = FakeAuthSessionManager(
+            accessToken = "stale-token",
+            refreshedAccessToken = null,
+        )
+        val provider = OpenApiGeneratedApiProvider(
+            apiBaseUrlProvider = FixedApiBaseUrlProvider("http://music.local"),
+            authSessionManagerProvider = Provider { authSessionManager },
+        )
+
+        val error = expectThrows<SessionExpiredException> {
+            provider.withAuthorizedApi<Unit> {
+                throw UnauthorizedApiException(message = "expired")
+            }
+        }
+
+        assertThat(error).isInstanceOf(SessionExpiredException::class.java)
+        assertThat(authSessionManager.refreshInvocationCount).isEqualTo(1)
+        assertThat(authSessionManager.lastAttemptedAccessToken).isEqualTo("stale-token")
+        assertThat(GeneratedApiClient.accessToken).isEqualTo("previous-token")
+    }
+
     private class FixedApiBaseUrlProvider(
         private val baseUrl: String,
     ) : ApiBaseUrlProvider {
@@ -103,8 +162,15 @@ class OpenApiGeneratedApiProviderTest {
 
     private class FakeAuthSessionManager(
         private var accessToken: String?,
+        private val refreshedAccessToken: String? = null,
     ) : AuthSessionManager {
         private val internalState = MutableStateFlow<SessionState>(SessionState.Initializing)
+
+        var refreshInvocationCount: Int = 0
+            private set
+
+        var lastAttemptedAccessToken: String? = null
+            private set
 
         override val sessionState: StateFlow<SessionState> = internalState
 
@@ -121,7 +187,12 @@ class OpenApiGeneratedApiProviderTest {
 
         override suspend fun resolveAccessToken(): String? = accessToken
 
-        override suspend fun refreshAfterUnauthorized(attemptedAccessToken: String?): String? = null
+        override suspend fun refreshAfterUnauthorized(attemptedAccessToken: String?): String? {
+            refreshInvocationCount += 1
+            lastAttemptedAccessToken = attemptedAccessToken
+            accessToken = refreshedAccessToken
+            return refreshedAccessToken
+        }
 
         override suspend fun getCurrentUser(): LocalUser? = null
 

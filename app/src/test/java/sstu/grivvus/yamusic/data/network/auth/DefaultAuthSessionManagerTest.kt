@@ -5,7 +5,9 @@ import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.async
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -167,6 +169,65 @@ class DefaultAuthSessionManagerTest {
             .isEqualTo(SessionState.Unauthenticated(SessionEndReason.EXPIRED))
     }
 
+    @Test
+    fun refreshAfterUnauthorized_whenTokenWasAlreadyRotated_returnsCurrentTokenWithoutRefresh() = runTest {
+        database.userDao().insert(
+            LocalUser(
+                remoteId = 1L,
+                username = "tester",
+                email = "tester@example.com",
+                access = "fresh-access",
+                refresh = "refresh-token",
+            ),
+        )
+        val tokenRefresher = FakeTokenRefresher(
+            nextSession = NetworkSession(
+                userId = 1L,
+                accessToken = "new-access",
+                refreshToken = "new-refresh",
+            ),
+        )
+        val sessionManager = createSessionManager(tokenRefresher, backgroundScope)
+
+        advanceUntilIdle()
+        val refreshedAccessToken = sessionManager.refreshAfterUnauthorized("stale-access")
+
+        assertThat(refreshedAccessToken).isEqualTo("fresh-access")
+        assertThat(tokenRefresher.invocationCount).isEqualTo(0)
+    }
+
+    @Test
+    fun refreshAfterUnauthorized_concurrentCalls_refreshOnlyOnce() = runTest {
+        database.userDao().insert(
+            LocalUser(
+                remoteId = 1L,
+                username = "tester",
+                email = "tester@example.com",
+                access = "old-access",
+                refresh = "refresh-token",
+            ),
+        )
+        val tokenRefresher = FakeTokenRefresher(
+            nextSession = NetworkSession(
+                userId = 1L,
+                accessToken = "new-access",
+                refreshToken = "new-refresh",
+            ),
+            refreshDelayMs = 50L,
+        )
+        val sessionManager = createSessionManager(tokenRefresher, backgroundScope)
+
+        advanceUntilIdle()
+        val firstCall = async { sessionManager.refreshAfterUnauthorized("old-access") }
+        val secondCall = async { sessionManager.refreshAfterUnauthorized("old-access") }
+
+        advanceUntilIdle()
+
+        assertThat(firstCall.await()).isEqualTo("new-access")
+        assertThat(secondCall.await()).isEqualTo("new-access")
+        assertThat(tokenRefresher.invocationCount).isEqualTo(1)
+    }
+
     private fun createSessionManager(
         tokenRefresher: FakeTokenRefresher,
         applicationScope: CoroutineScope,
@@ -182,6 +243,7 @@ class DefaultAuthSessionManagerTest {
     private class FakeTokenRefresher(
         private val nextSession: NetworkSession? = null,
         private val refreshError: Throwable? = null,
+        private val refreshDelayMs: Long = 0L,
     ) : TokenRefresher {
         var invocationCount: Int = 0
             private set
@@ -192,6 +254,9 @@ class DefaultAuthSessionManagerTest {
         override suspend fun refresh(refreshToken: String): NetworkSession {
             invocationCount += 1
             lastRefreshToken = refreshToken
+            if (refreshDelayMs > 0) {
+                delay(refreshDelayMs)
+            }
             refreshError?.let { throw it }
             return checkNotNull(nextSession)
         }
