@@ -10,10 +10,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
-import sstu.grivvus.yamusic.data.network.isServerSideError
 import sstu.grivvus.yamusic.data.network.NetworkUserLogin
+import sstu.grivvus.yamusic.data.network.core.ApiException
 import timber.log.Timber
-import java.io.IOException
 import javax.inject.Inject
 
 data class LoginUiState(
@@ -62,12 +61,12 @@ constructor(
                 try {
                     userRepository.login(NetworkUserLogin(_username.value, _password.value))
                     onSuccess()
-                } catch (e: IOException) {
+                } catch (e: ApiException) {
                     _showError.value = true
-                    _errorMessage.value = if (e.isServerSideError()) {
-                        "Server error. Please try again later"
+                    if (e.statusCode != null && e.statusCode!! == 400) {
+                        _errorMessage.value = "Wrong login or password"
                     } else {
-                        "Wrong username or password"
+                        _errorMessage.value = "Can't proceed login due to server error"
                     }
                 } catch (e: Exception) {
                     Timber.tag("NetworkError").e(e)

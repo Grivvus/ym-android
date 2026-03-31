@@ -8,13 +8,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import sstu.grivvus.yamusic.NavigationActions
 import sstu.grivvus.yamusic.WhileUiSubscribed
 import sstu.grivvus.yamusic.data.UserRepository
-import sstu.grivvus.yamusic.data.network.isServerSideError
 import sstu.grivvus.yamusic.data.network.NetworkUserCreate
+import sstu.grivvus.yamusic.data.network.core.ApiException
 import timber.log.Timber
-import java.io.IOException
 import javax.inject.Inject
 
 data class RegisterUiState(
@@ -66,15 +64,22 @@ class RegisterViewModel
                 }
             } else {
                 try {
-                    userRepository.register(NetworkUserCreate(_username.value, null, _password.value))
+                    userRepository.register(
+                        NetworkUserCreate(
+                            _username.value,
+                            null,
+                            _password.value
+                        )
+                    )
                     onSuccess()
-                } catch (e: IOException) {
+                } catch (e: ApiException) {
                     _showError.value = true
-                    _errorMessage.value = if (e.isServerSideError()) {
-                        "Server error. Please try again later"
-                    } else {
-                        "This username is already used"
-                    }
+                    _errorMessage.value =
+                        if (e.statusCode != null && e.statusCode!! >= 400 && e.statusCode!! < 500) {
+                            "This username is already used"
+                        } else {
+                            "Server error. Please try again later"
+                        }
                 } catch (e: Exception) {
                     Timber.tag("NetworkError").e(e)
                     _showError.value = true

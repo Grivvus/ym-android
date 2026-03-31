@@ -16,8 +16,7 @@ import sstu.grivvus.yamusic.data.UserRepository
 import sstu.grivvus.yamusic.data.network.ChangeServerDto
 import sstu.grivvus.yamusic.data.network.ChangeUserDto
 import sstu.grivvus.yamusic.data.network.auth.SessionExpiredException
-import sstu.grivvus.yamusic.data.network.isServerSideError
-import java.io.IOException
+import sstu.grivvus.yamusic.data.network.core.ApiException
 import javax.inject.Inject
 
 data class ProfileUiState(
@@ -190,12 +189,13 @@ class ProfileViewModel
             _errorMsg.value = "Profile updated successfully"
         } catch (_: SessionExpiredException) {
             return@launch
-        } catch (e: IOException) {
-            _errorMsg.value = if (e.isServerSideError()) {
-                "Server error. Please try again later"
-            } else {
-                "New username or email are not unique"
-            }
+        } catch (e: ApiException) {
+            _errorMsg.value =
+                if (e.statusCode != null && e.statusCode!! >= 400 && e.statusCode!! < 500) {
+                    "New username or email are not unique"
+                } else {
+                    "Server error. Please try again later"
+                }
         } catch (e: Exception) {
             _errorMsg.value = "Can't update profile due to unexpected error"
         } finally {

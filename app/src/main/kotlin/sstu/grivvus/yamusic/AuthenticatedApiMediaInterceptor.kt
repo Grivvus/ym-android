@@ -1,10 +1,11 @@
 package sstu.grivvus.yamusic
 
+import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
 import sstu.grivvus.yamusic.data.ServerInfoRepository
-import sstu.grivvus.yamusic.data.network.AuthSessionManager
+import sstu.grivvus.yamusic.data.network.auth.AuthSessionManager
 
 class AuthenticatedApiMediaInterceptor(
     private val authSessionManager: AuthSessionManager,
@@ -17,7 +18,7 @@ class AuthenticatedApiMediaInterceptor(
         }
 
         val initialAccessToken = request.bearerTokenOrNull()
-            ?: authSessionManager.currentAccessTokenBlocking()
+            ?: runBlocking { authSessionManager.getCurrentUser()?.access }
         val authenticatedRequest = request.withBearerToken(initialAccessToken)
         val initialResponse = chain.proceed(authenticatedRequest)
         if (initialResponse.code != 401) {
@@ -25,7 +26,7 @@ class AuthenticatedApiMediaInterceptor(
         }
 
         val refreshedAccessToken = try {
-            authSessionManager.refreshAccessTokenAfterUnauthorizedBlocking(initialAccessToken)
+            runBlocking { authSessionManager.refreshAfterUnauthorized(initialAccessToken) }
         } catch (error: Exception) {
             initialResponse.close()
             throw error
@@ -34,7 +35,7 @@ class AuthenticatedApiMediaInterceptor(
         initialResponse.close()
         val retryResponse = chain.proceed(request.withBearerToken(refreshedAccessToken))
         if (retryResponse.code == 401) {
-            authSessionManager.markSessionExpiredBlocking()
+            runBlocking { authSessionManager.markSessionExpired() }
         }
         return retryResponse
     }
