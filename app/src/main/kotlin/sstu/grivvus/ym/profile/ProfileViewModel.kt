@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import sstu.grivvus.ym.WhileUiSubscribed
+import sstu.grivvus.ym.logHandledUiError
 import sstu.grivvus.ym.data.ServerInfoRepository
 import sstu.grivvus.ym.data.UserRepository
 import sstu.grivvus.ym.data.network.ChangeServerDto
@@ -110,6 +111,7 @@ class ProfileViewModel
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (e: Exception) {
+                e.logHandledUiError("ProfileViewModel.refreshUser")
                 _errorMsg.value = "can't connect to the server, local data will be used"
             } finally {
                 _isRefreshing.value = false
@@ -152,6 +154,7 @@ class ProfileViewModel
         } catch (_: SessionExpiredException) {
             return@launch
         } catch (e: Exception) {
+            e.logHandledUiError("ProfileViewModel.uploadAvatar")
             _errorMsg.value = "Failed to set avatar image"
         } finally {
             _isLoading.value = false
@@ -187,6 +190,7 @@ class ProfileViewModel
         } catch (_: SessionExpiredException) {
             return@launch
         } catch (e: ApiException) {
+            e.logHandledUiError("ProfileViewModel.tryToApplyChanges")
             _errorMsg.value =
                 if (e.statusCode != null && e.statusCode!! >= 400 && e.statusCode!! < 500) {
                     "New username or email are not unique"
@@ -194,6 +198,7 @@ class ProfileViewModel
                     "Server error. Please try again later"
                 }
         } catch (e: Exception) {
+            e.logHandledUiError("ProfileViewModel.tryToApplyChanges")
             _errorMsg.value = "Can't update profile due to unexpected error"
         } finally {
             _isLoading.value = false

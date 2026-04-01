@@ -49,7 +49,7 @@ class OpenApiArtistRemoteDataSource @Inject constructor(
         return generatedApiProvider.withAuthorizedApi { api ->
             artistApiMapper.mapArtists(
                 apiExecutor.execute {
-                    api.getAllArtistsWithHttpInfo()
+                    api.getAllArtistsWithHttpInfo(null, null)
                 },
             )
         }

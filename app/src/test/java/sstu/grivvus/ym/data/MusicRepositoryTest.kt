@@ -20,6 +20,8 @@ import sstu.grivvus.ym.data.local.AppDatabase
 import sstu.grivvus.ym.data.local.LocalUser
 import sstu.grivvus.ym.data.local.Playlist
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
+import sstu.grivvus.ym.data.network.remote.album.AlbumRemoteDataSource
+import sstu.grivvus.ym.data.network.remote.artist.ArtistRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.playlist.PlaylistRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.track.TrackRemoteDataSource
 import sstu.grivvus.ym.testutil.MainDispatcherRule
@@ -36,6 +38,8 @@ class MusicRepositoryTest {
 
     private val playlistRemoteDataSource = mockk<PlaylistRemoteDataSource>()
     private val trackRemoteDataSource = mockk<TrackRemoteDataSource>()
+    private val artistRemoteDataSource = mockk<ArtistRemoteDataSource>()
+    private val albumRemoteDataSource = mockk<AlbumRemoteDataSource>()
     private val serverInfoRepository = mockk<ServerInfoRepository>()
     private val authSessionManager = mockk<AuthSessionManager>()
 
@@ -117,6 +121,8 @@ class MusicRepositoryTest {
             playlistTrackDao = database.playlistTrackDao(),
             playlistRemoteDataSource = playlistRemoteDataSource,
             trackRemoteDataSource = trackRemoteDataSource,
+            artistRemoteDataSource = artistRemoteDataSource,
+            albumRemoteDataSource = albumRemoteDataSource,
             serverInfoRepository = serverInfoRepository,
             authSessionManager = authSessionManager,
             context = applicationContext,

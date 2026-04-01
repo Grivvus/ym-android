@@ -78,8 +78,8 @@ interface TrackAlbumDao {
     @Upsert
     suspend fun upsert(ref: TrackAlbumCrossRef)
 
-    @Upsert
-    suspend fun upsertAll(refs: List<TrackAlbumCrossRef>)
+    @Insert()
+    suspend fun insertAll(refs: List<TrackAlbumCrossRef>)
 
     @Query("SELECT * FROM track_album_cross_ref")
     suspend fun getAll(): List<TrackAlbumCrossRef>

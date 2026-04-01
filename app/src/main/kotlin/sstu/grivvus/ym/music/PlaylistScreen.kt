@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.automirrored.sharp._360
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.sharp._360
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 import sstu.grivvus.ym.components.BottomBar
 import sstu.grivvus.ym.components.ErrorSnackbar
+import sstu.grivvus.ym.playback.PlaybackViewModel
 import sstu.grivvus.ym.ui.theme.appIconsMirrored
 
 private data class RenamePlaylistDraft(
@@ -68,8 +69,10 @@ fun PlaylistScreen(
     navigateToMusic: () -> Unit,
     navigateToLibrary: () -> Unit,
     navigateToProfile: () -> Unit,
+    onOpenPlayer: (Long) -> Unit,
     onBack: () -> Unit,
     viewModel: PlaylistViewModel = hiltViewModel(),
+    playbackViewModel: PlaybackViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -165,8 +168,22 @@ fun PlaylistScreen(
                     PlaylistDetails(
                         playlist = playlist,
                         isBusy = uiState.isMutating || uiState.isRefreshing,
+                        onPlayAll = {
+                            viewModel.playbackQueueFromStart()?.let { queue ->
+                                playbackViewModel.play(queue)
+                                val trackId = queue.items.getOrNull(queue.startIndex)?.id
+                                    ?: return@let
+                                onOpenPlayer(trackId)
+                            }
+                        },
                         onAddExistingTrack = { showAddTracksDialog = true },
                         onUploadTrack = { audioPicker.launch("audio/*") },
+                        onTrackClick = { trackId ->
+                            viewModel.playbackQueueFor(trackId)?.let { queue ->
+                                playbackViewModel.play(queue)
+                                onOpenPlayer(trackId)
+                            }
+                        },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -262,8 +279,10 @@ fun PlaylistScreen(
 private fun PlaylistDetails(
     playlist: PlaylistDetailUi,
     isBusy: Boolean,
+    onPlayAll: () -> Unit,
     onAddExistingTrack: () -> Unit,
     onUploadTrack: () -> Unit,
+    onTrackClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -296,6 +315,14 @@ private fun PlaylistDetails(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(16.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        FilledTonalButton(
+                            onClick = onPlayAll,
+                            enabled = playlist.tracks.isNotEmpty(),
+                        ) {
+                            Text("Play all")
+                        }
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         FilledTonalButton(onClick = onAddExistingTrack) {
                             Text("Add from library")
@@ -333,7 +360,10 @@ private fun PlaylistDetails(
             }
         } else {
             items(playlist.tracks, key = { it.id }) { track ->
-                TrackRow(track = track)
+                TrackRow(
+                    track = track,
+                    onClick = { onTrackClick(track.id) },
+                )
             }
         }
 
@@ -344,9 +374,14 @@ private fun PlaylistDetails(
 }
 
 @Composable
-private fun TrackRow(track: TrackItemUi) {
+private fun TrackRow(
+    track: TrackItemUi,
+    onClick: () -> Unit,
+) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         tonalElevation = 2.dp,
     ) {

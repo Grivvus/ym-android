@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import sstu.grivvus.ym.WhileUiSubscribed
+import sstu.grivvus.ym.logHandledUiError
 import sstu.grivvus.ym.data.ServerInfoRepository
 import sstu.grivvus.ym.data.network.remote.server.ServerProbeRemoteDataSource
 import java.io.IOException
@@ -69,8 +70,10 @@ constructor(
                 serverInfoRepository.saveServerInfo(host, portValue)
                 onSuccess()
             } catch (e: IOException) {
+                e.logHandledUiError("ServerSetupViewModel.proceed")
                 showError("Unable to connect to server. Check host, port and /ping endpoint")
             } catch (e: Exception) {
+                e.logHandledUiError("ServerSetupViewModel.proceed")
                 showError("Can't proceed setup due to server error")
             } finally {
                 _isLoading.value = false

@@ -18,9 +18,9 @@ import sstu.grivvus.ym.components.BlankScreen
 import sstu.grivvus.ym.data.network.auth.SessionState
 import sstu.grivvus.ym.login.LoginScreen
 import sstu.grivvus.ym.music.MusicScreen
-import sstu.grivvus.ym.music.PlayerPlaceholderScreen
 import sstu.grivvus.ym.music.PlaylistScreen
 import sstu.grivvus.ym.music.UploadScreen
+import sstu.grivvus.ym.playback.PlayerScreen
 import sstu.grivvus.ym.profile.ProfileScreen
 import sstu.grivvus.ym.register.RegistrationScreen
 import sstu.grivvus.ym.serverSetup.ServerSetup
@@ -147,6 +147,7 @@ fun YMNavGraph(
                 navigateToMusic = { navActions.navigateToMusic() },
                 navigateToLibrary = { navActions.navigateToLibrary() },
                 navigateToProfile = { navActions.navigateToProfile() },
+                onOpenPlayer = { trackId -> navActions.navigateToPlayer(trackId) },
                 onBack = {
                     navController.previousBackStackEntry
                         ?.savedStateHandle
@@ -168,8 +169,8 @@ fun YMNavGraph(
                 }
             ),
         ) { backStackEntry ->
-            PlayerPlaceholderScreen(
-                trackId = backStackEntry.arguments?.getLong(RouteArguments.PLAYER_TRACK_ID) ?: -1L,
+            PlayerScreen(
+                requestedTrackId = backStackEntry.arguments?.getLong(RouteArguments.PLAYER_TRACK_ID),
                 onBack = navActions::popBackStack,
             )
         }

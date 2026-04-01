@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.logHandledUiError
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.PlaylistCreationConflict
@@ -59,6 +60,7 @@ class MusicViewModel @Inject constructor(
                 if (fallbackData != null) {
                     applyLibraryData(fallbackData)
                 }
+                error.logHandledUiError("MusicViewModel.refresh")
                 _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isLoading = false, isRefreshing = false)
@@ -82,8 +84,10 @@ class MusicViewModel @Inject constructor(
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (e: PlaylistCreationConflict) {
+                e.logHandledUiError("MusicViewModel.mutate")
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } catch (e: Exception) {
+                e.logHandledUiError("MusicViewModel.mutate")
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isMutating = false)

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.logHandledUiError
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.PlaylistCreationConflict
 import sstu.grivvus.ym.data.UploadTrackCatalog
@@ -137,6 +138,7 @@ class UploadTrackModalViewModel(
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (error: Exception) {
+                error.logHandledUiError("UploadTrackModalViewModel.createArtistFromQuery")
                 _uiState.value = _uiState.value.copy(
                     errorMessage = error.toReadableMessage(),
                 )
@@ -205,6 +207,7 @@ class UploadTrackModalViewModel(
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (error: Exception) {
+                error.logHandledUiError("UploadTrackModalViewModel.submit")
                 _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isSubmitting = false)
@@ -220,6 +223,7 @@ class UploadTrackModalViewModel(
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (error: Exception) {
+                error.logHandledUiError("UploadTrackModalViewModel.loadCatalog")
                 _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isCatalogLoading = false)

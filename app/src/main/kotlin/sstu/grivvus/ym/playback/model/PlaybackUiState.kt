@@ -4,6 +4,7 @@ data class PlaybackUiState(
     val isConnected: Boolean = false,
     val isBuffering: Boolean = false,
     val isPlaying: Boolean = false,
+    val isSeekable: Boolean = false,
     val currentTrack: PlayableTrack? = null,
     val queue: List<PlayableTrack> = emptyList(),
     val currentIndex: Int = -1,

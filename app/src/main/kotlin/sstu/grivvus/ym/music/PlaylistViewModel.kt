@@ -13,14 +13,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.logHandledUiError
 import sstu.grivvus.ym.RouteArguments
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
+import sstu.grivvus.ym.data.PlaylistBundle
 import sstu.grivvus.ym.data.PlaylistCreationConflict
 import sstu.grivvus.ym.data.TrackBundle
 import sstu.grivvus.ym.data.local.Album
 import sstu.grivvus.ym.data.local.Artist
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
+import sstu.grivvus.ym.playback.model.PlaybackQueue
+import sstu.grivvus.ym.playback.queue.PlaybackQueueFactory
 import java.io.IOException
 
 data class TrackItemUi(
@@ -53,10 +57,12 @@ sealed interface PlaylistScreenEvent {
 @HiltViewModel
 class PlaylistViewModel @Inject constructor(
     private val repository: MusicRepository,
+    private val playbackQueueFactory: PlaybackQueueFactory,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val playlistId: Long =
         checkNotNull(savedStateHandle.get<Long>(RouteArguments.PLAYLIST_ID))
+    private var currentPlaylistBundle: PlaylistBundle? = null
     private val _uiState = MutableStateFlow(PlaylistUiState())
     private val _events = MutableSharedFlow<PlaylistScreenEvent>()
     val uiState: StateFlow<PlaylistUiState> = _uiState.asStateFlow()
@@ -84,6 +90,7 @@ class PlaylistViewModel @Inject constructor(
                 if (fallbackData != null) {
                     applyLibraryData(fallbackData)
                 }
+                error.logHandledUiError("PlaylistViewModel.refresh")
                 _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isLoading = false, isRefreshing = false)
@@ -112,8 +119,10 @@ class PlaylistViewModel @Inject constructor(
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (e: PlaylistCreationConflict) {
+                e.logHandledUiError("PlaylistViewModel.deletePlaylist")
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } catch (e: Exception) {
+                e.logHandledUiError("PlaylistViewModel.deletePlaylist")
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isMutating = false)
@@ -132,9 +141,24 @@ class PlaylistViewModel @Inject constructor(
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (error: Exception) {
+                error.logHandledUiError("PlaylistViewModel.reloadFromLocal")
                 _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
             }
         }
+    }
+
+    fun playbackQueueFor(trackId: Long): PlaybackQueue? {
+        val playlistBundle = currentPlaylistBundle ?: return null
+        if (playlistBundle.tracks.none { it.track.remoteId == trackId }) {
+            return null
+        }
+        return playbackQueueFactory.playlistQueue(playlistBundle, trackId)
+    }
+
+    fun playbackQueueFromStart(): PlaybackQueue? {
+        val playlistBundle = currentPlaylistBundle ?: return null
+        val firstTrackId = playlistBundle.tracks.firstOrNull()?.track?.remoteId ?: return null
+        return playbackQueueFactory.playlistQueue(playlistBundle, firstTrackId)
     }
 
     private fun mutate(block: suspend () -> MusicLibraryData) {
@@ -145,8 +169,10 @@ class PlaylistViewModel @Inject constructor(
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (e: PlaylistCreationConflict) {
+                e.logHandledUiError("PlaylistViewModel.mutate")
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } catch (e: Exception) {
+                e.logHandledUiError("PlaylistViewModel.mutate")
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isMutating = false)
@@ -157,6 +183,7 @@ class PlaylistViewModel @Inject constructor(
     private fun applyLibraryData(data: MusicLibraryData) {
         val artistsById = data.artists.associateBy { it.remoteId }
         val playlistBundle = data.playlists.firstOrNull { it.playlist.remoteId == playlistId }
+        currentPlaylistBundle = playlistBundle
         _uiState.value = _uiState.value.copy(
             playlist = playlistBundle?.let { bundle ->
                 PlaylistDetailUi(

@@ -309,7 +309,7 @@ class MusicRepository @Inject constructor(
                     remoteId = track.id,
                     name = track.name,
                     artistId = track.artistId,
-                    durationMs = existingTrack?.durationMs,
+                    durationMs = track.durationMs,
                     uriFast = track.qualityPresets[TrackQuality.FAST]?.toUri()
                         ?: existingTrack?.uriFast,
                     uriStandard = track.qualityPresets[TrackQuality.STANDARD]?.toUri()
@@ -324,15 +324,16 @@ class MusicRepository @Inject constructor(
             },
         )
 
-        trackAlbumDao.clearAll()
-        trackAlbumDao.upsertAll(
-            remoteTracks.map { track ->
-                TrackAlbumCrossRef(
-                    trackId = track.id,
-                    albumId = track.albumId,
-                )
-            },
-        )
+        // Constraint violation
+//        trackAlbumDao.clearAll()
+//        trackAlbumDao.insertAll(
+//            remoteTracks.map { track ->
+//                TrackAlbumCrossRef(
+//                    trackId = track.id,
+//                    albumId = track.albumId,
+//                )
+//            },
+//        )
 
         val remotePlaylistSummaries = playlistRemoteDataSource.getMyPlaylists()
         val remotePlaylists = remotePlaylistSummaries.map { summary ->

@@ -12,6 +12,7 @@ class TrackApiMapper @Inject constructor() {
         return NetworkTrack(
             id = response.trackId.toLong(), name = response.name,
             artistId = response.artistId.toLong(), albumId = response.albumId.toLong(),
+            durationMs = response.durationMs.toLong(),
             coverUrl = response.coverUrl,
             qualityPresets = response.toQualityPresets(),
         )
