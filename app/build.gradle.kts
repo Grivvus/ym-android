@@ -24,7 +24,7 @@ openApiGenerate {
     library.set("jvm-okhttp4")
     inputSpec.set(openApiSpec.asFile.absolutePath)
     outputDir.set(openApiOutputDir.get().asFile.absolutePath)
-    packageName.set("sstu.grivvus.yamusic.openapi")
+    packageName.set("sstu.grivvus.ym.openapi")
     configOptions.set(
         mapOf(
             "dateLibrary" to "java8",
@@ -34,11 +34,11 @@ openApiGenerate {
 }
 
 android {
-    namespace = "sstu.grivvus.yamusic"
+    namespace = "sstu.grivvus.ym"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "sstu.grivvus.yamusic"
+        applicationId = "sstu.grivvus.ym"
         minSdk = 35
         targetSdk = 36
         versionCode = 1
@@ -104,16 +104,20 @@ val syncOpenApiSpec = tasks.register("syncOpenApiSpec") {
             append(System.currentTimeMillis())
         }
 
-        val connection = (URI.create(cacheBustedUrl).toURL().openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 30_000
-            readTimeout = 60_000
-            useCaches = false
-            setRequestProperty("Accept", "application/yaml, text/yaml, application/vnd.github.raw")
-            setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0")
-            setRequestProperty("Pragma", "no-cache")
-            setRequestProperty("Expires", "0")
-        }
+        val connection =
+            (URI.create(cacheBustedUrl).toURL().openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 30_000
+                readTimeout = 60_000
+                useCaches = false
+                setRequestProperty(
+                    "Accept",
+                    "application/yaml, text/yaml, application/vnd.github.raw"
+                )
+                setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0")
+                setRequestProperty("Pragma", "no-cache")
+                setRequestProperty("Expires", "0")
+            }
 
         val responseCode = connection.responseCode
         if (responseCode !in 200..299) {
@@ -142,7 +146,7 @@ val patchOpenApiGeneratedSources = tasks.register("patchOpenApiGeneratedSources"
 
     doLast {
         val apiClientPath = openApiOutputDir.get()
-            .file("src/main/kotlin/sstu/grivvus/yamusic/openapi/infrastructure/ApiClient.kt")
+            .file("src/main/kotlin/sstu/grivvus/ym/openapi/infrastructure/ApiClient.kt")
             .asFile
 
         if (!apiClientPath.exists()) return@doLast

@@ -23,5 +23,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "YaMusic"
+rootProject.name = "ym"
 include(":app")
