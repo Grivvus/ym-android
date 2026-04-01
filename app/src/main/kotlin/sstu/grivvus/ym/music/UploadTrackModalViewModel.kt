@@ -47,6 +47,7 @@ data class UploadTrackModalUiState(
     val artists: List<UploadTrackArtistOptionUi> = emptyList(),
     val albums: List<UploadTrackAlbumOptionUi> = emptyList(),
     val isCatalogLoading: Boolean = true,
+    val isCreatingArtist: Boolean = false,
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null,
 )
@@ -83,7 +84,7 @@ class UploadTrackModalViewModel(
 
     fun onArtistQueryChanged(value: String) {
         val currentState = _uiState.value
-        val exactArtist = currentState.artists.singleOrNull { artist ->
+        val exactArtist = currentState.artists.firstOrNull { artist ->
             artist.displayName.equals(value.trim(), ignoreCase = true)
         }
         _uiState.value = currentState.copy(
@@ -96,6 +97,53 @@ class UploadTrackModalViewModel(
             },
             errorMessage = null,
         )
+    }
+
+    fun createArtistFromQuery() {
+        val currentState = _uiState.value
+        val artistName = currentState.artistQuery.trim()
+        if (artistName.isBlank()) {
+            _uiState.value = currentState.copy(errorMessage = "Artist name is required")
+            return
+        }
+
+        currentState.artists.firstOrNull { artist ->
+            artist.displayName.equals(artistName, ignoreCase = true)
+        }?.let { existingArtist ->
+            onArtistSelected(existingArtist)
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = currentState.copy(isCreatingArtist = true, errorMessage = null)
+            try {
+                val createdArtist = repository.createArtist(artistName)
+                val updatedArtists = (_uiState.value.artists + UploadTrackArtistOptionUi(
+                    id = createdArtist.remoteId,
+                    displayName = createdArtist.name,
+                ))
+                    .distinctBy { it.id }
+                    .sortedWith(
+                        compareBy<UploadTrackArtistOptionUi> { it.displayName.lowercase() }
+                            .thenBy { it.id },
+                    )
+                _uiState.value = _uiState.value.copy(
+                    artists = updatedArtists,
+                    artistQuery = createdArtist.name,
+                    selectedArtistId = createdArtist.remoteId,
+                    selectedAlbumId = null,
+                    errorMessage = null,
+                )
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = error.toReadableMessage(),
+                )
+            } finally {
+                _uiState.value = _uiState.value.copy(isCreatingArtist = false)
+            }
+        }
     }
 
     fun onArtistSelected(artist: UploadTrackArtistOptionUi) {
@@ -183,36 +231,28 @@ class UploadTrackModalViewModel(
         _uiState.value = _uiState.value.copy(
             artists = catalog.artists
                 .sortedWith(
-                    compareBy<Artist> { it.displayName().lowercase() }
+                    compareBy<Artist> { it.name.lowercase() }
                         .thenBy { it.remoteId },
                 )
                 .map { artist ->
                     UploadTrackArtistOptionUi(
                         id = artist.remoteId,
-                        displayName = artist.displayName(),
+                        displayName = artist.name,
                     )
                 },
             albums = catalog.albums
                 .sortedWith(
-                    compareBy<Album> { it.displayName().lowercase() }
+                    compareBy<Album> { it.name.lowercase() }
                         .thenBy { it.remoteId },
                 )
                 .map { album ->
                     UploadTrackAlbumOptionUi(
                         id = album.remoteId,
                         artistId = album.artistId,
-                        displayName = album.displayName(),
+                        displayName = album.name,
                     )
                 },
         )
-    }
-
-    private fun Artist.displayName(): String {
-        return name.ifBlank { "Artist #$remoteId" }
-    }
-
-    private fun Album.displayName(): String {
-        return name.ifBlank { "Album #$remoteId" }
     }
 
     private fun Throwable.toReadableMessage(): String {

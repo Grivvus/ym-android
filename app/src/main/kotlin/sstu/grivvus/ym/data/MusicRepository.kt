@@ -92,6 +92,29 @@ class MusicRepository @Inject constructor(
             )
         }
 
+    suspend fun createArtist(name: String): Artist = withContext(dispatcher) {
+        val normalizedName = name.trim()
+        if (normalizedName.isBlank()) {
+            throw IOException("Artist name is required")
+        }
+
+        artistDao.getAll().firstOrNull { artist ->
+            artist.name.equals(normalizedName, ignoreCase = true)
+        }?.let { existingArtist ->
+            return@withContext existingArtist
+        }
+
+        val artistId = artistRemoteDataSource.createArtist(name = normalizedName)
+        val remoteArtistMetadata = loadRemoteArtistMetadata(artistId)
+        val artist = Artist(
+            remoteId = artistId,
+            name = remoteArtistMetadata?.name?.takeIf { it.isNotBlank() } ?: normalizedName,
+            imageUri = remoteArtistMetadata?.imageUri,
+        )
+        artistDao.upsert(artist)
+        artist
+    }
+
     suspend fun createPlaylist(name: String, coverUri: Uri?): MusicLibraryData =
         withContext(dispatcher) {
             val preparedCover = coverUri?.let(::prepareUploadFile)

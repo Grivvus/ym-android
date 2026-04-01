@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -16,6 +17,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,6 +41,8 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.collectLatest
 import sstu.grivvus.ym.data.MusicRepository
+
+private const val MAX_ARTIST_SUGGESTIONS = 5
 
 @Composable
 fun UploadTrackModal(
@@ -93,6 +97,7 @@ fun UploadTrackModal(
         onTitleChange = modalViewModel::onTitleChanged,
         onArtistQueryChange = modalViewModel::onArtistQueryChanged,
         onArtistSelected = modalViewModel::onArtistSelected,
+        onCreateArtist = modalViewModel::createArtistFromQuery,
         onAlbumSelected = { album ->
             modalViewModel.onAlbumSelected(album.id)
         },
@@ -109,12 +114,12 @@ private fun UploadTrackModalContent(
     onTitleChange: (String) -> Unit,
     onArtistQueryChange: (String) -> Unit,
     onArtistSelected: (UploadTrackArtistOptionUi) -> Unit,
+    onCreateArtist: () -> Unit,
     onAlbumSelected: (UploadTrackAlbumOptionUi) -> Unit,
     onSingleChange: (Boolean) -> Unit,
     onDismissError: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    var artistMenuExpanded by remember { mutableStateOf(false) }
     var albumMenuExpanded by remember { mutableStateOf(false) }
     val normalizedArtistQuery = uiState.artistQuery.trim()
     val artistSuggestions = remember(uiState.artists, normalizedArtistQuery) {
@@ -123,7 +128,12 @@ private fun UploadTrackModalContent(
         } else {
             uiState.artists.filter { artist ->
                 artist.displayName.startsWith(normalizedArtistQuery, ignoreCase = true)
-            }
+            }.take(MAX_ARTIST_SUGGESTIONS)
+        }
+    }
+    val hasExactArtistMatch = remember(uiState.artists, normalizedArtistQuery) {
+        normalizedArtistQuery.isNotBlank() && uiState.artists.any { artist ->
+            artist.displayName.equals(normalizedArtistQuery, ignoreCase = true)
         }
     }
     val selectedArtist = remember(uiState.artists, uiState.selectedArtistId) {
@@ -135,7 +145,12 @@ private fun UploadTrackModalContent(
     val selectedAlbum = remember(artistAlbums, uiState.selectedAlbumId) {
         artistAlbums.firstOrNull { it.id == uiState.selectedAlbumId }
     }
-    val isBusy = uiState.isCatalogLoading || uiState.isSubmitting
+    val hasArtistSuggestions = artistSuggestions.isNotEmpty()
+    val shouldShowArtistSuggestions = normalizedArtistQuery.isNotBlank() &&
+            artistSuggestions.isNotEmpty() &&
+            !hasExactArtistMatch
+    val shouldShowCreateArtist = normalizedArtistQuery.isNotBlank() && !hasExactArtistMatch
+    val isBusy = uiState.isCatalogLoading || uiState.isCreatingArtist || uiState.isSubmitting
     val isValid = uiState.title.isNotBlank() &&
             selectedArtist != null &&
             (uiState.isSingle || selectedAlbum != null)
@@ -180,35 +195,66 @@ private fun UploadTrackModalContent(
                             onValueChange = { value ->
                                 onDismissError()
                                 onArtistQueryChange(value)
-                                artistMenuExpanded = value.isNotBlank()
                             },
                             label = { Text("Artist") },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        DropdownMenu(
-                            expanded = artistMenuExpanded && artistSuggestions.isNotEmpty(),
-                            onDismissRequest = { artistMenuExpanded = false },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 240.dp),
+                    }
+                    if (shouldShowArtistSuggestions || shouldShowCreateArtist) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            tonalElevation = 2.dp,
                         ) {
-                            artistSuggestions.forEach { artist ->
-                                DropdownMenuItem(
-                                    text = { Text(artist.displayName) },
-                                    onClick = {
-                                        onDismissError()
-                                        onArtistSelected(artist)
-                                        artistMenuExpanded = false
-                                    },
-                                )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 240.dp),
+                            ) {
+                                artistSuggestions.forEachIndexed { index, artist ->
+                                    TextButton(
+                                        onClick = {
+                                            onDismissError()
+                                            onArtistSelected(artist)
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Text(
+                                            text = artist.displayName,
+                                            modifier = Modifier.fillMaxWidth(),
+                                        )
+                                    }
+                                    if (index != artistSuggestions.lastIndex || shouldShowCreateArtist) {
+                                        HorizontalDivider()
+                                    }
+                                }
+                                if (shouldShowCreateArtist) {
+                                    TextButton(
+                                        onClick = {
+                                            onDismissError()
+                                            onCreateArtist()
+                                        },
+                                        enabled = !uiState.isCreatingArtist,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Text(
+                                            text = if (uiState.isCreatingArtist) {
+                                                "Adding artist..."
+                                            } else {
+                                                "Add artist \"$normalizedArtistQuery\""
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                     when {
                         uiState.artists.isEmpty() -> {
                             Text(
-                                text = "No local artists found. Refresh the library first or upload metadata from another screen.",
+                                text = "No local artists found. Enter a name and add the artist.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -225,6 +271,22 @@ private fun UploadTrackModalContent(
                         selectedArtist != null -> {
                             Text(
                                 text = "Selected artist: ${selectedArtist.displayName}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        shouldShowCreateArtist && hasArtistSuggestions -> {
+                            Text(
+                                text = "Select an artist from the suggestions or add a new one.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        shouldShowCreateArtist -> {
+                            Text(
+                                text = "Artist not found in the local library. You can add a new one.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
