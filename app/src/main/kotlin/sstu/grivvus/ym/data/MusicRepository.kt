@@ -115,6 +115,76 @@ class MusicRepository @Inject constructor(
         artist
     }
 
+    suspend fun loadAlbumsForArtist(
+        artistId: Long,
+        refreshFromNetwork: Boolean = true,
+    ): List<Album> = withContext(dispatcher) {
+        if (refreshFromNetwork) {
+            val remoteArtist = artistRemoteDataSource.getArtist(artistId)
+            val existingArtist = artistDao.getById(artistId)
+            artistDao.upsert(
+                Artist(
+                    remoteId = remoteArtist.id,
+                    name = remoteArtist.name,
+                    imageUri = remoteArtist.coverUrl?.toUri() ?: existingArtist?.imageUri,
+                ),
+            )
+
+            val remoteAlbums = remoteArtist.albumIds
+                .distinct()
+                .mapNotNull { albumId ->
+                    runCatching { albumRemoteDataSource.getAlbum(albumId) }.getOrNull()
+                }
+            if (remoteAlbums.isNotEmpty()) {
+                albumDao.upsertAll(
+                    remoteAlbums.map { album ->
+                        Album(
+                            remoteId = album.id,
+                            artistId = artistId,
+                            name = album.name,
+                            coverUri = album.coverUrl?.toUri(),
+                        )
+                    },
+                )
+            }
+        }
+
+        albumDao.getAll()
+            .filter { album -> album.artistId == artistId }
+            .sortedWith(compareBy<Album> { it.name.lowercase() }.thenBy { it.remoteId })
+    }
+
+    suspend fun createAlbum(
+        artistId: Long,
+        name: String,
+    ): Album = withContext(dispatcher) {
+        val normalizedName = name.trim()
+        if (normalizedName.isBlank()) {
+            throw IOException("Album name is required")
+        }
+
+        albumDao.getAll().firstOrNull { album ->
+            album.artistId == artistId && album.name.equals(normalizedName, ignoreCase = true)
+        }?.let { existingAlbum ->
+            return@withContext existingAlbum
+        }
+
+        val albumId = albumRemoteDataSource.createAlbum(
+            artistId = artistId,
+            name = normalizedName,
+            cover = null,
+        )
+        val remoteAlbumMetadata = loadRemoteAlbumMetadata(albumId)
+        val album = Album(
+            remoteId = albumId,
+            artistId = artistId,
+            name = remoteAlbumMetadata?.name?.takeIf { it.isNotBlank() } ?: normalizedName,
+            coverUri = remoteAlbumMetadata?.coverUri,
+        )
+        albumDao.upsert(album)
+        album
+    }
+
     suspend fun createPlaylist(name: String, coverUri: Uri?): MusicLibraryData =
         withContext(dispatcher) {
             val preparedCover = coverUri?.let(::prepareUploadFile)
@@ -231,6 +301,7 @@ class MusicRepository @Inject constructor(
         artistId: Long,
         albumId: Long?,
         isSingle: Boolean,
+        isGloballyAvailable: Boolean?,
     ): MusicLibraryData = withContext(dispatcher) {
         val preparedTrack = prepareUploadFile(trackUri)
         try {
@@ -239,6 +310,7 @@ class MusicRepository @Inject constructor(
                 artistId = artistId,
                 albumId = albumId,
                 isSingle = isSingle,
+                isGloballyAvailable = isGloballyAvailable,
                 track = preparedTrack.toUploadPart(),
             )
             val existingArtist = artistDao.getById(artistId)

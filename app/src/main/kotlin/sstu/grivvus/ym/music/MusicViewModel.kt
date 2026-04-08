@@ -8,11 +8,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import sstu.grivvus.ym.logHandledUiError
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.PlaylistCreationConflict
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
+import sstu.grivvus.ym.logHandledException
 import java.io.IOException
 import javax.inject.Inject
 
@@ -60,7 +60,7 @@ class MusicViewModel @Inject constructor(
                 if (fallbackData != null) {
                     applyLibraryData(fallbackData)
                 }
-                error.logHandledUiError("MusicViewModel.refresh")
+                error.logHandledException("MusicViewModel.refresh")
                 _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isLoading = false, isRefreshing = false)
@@ -84,10 +84,10 @@ class MusicViewModel @Inject constructor(
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (e: PlaylistCreationConflict) {
-                e.logHandledUiError("MusicViewModel.mutate")
+                e.logHandledException("MusicViewModel.mutate")
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } catch (e: Exception) {
-                e.logHandledUiError("MusicViewModel.mutate")
+                e.logHandledException("MusicViewModel.mutate")
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isMutating = false)

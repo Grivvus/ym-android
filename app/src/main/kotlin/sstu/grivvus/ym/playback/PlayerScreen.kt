@@ -13,15 +13,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -40,12 +36,6 @@ fun PlayerScreen(
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentTrack = playbackState.currentTrack
-    val durationMs = playbackState.durationMs.coerceAtLeast(0L)
-    val isSeekEnabled = playbackState.isSeekable && durationMs > 0L
-    val (isUserSeeking, setIsUserSeeking) = remember(currentTrack?.id) { mutableStateOf(false) }
-    val (seekPreviewFraction, setSeekPreviewFraction) = remember(currentTrack?.id) {
-        mutableFloatStateOf(0f)
-    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         if (currentTrack == null) {
@@ -78,7 +68,7 @@ fun PlayerScreen(
         ) {
             item {
                 TextButton(onClick = onBack) {
-                    Text("Back")
+                    Text("Minimize")
                 }
             }
 
@@ -92,48 +82,13 @@ fun PlayerScreen(
             }
 
             item {
-                val sliderFraction = if (isUserSeeking) {
-                    seekPreviewFraction
-                } else {
-                    playbackState.positionMs
-                        .coerceIn(0L, durationMs)
-                        .toFractionOf(durationMs)
-                }
-
-                Column {
-                    Slider(
-                        value = sliderFraction,
-                        onValueChange = { value ->
-                            if (isSeekEnabled) {
-                                setIsUserSeeking(true)
-                                setSeekPreviewFraction(value)
-                            }
-                        },
-                        onValueChangeFinished = {
-                            if (isSeekEnabled) {
-                                val targetPositionMs = (seekPreviewFraction * durationMs).toLong()
-                                viewModel.seekTo(targetPositionMs)
-                            }
-                            setIsUserSeeking(false)
-                        },
-                        enabled = isSeekEnabled,
-                        valueRange = 0f..1f,
-                    )
-                    Text(
-                        text = "${
-                            formatDuration(
-                                currentPositionMs(
-                                    playbackState.positionMs,
-                                    durationMs,
-                                    isUserSeeking,
-                                    seekPreviewFraction
-                                )
-                            )
-                        } / ${formatDuration(durationMs)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                PlaybackSeekBar(
+                    positionMs = playbackState.positionMs,
+                    durationMs = playbackState.durationMs,
+                    isSeekEnabled = playbackState.isSeekable && playbackState.durationMs > 0L,
+                    onSeekTo = viewModel::seekTo,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             item {
@@ -224,33 +179,4 @@ fun PlayerScreen(
             }
         }
     }
-}
-
-private fun formatDuration(durationMs: Long): String {
-    if (durationMs <= 0L) {
-        return "00:00"
-    }
-    val totalSeconds = durationMs / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%02d:%02d".format(minutes, seconds)
-}
-
-private fun Long.toFractionOf(totalDurationMs: Long): Float {
-    if (totalDurationMs <= 0L) {
-        return 0f
-    }
-    return (toFloat() / totalDurationMs.toFloat()).coerceIn(0f, 1f)
-}
-
-private fun currentPositionMs(
-    actualPositionMs: Long,
-    durationMs: Long,
-    isUserSeeking: Boolean,
-    previewFraction: Float,
-): Long {
-    if (!isUserSeeking || durationMs <= 0L) {
-        return actualPositionMs.coerceAtLeast(0L)
-    }
-    return (previewFraction.coerceIn(0f, 1f) * durationMs).toLong()
 }

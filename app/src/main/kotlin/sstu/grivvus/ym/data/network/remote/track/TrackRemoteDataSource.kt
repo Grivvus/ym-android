@@ -1,10 +1,13 @@
 package sstu.grivvus.ym.data.network.remote.track
 
+import okhttp3.OkHttpClient
 import sstu.grivvus.ym.data.network.core.ApiExecutor
 import sstu.grivvus.ym.data.network.core.GeneratedApiProvider
 import sstu.grivvus.ym.data.network.mapper.TrackApiMapper
 import sstu.grivvus.ym.data.network.model.NetworkTrack
 import sstu.grivvus.ym.data.network.model.UploadPart
+import sstu.grivvus.ym.di.TrackUploadHttpClient
+import sstu.grivvus.ym.openapi.apis.DefaultApi
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,6 +22,7 @@ interface TrackRemoteDataSource {
         albumId: Long?,
         isSingle: Boolean,
         track: UploadPart,
+        isGloballyAvailable: Boolean? = null,
     ): Long
 
     suspend fun deleteTrack(trackId: Long)
@@ -29,6 +33,7 @@ class OpenApiTrackRemoteDataSource @Inject constructor(
     private val generatedApiProvider: GeneratedApiProvider,
     private val apiExecutor: ApiExecutor,
     private val trackApiMapper: TrackApiMapper,
+    @param:TrackUploadHttpClient private val trackUploadHttpClient: OkHttpClient,
 ) : TrackRemoteDataSource {
     override suspend fun getMyTracks(): List<NetworkTrack> {
         return generatedApiProvider.withAuthorizedApi { api ->
@@ -56,10 +61,12 @@ class OpenApiTrackRemoteDataSource @Inject constructor(
         albumId: Long?,
         isSingle: Boolean,
         track: UploadPart,
+        isGloballyAvailable: Boolean?,
     ): Long {
         return generatedApiProvider.withAuthorizedApi { api ->
+            val uploadApi = DefaultApi(basePath = api.baseUrl, client = trackUploadHttpClient)
             apiExecutor.execute {
-                api.uploadTrackWithHttpInfo(
+                uploadApi.uploadTrackWithHttpInfo(
                     name = name,
                     artistId = artistId.toInt(),
                     track = track.file,

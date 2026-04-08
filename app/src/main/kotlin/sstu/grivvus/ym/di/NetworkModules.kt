@@ -2,9 +2,10 @@ package sstu.grivvus.ym.di
 
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
+import okhttp3.OkHttpClient
 import sstu.grivvus.ym.data.network.auth.AuthHeaderProvider
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
 import sstu.grivvus.ym.data.network.auth.DefaultAuthHeaderProvider
@@ -34,6 +35,16 @@ import sstu.grivvus.ym.data.network.remote.track.OpenApiTrackRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.track.TrackRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.user.OpenApiUserRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.user.UserRemoteDataSource
+import java.util.concurrent.TimeUnit
+import javax.inject.Qualifier
+import javax.inject.Singleton
+
+private const val TRACK_UPLOAD_READ_TIMEOUT_MINUTES = 5L
+private const val TRACK_UPLOAD_WRITE_TIMEOUT_MINUTES = 5L
+
+@Qualifier
+@Retention(AnnotationRetention.RUNTIME)
+annotation class TrackUploadHttpClient
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -127,4 +138,18 @@ abstract class NetworkModules {
     abstract fun bindServerProbeRemoteDataSource(
         implementation: OpenApiServerProbeRemoteDataSource,
     ): ServerProbeRemoteDataSource
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object NetworkClientModule {
+    @Provides
+    @Singleton
+    @TrackUploadHttpClient
+    fun provideTrackUploadHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .readTimeout(TRACK_UPLOAD_READ_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+            .writeTimeout(TRACK_UPLOAD_WRITE_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+            .build()
+    }
 }

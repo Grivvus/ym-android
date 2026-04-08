@@ -5,7 +5,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -13,7 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import sstu.grivvus.ym.logHandledUiError
 import sstu.grivvus.ym.RouteArguments
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
@@ -23,9 +21,11 @@ import sstu.grivvus.ym.data.TrackBundle
 import sstu.grivvus.ym.data.local.Album
 import sstu.grivvus.ym.data.local.Artist
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
+import sstu.grivvus.ym.logHandledException
 import sstu.grivvus.ym.playback.model.PlaybackQueue
 import sstu.grivvus.ym.playback.queue.PlaybackQueueFactory
 import java.io.IOException
+import javax.inject.Inject
 
 data class TrackItemUi(
     val id: Long,
@@ -90,7 +90,7 @@ class PlaylistViewModel @Inject constructor(
                 if (fallbackData != null) {
                     applyLibraryData(fallbackData)
                 }
-                error.logHandledUiError("PlaylistViewModel.refresh")
+                error.logHandledException("PlaylistViewModel.refresh")
                 _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isLoading = false, isRefreshing = false)
@@ -119,10 +119,10 @@ class PlaylistViewModel @Inject constructor(
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (e: PlaylistCreationConflict) {
-                e.logHandledUiError("PlaylistViewModel.deletePlaylist")
+                e.logHandledException("PlaylistViewModel.deletePlaylist")
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } catch (e: Exception) {
-                e.logHandledUiError("PlaylistViewModel.deletePlaylist")
+                e.logHandledException("PlaylistViewModel.deletePlaylist")
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isMutating = false)
@@ -141,7 +141,7 @@ class PlaylistViewModel @Inject constructor(
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (error: Exception) {
-                error.logHandledUiError("PlaylistViewModel.reloadFromLocal")
+                error.logHandledException("PlaylistViewModel.reloadFromLocal")
                 _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
             }
         }
@@ -169,10 +169,10 @@ class PlaylistViewModel @Inject constructor(
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (e: PlaylistCreationConflict) {
-                e.logHandledUiError("PlaylistViewModel.mutate")
+                e.logHandledException("PlaylistViewModel.mutate")
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } catch (e: Exception) {
-                e.logHandledUiError("PlaylistViewModel.mutate")
+                e.logHandledException("PlaylistViewModel.mutate")
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isMutating = false)

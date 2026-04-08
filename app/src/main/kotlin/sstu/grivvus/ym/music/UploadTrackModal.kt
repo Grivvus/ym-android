@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.collectLatest
 import sstu.grivvus.ym.data.MusicRepository
 
 private const val MAX_ARTIST_SUGGESTIONS = 5
+private const val MAX_ALBUM_SUGGESTIONS = 5
 
 @Composable
 fun UploadTrackModal(
@@ -98,10 +99,13 @@ fun UploadTrackModal(
         onArtistQueryChange = modalViewModel::onArtistQueryChanged,
         onArtistSelected = modalViewModel::onArtistSelected,
         onCreateArtist = modalViewModel::createArtistFromQuery,
+        onAlbumQueryChange = modalViewModel::onAlbumQueryChanged,
         onAlbumSelected = { album ->
             modalViewModel.onAlbumSelected(album.id)
         },
+        onCreateAlbum = modalViewModel::createAlbumFromQuery,
         onSingleChange = modalViewModel::onSingleChanged,
+        onAvailabilityChange = modalViewModel::onAvailabilityChange,
         onDismissError = modalViewModel::dismissError,
         onConfirm = modalViewModel::submit,
     )
@@ -115,8 +119,11 @@ private fun UploadTrackModalContent(
     onArtistQueryChange: (String) -> Unit,
     onArtistSelected: (UploadTrackArtistOptionUi) -> Unit,
     onCreateArtist: () -> Unit,
+    onAlbumQueryChange: (String) -> Unit,
     onAlbumSelected: (UploadTrackAlbumOptionUi) -> Unit,
+    onCreateAlbum: () -> Unit,
     onSingleChange: (Boolean) -> Unit,
+    onAvailabilityChange: (Boolean) -> Unit,
     onDismissError: () -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -142,6 +149,21 @@ private fun UploadTrackModalContent(
     val artistAlbums = remember(uiState.albums, uiState.selectedArtistId) {
         uiState.albums.filter { album -> album.artistId == uiState.selectedArtistId }
     }
+    val normalizedAlbumQuery = uiState.albumQuery.trim()
+    val albumSuggestions = remember(artistAlbums, normalizedAlbumQuery) {
+        if (normalizedAlbumQuery.isBlank()) {
+            emptyList()
+        } else {
+            artistAlbums.filter { album ->
+                album.displayName.startsWith(normalizedAlbumQuery, ignoreCase = true)
+            }.take(MAX_ALBUM_SUGGESTIONS)
+        }
+    }
+    val hasExactAlbumMatch = remember(artistAlbums, normalizedAlbumQuery) {
+        normalizedAlbumQuery.isNotBlank() && artistAlbums.any { album ->
+            album.displayName.equals(normalizedAlbumQuery, ignoreCase = true)
+        }
+    }
     val selectedAlbum = remember(artistAlbums, uiState.selectedAlbumId) {
         artistAlbums.firstOrNull { it.id == uiState.selectedAlbumId }
     }
@@ -150,7 +172,18 @@ private fun UploadTrackModalContent(
             artistSuggestions.isNotEmpty() &&
             !hasExactArtistMatch
     val shouldShowCreateArtist = normalizedArtistQuery.isNotBlank() && !hasExactArtistMatch
-    val isBusy = uiState.isCatalogLoading || uiState.isCreatingArtist || uiState.isSubmitting
+    val shouldShowAlbumSuggestions = selectedArtist != null &&
+            normalizedAlbumQuery.isNotBlank() &&
+            albumSuggestions.isNotEmpty() &&
+            !hasExactAlbumMatch
+    val shouldShowCreateAlbum = selectedArtist != null &&
+            normalizedAlbumQuery.isNotBlank() &&
+            !hasExactAlbumMatch
+    val isBusy = uiState.isCatalogLoading ||
+            uiState.isAlbumsLoading ||
+            uiState.isCreatingArtist ||
+            uiState.isCreatingAlbum ||
+            uiState.isSubmitting
     val isValid = uiState.title.isNotBlank() &&
             selectedArtist != null &&
             (uiState.isSingle || selectedAlbum != null)
@@ -189,6 +222,19 @@ private fun UploadTrackModalContent(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(uiState.isGloballyAvailable, {
+                            onDismissError()
+                            onAvailabilityChange(it)
+                        })
+                        Text(
+                            text = "Available for all users",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                     Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedTextField(
                             value = uiState.artistQuery,
@@ -319,11 +365,13 @@ private fun UploadTrackModalContent(
                     if (!uiState.isSingle) {
                         Box(modifier = Modifier.fillMaxWidth()) {
                             OutlinedTextField(
-                                value = selectedAlbum?.displayName.orEmpty(),
-                                onValueChange = {},
+                                value = uiState.albumQuery,
+                                onValueChange = { value ->
+                                    onDismissError()
+                                    onAlbumQueryChange(value)
+                                },
                                 label = { Text("Album") },
                                 singleLine = true,
-                                readOnly = true,
                                 enabled = selectedArtist != null,
                                 placeholder = {
                                     Text(
@@ -335,27 +383,56 @@ private fun UploadTrackModalContent(
                                     )
                                 },
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable(enabled = selectedArtist != null) {
-                                        albumMenuExpanded = artistAlbums.isNotEmpty()
-                                    },
+                                    .fillMaxWidth(),
                             )
-                            DropdownMenu(
-                                expanded = albumMenuExpanded && artistAlbums.isNotEmpty(),
-                                onDismissRequest = { albumMenuExpanded = false },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(max = 240.dp),
+                        }
+                        if (shouldShowAlbumSuggestions || shouldShowCreateAlbum) {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                tonalElevation = 2.dp,
                             ) {
-                                artistAlbums.forEach { album ->
-                                    DropdownMenuItem(
-                                        text = { Text(album.displayName) },
-                                        onClick = {
-                                            onDismissError()
-                                            onAlbumSelected(album)
-                                            albumMenuExpanded = false
-                                        },
-                                    )
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 240.dp),
+                                ) {
+                                    albumSuggestions.forEachIndexed { index, album ->
+                                        TextButton(
+                                            onClick = {
+                                                onDismissError()
+                                                onAlbumSelected(album)
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                        ) {
+                                            Text(
+                                                text = album.displayName,
+                                                modifier = Modifier.fillMaxWidth(),
+                                            )
+                                        }
+                                        if (index != albumSuggestions.lastIndex || shouldShowCreateAlbum) {
+                                            HorizontalDivider()
+                                        }
+                                    }
+                                    if (shouldShowCreateAlbum) {
+                                        TextButton(
+                                            onClick = {
+                                                onDismissError()
+                                                onCreateAlbum()
+                                            },
+                                            enabled = !uiState.isCreatingAlbum,
+                                            modifier = Modifier.fillMaxWidth(),
+                                        ) {
+                                            Text(
+                                                text = if (uiState.isCreatingAlbum) {
+                                                    "Adding album..."
+                                                } else {
+                                                    "Add album \"$normalizedAlbumQuery\""
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -368,9 +445,47 @@ private fun UploadTrackModalContent(
                                 )
                             }
 
+                            uiState.isAlbumsLoading -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    CircularProgressIndicator()
+                                    Text(
+                                        text = "Loading albums for ${selectedArtist.displayName}...",
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
+                            }
+
+                            selectedAlbum != null -> {
+                                Text(
+                                    text = "Selected album: ${selectedAlbum.displayName}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+
                             artistAlbums.isEmpty() -> {
                                 Text(
-                                    text = "No albums found for this artist. Mark the track as single if needed.",
+                                    text = "No albums found for this artist. Add a new album or mark the track as single.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+
+                            shouldShowCreateAlbum && albumSuggestions.isNotEmpty() -> {
+                                Text(
+                                    text = "Select an album from the suggestions or add a new one.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+
+                            shouldShowCreateAlbum -> {
+                                Text(
+                                    text = "Album not found for this artist. You can add a new one.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

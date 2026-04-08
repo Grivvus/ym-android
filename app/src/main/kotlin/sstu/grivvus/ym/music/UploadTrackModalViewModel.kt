@@ -11,13 +11,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import sstu.grivvus.ym.logHandledUiError
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.PlaylistCreationConflict
 import sstu.grivvus.ym.data.UploadTrackCatalog
 import sstu.grivvus.ym.data.local.Album
 import sstu.grivvus.ym.data.local.Artist
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
+import sstu.grivvus.ym.logHandledException
 import java.io.IOException
 
 data class UploadTrackModalArgs(
@@ -42,13 +42,17 @@ data class UploadTrackModalUiState(
     val uri: Uri,
     val title: String = "",
     val artistQuery: String = "",
+    val albumQuery: String = "",
     val selectedArtistId: Long? = null,
     val selectedAlbumId: Long? = null,
     val isSingle: Boolean = false,
+    val isGloballyAvailable: Boolean = false,
     val artists: List<UploadTrackArtistOptionUi> = emptyList(),
     val albums: List<UploadTrackAlbumOptionUi> = emptyList(),
     val isCatalogLoading: Boolean = true,
+    val isAlbumsLoading: Boolean = false,
     val isCreatingArtist: Boolean = false,
+    val isCreatingAlbum: Boolean = false,
     val isSubmitting: Boolean = false,
     val errorMessage: String? = null,
 )
@@ -88,9 +92,18 @@ class UploadTrackModalViewModel(
         val exactArtist = currentState.artists.firstOrNull { artist ->
             artist.displayName.equals(value.trim(), ignoreCase = true)
         }
+        if (exactArtist != null && exactArtist.id != currentState.selectedArtistId) {
+            onArtistSelected(exactArtist)
+            return
+        }
         _uiState.value = currentState.copy(
             artistQuery = value,
             selectedArtistId = exactArtist?.id,
+            albumQuery = if (exactArtist?.id == currentState.selectedArtistId) {
+                currentState.albumQuery
+            } else {
+                ""
+            },
             selectedAlbumId = if (exactArtist?.id == currentState.selectedArtistId) {
                 currentState.selectedAlbumId
             } else {
@@ -132,13 +145,15 @@ class UploadTrackModalViewModel(
                     artists = updatedArtists,
                     artistQuery = createdArtist.name,
                     selectedArtistId = createdArtist.remoteId,
+                    albumQuery = "",
                     selectedAlbumId = null,
                     errorMessage = null,
                 )
+                loadAlbumsForSelectedArtist(createdArtist.remoteId)
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (error: Exception) {
-                error.logHandledUiError("UploadTrackModalViewModel.createArtistFromQuery")
+                error.logHandledException("UploadTrackModalViewModel.createArtistFromQuery")
                 _uiState.value = _uiState.value.copy(
                     errorMessage = error.toReadableMessage(),
                 )
@@ -153,28 +168,104 @@ class UploadTrackModalViewModel(
         _uiState.value = currentState.copy(
             artistQuery = artist.displayName,
             selectedArtistId = artist.id,
-            selectedAlbumId = if (artist.id == currentState.selectedArtistId) {
-                currentState.selectedAlbumId
-            } else {
-                null
-            },
+            albumQuery = "",
+            selectedAlbumId = null,
+            errorMessage = null,
+        )
+        loadAlbumsForSelectedArtist(artist.id)
+    }
+
+    fun onAlbumQueryChanged(value: String) {
+        val currentState = _uiState.value
+        val artistId = currentState.selectedArtistId
+        val exactAlbum = currentState.albums.firstOrNull { album ->
+            album.artistId == artistId && album.displayName.equals(value.trim(), ignoreCase = true)
+        }
+        _uiState.value = currentState.copy(
+            albumQuery = value,
+            selectedAlbumId = exactAlbum?.id,
             errorMessage = null,
         )
     }
 
     fun onAlbumSelected(albumId: Long) {
+        val selectedAlbum = _uiState.value.albums.firstOrNull { it.id == albumId }
         _uiState.value = _uiState.value.copy(
+            albumQuery = selectedAlbum?.displayName.orEmpty(),
             selectedAlbumId = albumId,
             errorMessage = null,
         )
+    }
+
+    fun createAlbumFromQuery() {
+        val currentState = _uiState.value
+        val artistId = currentState.selectedArtistId
+        val albumName = currentState.albumQuery.trim()
+        if (artistId == null) {
+            _uiState.value = currentState.copy(errorMessage = "Select an artist first")
+            return
+        }
+        if (albumName.isBlank()) {
+            _uiState.value = currentState.copy(errorMessage = "Album name is required")
+            return
+        }
+
+        currentState.albums.firstOrNull { album ->
+            album.artistId == artistId && album.displayName.equals(albumName, ignoreCase = true)
+        }?.let { existingAlbum ->
+            onAlbumSelected(existingAlbum.id)
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = currentState.copy(isCreatingAlbum = true, errorMessage = null)
+            try {
+                val createdAlbum = repository.createAlbum(
+                    artistId = artistId,
+                    name = albumName,
+                )
+                val updatedAlbums = mergeAlbums(
+                    _uiState.value.albums,
+                    listOf(
+                        UploadTrackAlbumOptionUi(
+                            id = createdAlbum.remoteId,
+                            artistId = createdAlbum.artistId,
+                            displayName = createdAlbum.name,
+                        ),
+                    ),
+                )
+                _uiState.value = _uiState.value.copy(
+                    albums = updatedAlbums,
+                    albumQuery = createdAlbum.name,
+                    selectedAlbumId = createdAlbum.remoteId,
+                    errorMessage = null,
+                )
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                error.logHandledException("UploadTrackModalViewModel.createAlbumFromQuery")
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = error.toReadableMessage(),
+                )
+            } finally {
+                _uiState.value = _uiState.value.copy(isCreatingAlbum = false)
+            }
+        }
     }
 
     fun onSingleChanged(isSingle: Boolean) {
         val currentState = _uiState.value
         _uiState.value = currentState.copy(
             isSingle = isSingle,
+            albumQuery = if (isSingle) "" else currentState.albumQuery,
             selectedAlbumId = if (isSingle) null else currentState.selectedAlbumId,
             errorMessage = null,
+        )
+    }
+
+    fun onAvailabilityChange(isGloballyAvailable: Boolean) {
+        _uiState.value = _uiState.value.copy(
+            isGloballyAvailable = isGloballyAvailable,
         )
     }
 
@@ -202,12 +293,13 @@ class UploadTrackModalViewModel(
                     artistId = artistId,
                     albumId = albumId,
                     isSingle = currentState.isSingle,
+                    isGloballyAvailable = currentState.isGloballyAvailable,
                 )
                 _events.emit(UploadTrackModalEvent.UploadCompleted)
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (error: Exception) {
-                error.logHandledUiError("UploadTrackModalViewModel.submit")
+                error.logHandledException("UploadTrackModalViewModel.submit")
                 _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isSubmitting = false)
@@ -223,7 +315,7 @@ class UploadTrackModalViewModel(
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (error: Exception) {
-                error.logHandledUiError("UploadTrackModalViewModel.loadCatalog")
+                error.logHandledException("UploadTrackModalViewModel.loadCatalog")
                 _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isCatalogLoading = false)
@@ -257,6 +349,53 @@ class UploadTrackModalViewModel(
                     )
                 },
         )
+    }
+
+    private fun loadAlbumsForSelectedArtist(artistId: Long) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isAlbumsLoading = true,
+                errorMessage = null,
+            )
+            try {
+                val albums = repository.loadAlbumsForArtist(artistId, refreshFromNetwork = true)
+                _uiState.value = _uiState.value.copy(
+                    albums = mergeAlbums(
+                        _uiState.value.albums,
+                        albums.map { album ->
+                            UploadTrackAlbumOptionUi(
+                                id = album.remoteId,
+                                artistId = album.artistId,
+                                displayName = album.name,
+                            )
+                        },
+                    ),
+                    albumQuery = "",
+                    selectedAlbumId = null,
+                )
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                error.logHandledException("UploadTrackModalViewModel.loadAlbumsForSelectedArtist")
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = error.toReadableMessage(),
+                )
+            } finally {
+                _uiState.value = _uiState.value.copy(isAlbumsLoading = false)
+            }
+        }
+    }
+
+    private fun mergeAlbums(
+        current: List<UploadTrackAlbumOptionUi>,
+        incoming: List<UploadTrackAlbumOptionUi>,
+    ): List<UploadTrackAlbumOptionUi> {
+        return (current + incoming)
+            .distinctBy { it.id }
+            .sortedWith(
+                compareBy<UploadTrackAlbumOptionUi> { it.displayName.lowercase() }
+                    .thenBy { it.id },
+            )
     }
 
     private fun Throwable.toReadableMessage(): String {
