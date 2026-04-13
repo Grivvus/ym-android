@@ -10,9 +10,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.data.PlaybackPreferencesRepository
 import sstu.grivvus.ym.WhileUiSubscribed
 import sstu.grivvus.ym.data.ServerInfoRepository
 import sstu.grivvus.ym.data.UserRepository
+import sstu.grivvus.ym.data.network.model.TrackQuality
 import sstu.grivvus.ym.data.network.ChangeServerDto
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.data.network.core.ApiException
@@ -28,6 +30,7 @@ data class ProfileUiState(
     val serverPort: String = "8000",
     val errorMsg: String? = null,
     val avatarUri: Uri? = null,
+    val preferredTrackQuality: TrackQuality = TrackQuality.STANDARD,
 )
 
 @HiltViewModel
@@ -35,6 +38,7 @@ class ProfileViewModel
 @Inject constructor(
     private val userRepository: UserRepository,
     private val serverInfoRepository: ServerInfoRepository,
+    private val playbackPreferencesRepository: PlaybackPreferencesRepository,
 ) : ViewModel() {
     private val _username: MutableStateFlow<String> = MutableStateFlow("")
     private val _email: MutableStateFlow<String?> = MutableStateFlow(null)
@@ -44,6 +48,9 @@ class ProfileViewModel
     private val _serverPort: MutableStateFlow<String> = MutableStateFlow("8000")
     private val _errorMsg: MutableStateFlow<String?> = MutableStateFlow(null)
     private val _avatarUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
+    private val _preferredTrackQuality: MutableStateFlow<TrackQuality> = MutableStateFlow(
+        playbackPreferencesRepository.currentPreferredTrackQuality(),
+    )
 
     val uiState: StateFlow<ProfileUiState> =
         combine(
@@ -61,12 +68,14 @@ class ProfileViewModel
             combine(
                 _isRefreshing,
                 _serverHost,
-                _serverPort
-            ) { isRefreshing, serverHost, serverPort ->
+                _serverPort,
+                _preferredTrackQuality,
+            ) { isRefreshing, serverHost, serverPort, preferredTrackQuality ->
                 ProfileUiState(
                     isRefreshing = isRefreshing,
                     serverHost = serverHost,
                     serverPort = serverPort,
+                    preferredTrackQuality = preferredTrackQuality,
                 )
             }
         ) { baseState, otherState ->
@@ -79,6 +88,7 @@ class ProfileViewModel
                 serverPort = otherState.serverPort,
                 errorMsg = baseState.errorMsg,
                 avatarUri = baseState.avatarUri,
+                preferredTrackQuality = otherState.preferredTrackQuality,
             )
         }.stateIn(viewModelScope, WhileUiSubscribed, ProfileUiState())
 
@@ -139,6 +149,10 @@ class ProfileViewModel
         _serverPort.value = value
     }
 
+    fun changePreferredTrackQuality(value: TrackQuality) {
+        _preferredTrackQuality.value = value
+    }
+
     fun logOut() {
         viewModelScope.launch {
             userRepository.logout()
@@ -171,7 +185,15 @@ class ProfileViewModel
                 if (_serverHost.value != serverInfoRepository.getServerInfo()?.host) _serverHost.value else null,
                 if (_serverPort.value != serverInfoRepository.getServerInfo()?.port) _serverPort.value else null
             )
-            if (newEmail == null && newUsername == null && changeServer.host == null && changeServer.port == null) {
+            val newTrackQuality = _preferredTrackQuality.value.takeIf {
+                it != playbackPreferencesRepository.currentPreferredTrackQuality()
+            }
+            if (newEmail == null &&
+                newUsername == null &&
+                changeServer.host == null &&
+                changeServer.port == null &&
+                newTrackQuality == null
+            ) {
                 _errorMsg.value = "Nothing that can be saved"
                 return@launch
             }
@@ -181,11 +203,14 @@ class ProfileViewModel
             serverInfoRepository.saveServerInfo(_serverHost.value, _serverPort.value)
             applyCurrentServerSettings()
 
-            if (newEmail == null && newUsername == null) {
-                return@launch
+            if (newTrackQuality != null) {
+                playbackPreferencesRepository.savePreferredTrackQuality(newTrackQuality)
             }
-            userRepository.applyChanges(newUsername, newEmail)
-            applyCurrentUser()
+
+            if (newEmail != null || newUsername != null) {
+                userRepository.applyChanges(newUsername, newEmail)
+                applyCurrentUser()
+            }
             _errorMsg.value = "Profile updated successfully"
         } catch (_: SessionExpiredException) {
             return@launch

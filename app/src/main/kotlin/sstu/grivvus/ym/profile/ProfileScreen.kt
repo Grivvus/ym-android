@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
@@ -30,6 +32,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -52,6 +55,8 @@ import coil3.compose.AsyncImage
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomBar
 import sstu.grivvus.ym.components.ErrorTooltip
+import sstu.grivvus.ym.data.network.model.TrackQuality
+import sstu.grivvus.ym.data.network.model.toDisplayName
 import sstu.grivvus.ym.passwordChange.PasswordChangeDialog
 import sstu.grivvus.ym.ui.theme.YMTheme
 import sstu.grivvus.ym.ui.theme.appIcons
@@ -172,6 +177,13 @@ fun ProfileScreen(
 
                     Spacer(Modifier.height(32.dp))
 
+                    TrackQualitySettings(
+                        selectedQuality = uiState.preferredTrackQuality,
+                        onQualitySelected = viewModel::changePreferredTrackQuality,
+                    )
+
+                    Spacer(Modifier.height(32.dp))
+
                     Button(
                         onClick = { showPasswordDialog = true },
                         enabled = !uiState.isLoading,
@@ -209,6 +221,53 @@ fun ProfileScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun TrackQualitySettings(
+    selectedQuality: TrackQuality,
+    onQualitySelected: (TrackQuality) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectableGroup(),
+    ) {
+        Text(
+            text = "Playback quality",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
+        TrackQuality.entries.forEach { quality ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onQualitySelected(quality) }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(
+                    selected = selectedQuality == quality,
+                    onClick = { onQualitySelected(quality) },
+                )
+                Text(
+                    text = quality.toDisplayName(),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+        }
+        Text(
+            text = "The new quality will be used from the next track start.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        HorizontalDivider(
+            Modifier.padding(top = 8.dp), 1.dp,
+            MaterialTheme.colorScheme.surfaceVariant,
+        )
     }
 }
 

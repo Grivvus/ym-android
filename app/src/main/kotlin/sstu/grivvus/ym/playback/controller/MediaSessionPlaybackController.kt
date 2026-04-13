@@ -12,10 +12,6 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,12 +19,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import sstu.grivvus.ym.data.PlaybackPreferencesRepository
 import sstu.grivvus.ym.data.network.model.TrackQuality
+import sstu.grivvus.ym.data.network.model.toQueryValue
 import sstu.grivvus.ym.data.network.remote.stream.StreamingRemoteDataSource
 import sstu.grivvus.ym.di.ApplicationScope
 import sstu.grivvus.ym.playback.model.PlayableTrack
@@ -37,11 +36,16 @@ import sstu.grivvus.ym.playback.model.PlaybackUiState
 import sstu.grivvus.ym.playback.model.PlaybackSource
 import sstu.grivvus.ym.playback.service.PlaybackService
 import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 @Singleton
 class MediaSessionPlaybackController @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val streamingRemoteDataSource: StreamingRemoteDataSource,
+    private val playbackPreferencesRepository: PlaybackPreferencesRepository,
     @param:ApplicationScope private val applicationScope: CoroutineScope,
 ) : PlaybackController {
     private val internalState = MutableStateFlow(PlaybackUiState())
@@ -50,6 +54,10 @@ class MediaSessionPlaybackController @Inject constructor(
     private var positionUpdateJob: Job? = null
 
     override val playbackState: StateFlow<PlaybackUiState> = internalState.asStateFlow()
+
+    init {
+        observePreferredQualityChanges()
+    }
 
     override suspend fun play(queue: PlaybackQueue) {
         if (queue.items.isEmpty()) {
@@ -205,13 +213,20 @@ class MediaSessionPlaybackController @Inject constructor(
         }
     }
 
-    private fun toMediaItem(track: PlayableTrack): MediaItem {
-        val mediaUri = resolvePlaybackUri(track)
+    private fun toMediaItem(
+        track: PlayableTrack,
+        preferredQuality: TrackQuality = playbackPreferencesRepository.currentPreferredTrackQuality(),
+    ): MediaItem {
+        val mediaUri = resolvePlaybackUri(track, preferredQuality)
         val extras = Bundle().apply {
             putLong(EXTRA_TRACK_ID, track.id)
             putString(EXTRA_SUBTITLE, track.subtitle)
             putString(EXTRA_ARTWORK_URI, track.artworkUri?.toString())
             putLong(EXTRA_DURATION_MS, track.durationMs ?: 0L)
+            putString(EXTRA_LOCAL_PATH, track.localPath)
+            TrackQuality.entries.forEach { quality ->
+                putString(extraQualityUriKey(quality), track.qualityUris[quality]?.toString())
+            }
         }
         val metadata = MediaMetadata.Builder()
             .setTitle(track.title)
@@ -227,11 +242,14 @@ class MediaSessionPlaybackController @Inject constructor(
             .build()
     }
 
-    private fun resolvePlaybackUri(track: PlayableTrack): Uri {
-        return resolvePlaybackDescriptor(track).uri
+    private fun resolvePlaybackUri(track: PlayableTrack, preferredQuality: TrackQuality): Uri {
+        return resolvePlaybackDescriptor(track, preferredQuality).uri
     }
 
-    private fun resolvePlaybackDescriptor(track: PlayableTrack): PlaybackDataSourceDescriptor {
+    private fun resolvePlaybackDescriptor(
+        track: PlayableTrack,
+        preferredQuality: TrackQuality,
+    ): PlaybackDataSourceDescriptor {
         val localFile = track.localPath
             ?.takeIf { it.isNotBlank() }
             ?.let(::File)
@@ -243,20 +261,16 @@ class MediaSessionPlaybackController @Inject constructor(
             )
         }
 
-        val preferredQuality = QUALITY_PREFERENCE.firstNotNullOfOrNull { quality ->
-            track.qualityUris[quality]?.let { quality to it }
-        } ?: track.qualityUris.entries.firstOrNull()?.toPair()
-
-        val uriFromPreset = preferredQuality?.second
+        val uriFromPreset = track.qualityUris[preferredQuality]
         if (uriFromPreset != null && !uriFromPreset.scheme.isNullOrBlank()) {
             return PlaybackDataSourceDescriptor(
                 uri = uriFromPreset,
             )
         }
 
-        val qualityParam = preferredQuality?.first?.toQueryValue()
         return PlaybackDataSourceDescriptor(
-            uri = streamingRemoteDataSource.streamUrl(track.id, qualityParam).toUri(),
+            uri = streamingRemoteDataSource.streamUrl(track.id, preferredQuality.toQueryValue())
+                .toUri(),
         )
     }
 
@@ -272,22 +286,61 @@ class MediaSessionPlaybackController @Inject constructor(
             ?.takeIf { it.containsKey(EXTRA_DURATION_MS) }
             ?.getLong(EXTRA_DURATION_MS)
             ?.takeIf { it > 0L }
+        val qualityUris = buildMap {
+            TrackQuality.entries.forEach { quality ->
+                extras?.getString(extraQualityUriKey(quality))
+                    ?.takeIf { it.isNotBlank() }
+                    ?.toUri()
+                    ?.let { put(quality, it) }
+            }
+        }
         return PlayableTrack(
             id = trackId,
             title = metadata.title?.toString().orEmpty(),
             subtitle = extras?.getString(EXTRA_SUBTITLE) ?: metadata.artist?.toString(),
             artworkUri = artworkUri,
             durationMs = durationMs,
+            localPath = extras?.getString(EXTRA_LOCAL_PATH)?.takeIf { it.isNotBlank() },
+            qualityUris = qualityUris,
         )
     }
 
-    private fun TrackQuality.toQueryValue(): String {
-        return when (this) {
-            TrackQuality.FAST -> "fast"
-            TrackQuality.STANDARD -> "standard"
-            TrackQuality.HIGH -> "high"
-            TrackQuality.LOSSLESS -> "lossless"
+    private fun observePreferredQualityChanges() {
+        applicationScope.launch {
+            playbackPreferencesRepository.preferredTrackQuality.collectLatest { preferredQuality ->
+                onControllerThread {
+                    val controller = mediaController ?: return@onControllerThread
+                    applyPreferredQualityToUpcomingItems(controller, preferredQuality)
+                }
+            }
         }
+    }
+
+    private fun applyPreferredQualityToUpcomingItems(
+        controller: MediaController,
+        preferredQuality: TrackQuality,
+    ) {
+        if (controller.mediaItemCount == 0) {
+            return
+        }
+
+        val replaceFromIndex = when (val currentIndex = controller.currentMediaItemIndex) {
+            in 0 until controller.mediaItemCount -> currentIndex + 1
+            else -> 0
+        }
+        if (replaceFromIndex >= controller.mediaItemCount) {
+            return
+        }
+
+        val updatedItems = (replaceFromIndex until controller.mediaItemCount)
+            .map { index -> controller.getMediaItemAt(index).toPlayableTrack() }
+            .map { track -> toMediaItem(track, preferredQuality) }
+        if (updatedItems.isEmpty()) {
+            return
+        }
+
+        controller.replaceMediaItems(replaceFromIndex, controller.mediaItemCount, updatedItems)
+        updateState(controller)
     }
 
     private val playerListener = object : Player.Listener {
@@ -308,12 +361,11 @@ class MediaSessionPlaybackController @Inject constructor(
         private const val EXTRA_SUBTITLE = "playable_track_subtitle"
         private const val EXTRA_ARTWORK_URI = "playable_track_artwork_uri"
         private const val EXTRA_DURATION_MS = "playable_track_duration_ms"
-        private val QUALITY_PREFERENCE = listOf(
-            TrackQuality.STANDARD,
-            TrackQuality.HIGH,
-            TrackQuality.FAST,
-            TrackQuality.LOSSLESS,
-        )
+        private const val EXTRA_LOCAL_PATH = "playable_track_local_path"
+
+        private fun extraQualityUriKey(quality: TrackQuality): String {
+            return "playable_track_quality_uri_${quality.name.lowercase()}"
+        }
     }
 
     private data class PlaybackDataSourceDescriptor(
