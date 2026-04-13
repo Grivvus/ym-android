@@ -12,6 +12,15 @@ class UserApiMapper @Inject constructor() {
             id = response.id.toLong(),
             username = response.username,
             email = response.email,
+            isSuperuser = extractIsSuperuser(response),
         )
+    }
+
+    private fun extractIsSuperuser(response: UserReturn): Boolean {
+        // The generated model in this repo may temporarily lag behind the remote spec.
+        val getter = response.javaClass.methods.firstOrNull { method ->
+            method.parameterCount == 0 && (method.name == "isSuperuser" || method.name == "getIsSuperuser")
+        } ?: return false
+        return getter.invoke(response) as? Boolean ?: false
     }
 }

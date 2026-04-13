@@ -185,7 +185,7 @@ class MusicRepository @Inject constructor(
         album
     }
 
-    suspend fun createPlaylist(name: String, coverUri: Uri?): MusicLibraryData =
+    suspend fun createPlaylist(name: String, coverUri: Uri?, isPublic: Boolean): MusicLibraryData =
         withContext(dispatcher) {
             val preparedCover = coverUri?.let(::prepareUploadFile)
             val playlist =
@@ -196,6 +196,7 @@ class MusicRepository @Inject constructor(
             try {
                 val playlistId = playlistRemoteDataSource.createPlaylist(
                     name = name,
+                    isPublic = isPublic,
                     cover = preparedCover?.toUploadPart(),
                 )
                 playlistDao.upsert(

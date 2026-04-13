@@ -25,6 +25,7 @@ data class LocalUser(
     @ColumnInfo(name = "email") val email: String?,
     @ColumnInfo(name = "access_token") val access: String?,
     @ColumnInfo(name = "refresh_token") val refresh: String?,
+    @ColumnInfo(name = "is_superuser", defaultValue = "0") val isSuperuser: Boolean = false,
     @ColumnInfo(name = "avatar_uri") val avatarUri: Uri? = null,
 )
 

@@ -16,7 +16,7 @@ interface PlaylistRemoteDataSource {
 
     suspend fun getPlaylist(playlistId: Long): NetworkPlaylist
 
-    suspend fun createPlaylist(name: String, cover: UploadPart?): Long
+    suspend fun createPlaylist(name: String, isPublic: Boolean, cover: UploadPart?): Long
 
     suspend fun updatePlaylist(playlistId: Long, name: String): NetworkPlaylist
 
@@ -56,13 +56,14 @@ class OpenApiPlaylistRemoteDataSource @Inject constructor(
         }
     }
 
-    override suspend fun createPlaylist(name: String, cover: UploadPart?): Long {
+    override suspend fun createPlaylist(name: String, isPublic: Boolean, cover: UploadPart?): Long {
         val currentUser = authSessionManager.requireCurrentUser()
         return generatedApiProvider.withAuthorizedApi { api ->
             apiExecutor.execute {
                 api.createPlaylistWithHttpInfo(
                     ownerId = currentUser.remoteId.toInt(),
                     playlistName = name,
+                    isPublic = isPublic,
                     playlistCover = cover?.file,
                 )
             }.playlistId.toLong()

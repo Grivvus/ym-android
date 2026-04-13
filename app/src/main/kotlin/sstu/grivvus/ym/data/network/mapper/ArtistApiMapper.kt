@@ -11,7 +11,6 @@ class ArtistApiMapper @Inject constructor() {
         return NetworkArtist(
             id = artist.artistId.toLong(),
             name = artist.artistName,
-            coverUrl = artist.artistCoverUrl,
             albumIds = artist.artistAlbums.map { it.toLong() },
         )
     }

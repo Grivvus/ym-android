@@ -152,6 +152,7 @@ class DefaultAuthSessionManager @Inject constructor(
             email = preservedUser?.email,
             access = accessToken,
             refresh = refreshToken,
+            isSuperuser = preservedUser?.isSuperuser ?: false,
             avatarUri = preservedUser?.avatarUri,
         )
     }

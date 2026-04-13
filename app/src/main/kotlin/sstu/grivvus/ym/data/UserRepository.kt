@@ -20,10 +20,9 @@ class UserRepository @Inject constructor(
     private val serverInfoRepository: ServerInfoRepository,
     @ApplicationContext private val context: Context,
 ) {
-    suspend fun register(username: String, password: String, email: String? = null) {
+    suspend fun register(username: String, password: String) {
         val session = authRemoteDataSource.register(
             username = username,
-            email = email,
             password = password,
         )
         authSessionManager.startSession(session)
@@ -31,9 +30,10 @@ class UserRepository @Inject constructor(
             LocalUser(
                 remoteId = session.userId,
                 username = username,
-                email = email,
+                email = null,
                 access = session.accessToken,
                 refresh = session.refreshToken,
+                isSuperuser = false,
             ),
         )
     }
@@ -51,6 +51,7 @@ class UserRepository @Inject constructor(
                 email = null,
                 access = session.accessToken,
                 refresh = session.refreshToken,
+                isSuperuser = false,
             ),
         )
     }
@@ -75,6 +76,7 @@ class UserRepository @Inject constructor(
                 email = remoteUser.email,
                 access = localUser.access,
                 refresh = localUser.refresh,
+                isSuperuser = remoteUser.isSuperuser,
                 avatarUri = buildRemoteAvatarUri(localUser.remoteId),
             ),
         )
@@ -108,6 +110,7 @@ class UserRepository @Inject constructor(
                     currentUser.remoteId,
                     currentUser.username, currentUser.email,
                     currentUser.access, currentUser.refresh,
+                    currentUser.isSuperuser,
                     buildRemoteAvatarUri(currentUser.remoteId, cacheBust = true),
                 ),
             )
@@ -132,6 +135,7 @@ class UserRepository @Inject constructor(
             remoteUser.email,
             localUser.access,
             localUser.refresh,
+            remoteUser.isSuperuser,
             buildRemoteAvatarUri(remoteUser.id, cacheBust = true),
         )
         authSessionManager.updateCurrentUser(newUserData)

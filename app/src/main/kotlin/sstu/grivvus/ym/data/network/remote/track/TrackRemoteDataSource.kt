@@ -72,7 +72,7 @@ class OpenApiTrackRemoteDataSource @Inject constructor(
                     track = track.file,
                     albumId = albumId?.toInt(),
                     isSingle = isSingle,
-                    isGloballyAvailable = null,
+                    isGloballyAvailable = isGloballyAvailable,
                 )
             }.trackId.toLong()
         }

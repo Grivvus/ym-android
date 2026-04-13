@@ -68,8 +68,8 @@ class MusicViewModel @Inject constructor(
         }
     }
 
-    fun createPlaylist(name: String, coverUri: Uri?) {
-        mutate { repository.createPlaylist(name, coverUri) }
+    fun createPlaylist(name: String, coverUri: Uri?, isPublic: Boolean) {
+        mutate { repository.createPlaylist(name, coverUri, isPublic) }
     }
 
     fun dismissError() {

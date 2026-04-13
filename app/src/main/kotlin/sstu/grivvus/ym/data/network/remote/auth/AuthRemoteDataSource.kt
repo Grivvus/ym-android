@@ -13,7 +13,7 @@ import javax.inject.Singleton
 interface AuthRemoteDataSource {
     suspend fun login(username: String, password: String): NetworkSession
 
-    suspend fun register(username: String, email: String?, password: String): NetworkSession
+    suspend fun register(username: String, password: String): NetworkSession
 
     suspend fun refresh(refreshToken: String): NetworkSession
 }
@@ -41,7 +41,6 @@ class OpenApiAuthRemoteDataSource @Inject constructor(
 
     override suspend fun register(
         username: String,
-        email: String?,
         password: String
     ): NetworkSession {
         return generatedApiProvider.withPublicApi { api ->

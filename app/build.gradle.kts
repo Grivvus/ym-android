@@ -81,10 +81,6 @@ kotlin {
     }
 }
 
-tasks.named("preBuild") {
-    dependsOn(tasks.named("openApiGenerate"))
-}
-
 val syncOpenApiSpec = tasks.register("syncOpenApiSpec") {
     group = "openapi"
     description =

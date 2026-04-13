@@ -71,12 +71,12 @@ class MusicRepositoryTest {
             val repository = createRepository()
 
             val error = expectThrows<PlaylistCreationConflict> {
-                repository.createPlaylist("Favorites", null)
+                repository.createPlaylist("Favorites", null, isPublic = false)
             }
 
             assertThat(error).hasMessageThat().isEqualTo("Playlist with this name already exists")
             assertThat(database.playlistDao().getAll()).hasSize(1)
-            coVerify(exactly = 0) { playlistRemoteDataSource.createPlaylist(any(), any()) }
+            coVerify(exactly = 0) { playlistRemoteDataSource.createPlaylist(any(), any(), any()) }
         }
 
     @Test
@@ -90,12 +90,12 @@ class MusicRepositoryTest {
         )
         coEvery { authSessionManager.requireCurrentUser() } returns currentUser(42L)
         coEvery {
-            playlistRemoteDataSource.createPlaylist("Favorites", null)
+            playlistRemoteDataSource.createPlaylist("Favorites", true, null)
         } returns 11L
 
         val repository = createRepository()
 
-        val data = repository.createPlaylist("Favorites", null)
+        val data = repository.createPlaylist("Favorites", null, isPublic = true)
 
         assertThat(data.playlists).hasSize(2)
         assertThat(database.playlistDao().getByUserAndName(42L, "Favorites")).isEqualTo(
@@ -108,7 +108,7 @@ class MusicRepositoryTest {
                 tracksSeeded = true,
             ),
         )
-        coVerify(exactly = 1) { playlistRemoteDataSource.createPlaylist("Favorites", null) }
+        coVerify(exactly = 1) { playlistRemoteDataSource.createPlaylist("Favorites", true, null) }
     }
 
     private fun createRepository(): MusicRepository {

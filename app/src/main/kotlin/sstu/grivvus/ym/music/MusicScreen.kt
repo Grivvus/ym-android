@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.automirrored.sharp._360
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,6 +51,7 @@ import sstu.grivvus.ym.ui.theme.appIconsMirrored
 private data class CreatePlaylistDraft(
     val name: String = "",
     val coverUri: Uri? = null,
+    val isPublic: Boolean = false,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -142,11 +144,13 @@ fun MusicScreen(
                     createDraft = CreatePlaylistDraft()
                 },
                 onNameChange = { value -> createDraft = createDraft.copy(name = value) },
+                onVisibilityChange = { isPublic -> createDraft = createDraft.copy(isPublic = isPublic) },
                 onSelectCover = { coverPicker.launch("image/*") },
                 onConfirm = {
                     viewModel.createPlaylist(
                         name = createDraft.name.trim(),
                         coverUri = createDraft.coverUri,
+                        isPublic = createDraft.isPublic,
                     )
                     showCreateDialog = false
                     createDraft = CreatePlaylistDraft()
@@ -249,6 +253,7 @@ private fun CreatePlaylistDialog(
     isBusy: Boolean,
     onDismiss: () -> Unit,
     onNameChange: (String) -> Unit,
+    onVisibilityChange: (Boolean) -> Unit,
     onSelectCover: () -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -263,6 +268,19 @@ private fun CreatePlaylistDialog(
                     label = { Text("Playlist name") },
                     singleLine = true,
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = draft.isPublic,
+                        onCheckedChange = onVisibilityChange,
+                    )
+                    Text(
+                        text = "Public playlist",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
                 Artwork(
                     uri = draft.coverUri,
                     modifier = Modifier

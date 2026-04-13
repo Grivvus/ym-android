@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "91b6ac086abdad16ac56532db9dc6a8d",
+    "identityHash": "8d46108074e5771b84498db0a771277d",
     "entities": [
       {
         "tableName": "user",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`remote_id` INTEGER NOT NULL, `username` TEXT NOT NULL, `email` TEXT, `access_token` TEXT, `refresh_token` TEXT, `avatar_uri` TEXT, PRIMARY KEY(`remote_id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`remote_id` INTEGER NOT NULL, `username` TEXT NOT NULL, `email` TEXT, `access_token` TEXT, `refresh_token` TEXT, `is_superuser` INTEGER NOT NULL DEFAULT 0, `avatar_uri` TEXT, PRIMARY KEY(`remote_id`))",
         "fields": [
           {
             "fieldPath": "remoteId",
@@ -34,6 +34,13 @@
             "fieldPath": "refresh",
             "columnName": "refresh_token",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isSuperuser",
+            "columnName": "is_superuser",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
           },
           {
             "fieldPath": "avatarUri",
@@ -421,7 +428,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '91b6ac086abdad16ac56532db9dc6a8d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8d46108074e5771b84498db0a771277d')"
     ]
   }
 }
