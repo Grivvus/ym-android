@@ -295,6 +295,25 @@ class MusicRepository @Inject constructor(
         buildLocalState()
     }
 
+    suspend fun uploadTrackToLibrary(
+        trackUri: Uri,
+        title: String,
+        artistId: Long,
+        albumId: Long?,
+        isSingle: Boolean,
+        isGloballyAvailable: Boolean?,
+    ): MusicLibraryData = withContext(dispatcher) {
+        uploadTrackInternal(
+            trackUri = trackUri,
+            title = title,
+            artistId = artistId,
+            albumId = albumId,
+            isSingle = isSingle,
+            isGloballyAvailable = isGloballyAvailable,
+        )
+        buildLocalState()
+    }
+
     suspend fun uploadTrackAndAddToPlaylist(
         playlistId: Long,
         trackUri: Uri,
@@ -304,63 +323,43 @@ class MusicRepository @Inject constructor(
         isSingle: Boolean,
         isGloballyAvailable: Boolean?,
     ): MusicLibraryData = withContext(dispatcher) {
-        val preparedTrack = prepareUploadFile(trackUri)
-        try {
-            val trackId = trackRemoteDataSource.uploadTrack(
-                name = title,
-                artistId = artistId,
-                albumId = albumId,
-                isSingle = isSingle,
-                isGloballyAvailable = isGloballyAvailable,
-                track = preparedTrack.toUploadPart(),
-            )
-            val existingArtist = artistDao.getById(artistId)
-            val remoteArtistMetadata = loadRemoteArtistMetadata(artistId)
-            artistDao.upsert(
-                Artist(
-                    remoteId = artistId,
-                    name = remoteArtistMetadata?.name?.takeIf { it.isNotBlank() }
-                        ?: existingArtist?.name.orEmpty(),
-                    imageUri = remoteArtistMetadata?.imageUri ?: existingArtist?.imageUri,
-                ),
-            )
-            audioTrackDao.upsert(
-                AudioTrack(
-                    remoteId = trackId,
-                    name = title,
-                    artistId = artistId,
-                ),
-            )
-            if (!isSingle && albumId != null) {
-                val existingAlbum = albumDao.getById(albumId)
-                val remoteAlbumMetadata = loadRemoteAlbumMetadata(albumId)
-                albumDao.upsert(
-                    Album(
-                        remoteId = albumId,
-                        artistId = artistId,
-                        name = remoteAlbumMetadata?.name?.takeIf { it.isNotBlank() }
-                            ?: existingAlbum?.name.orEmpty(),
-                        coverUri = remoteAlbumMetadata?.coverUri ?: existingAlbum?.coverUri,
-                    ),
-                )
-                trackAlbumDao.upsert(TrackAlbumCrossRef(trackId = trackId, albumId = albumId))
-            }
-            val playlist = playlistDao.getById(playlistId)
-                ?: throw IOException("Playlist was not found")
-            playlistRemoteDataSource.addTrack(playlistId, trackId)
-            playlistTrackDao.upsert(
-                PlaylistTrackCrossRef(
-                    playlistId = playlistId,
-                    trackId = trackId,
-                ),
-            )
-            if (!playlist.tracksSeeded) {
-                playlistDao.upsert(playlist.copy(tracksSeeded = true))
-            }
-            buildLocalState()
-        } finally {
-            preparedTrack.file.delete()
+        val trackId = uploadTrackInternal(
+            trackUri = trackUri,
+            title = title,
+            artistId = artistId,
+            albumId = albumId,
+            isSingle = isSingle,
+            isGloballyAvailable = isGloballyAvailable,
+        )
+        val playlist = playlistDao.getById(playlistId)
+            ?: throw IOException("Playlist was not found")
+        playlistRemoteDataSource.addTrack(playlistId, trackId)
+        playlistTrackDao.upsert(
+            PlaylistTrackCrossRef(
+                playlistId = playlistId,
+                trackId = trackId,
+            ),
+        )
+        if (!playlist.tracksSeeded) {
+            playlistDao.upsert(playlist.copy(tracksSeeded = true))
         }
+        buildLocalState()
+    }
+
+    suspend fun deleteTrack(trackId: Long): MusicLibraryData = withContext(dispatcher) {
+        deleteTracks(trackIds = listOf(trackId))
+    }
+
+    suspend fun deleteTracks(trackIds: Collection<Long>): MusicLibraryData = withContext(dispatcher) {
+        val distinctTrackIds = trackIds.distinct()
+        if (distinctTrackIds.isEmpty()) {
+            return@withContext buildLocalState()
+        }
+        distinctTrackIds.forEach { trackId ->
+            trackRemoteDataSource.deleteTrack(trackId)
+        }
+        audioTrackDao.deleteByIds(distinctTrackIds)
+        buildLocalState()
     }
 
     private suspend fun syncRemoteState() {
@@ -374,6 +373,33 @@ class MusicRepository @Inject constructor(
 
         val remoteTracks = trackRemoteDataSource.getMyTracks()
         val existingTracks = audioTrackDao.getAll().associateBy { it.remoteId }
+        val remoteTrackIds = remoteTracks.map { it.id }.toSet()
+        val artistIdsByAlbumId = remoteTracks.associate { track -> track.albumId to track.artistId }
+
+        val existingAlbumsById = albumDao.getAll().associateBy { it.remoteId }
+        val missingAlbumIds = remoteTracks.map { it.albumId }
+            .distinct()
+            .filterNot { albumId -> albumId in existingAlbumsById }
+        val fetchedAlbums = missingAlbumIds.mapNotNull { albumId ->
+            runCatching { albumRemoteDataSource.getAlbum(albumId) }.getOrNull()?.let { album ->
+                val artistId = artistIdsByAlbumId[album.id] ?: return@let null
+                Album(
+                    remoteId = album.id,
+                    artistId = artistId,
+                    name = album.name,
+                    coverUri = album.coverUrl?.toUri(),
+                )
+            }
+        }
+        if (fetchedAlbums.isNotEmpty()) {
+            albumDao.upsertAll(fetchedAlbums)
+        }
+        val availableAlbumIds = existingAlbumsById.keys + fetchedAlbums.map { it.remoteId }
+
+        val staleTrackIds = existingTracks.keys - remoteTrackIds
+        if (staleTrackIds.isNotEmpty()) {
+            audioTrackDao.deleteByIds(staleTrackIds.toList())
+        }
 
         audioTrackDao.upsertAll(
             remoteTracks.map { track ->
@@ -396,17 +422,19 @@ class MusicRepository @Inject constructor(
                 )
             },
         )
-
-        // Constraint violation
-//        trackAlbumDao.clearAll()
-//        trackAlbumDao.insertAll(
-//            remoteTracks.map { track ->
-//                TrackAlbumCrossRef(
-//                    trackId = track.id,
-//                    albumId = track.albumId,
-//                )
-//            },
-//        )
+        trackAlbumDao.clearAll()
+        trackAlbumDao.insertAll(
+            remoteTracks.mapNotNull { track ->
+                if (track.albumId !in availableAlbumIds) {
+                    null
+                } else {
+                    TrackAlbumCrossRef(
+                        trackId = track.id,
+                        albumId = track.albumId,
+                    )
+                }
+            },
+        )
 
         val remotePlaylistSummaries = playlistRemoteDataSource.getMyPlaylists()
         val remotePlaylists = remotePlaylistSummaries.map { summary ->
@@ -487,6 +515,61 @@ class MusicRepository @Inject constructor(
             artists = artists,
             albums = albums,
         )
+    }
+
+    private suspend fun uploadTrackInternal(
+        trackUri: Uri,
+        title: String,
+        artistId: Long,
+        albumId: Long?,
+        isSingle: Boolean,
+        isGloballyAvailable: Boolean?,
+    ): Long {
+        val preparedTrack = prepareUploadFile(trackUri)
+        try {
+            val trackId = trackRemoteDataSource.uploadTrack(
+                name = title,
+                artistId = artistId,
+                albumId = albumId,
+                isSingle = isSingle,
+                isGloballyAvailable = isGloballyAvailable,
+                track = preparedTrack.toUploadPart(),
+            )
+            val existingArtist = artistDao.getById(artistId)
+            val remoteArtistMetadata = loadRemoteArtistMetadata(artistId)
+            artistDao.upsert(
+                Artist(
+                    remoteId = artistId,
+                    name = remoteArtistMetadata?.name?.takeIf { it.isNotBlank() }
+                        ?: existingArtist?.name.orEmpty(),
+                    imageUri = remoteArtistMetadata?.imageUri ?: existingArtist?.imageUri,
+                ),
+            )
+            audioTrackDao.upsert(
+                AudioTrack(
+                    remoteId = trackId,
+                    name = title,
+                    artistId = artistId,
+                ),
+            )
+            if (!isSingle && albumId != null) {
+                val existingAlbum = albumDao.getById(albumId)
+                val remoteAlbumMetadata = loadRemoteAlbumMetadata(albumId)
+                albumDao.upsert(
+                    Album(
+                        remoteId = albumId,
+                        artistId = artistId,
+                        name = remoteAlbumMetadata?.name?.takeIf { it.isNotBlank() }
+                            ?: existingAlbum?.name.orEmpty(),
+                        coverUri = remoteAlbumMetadata?.coverUri ?: existingAlbum?.coverUri,
+                    ),
+                )
+                trackAlbumDao.upsert(TrackAlbumCrossRef(trackId = trackId, albumId = albumId))
+            }
+            return trackId
+        } finally {
+            preparedTrack.file.delete()
+        }
     }
 
     private fun prepareUploadFile(sourceUri: Uri): PreparedUploadFile {

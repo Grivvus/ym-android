@@ -16,6 +16,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import sstu.grivvus.ym.library.AlbumScreen
+import sstu.grivvus.ym.library.ArtistScreen
 import sstu.grivvus.ym.library.LibraryScreen
 import sstu.grivvus.ym.data.network.auth.SessionState
 import sstu.grivvus.ym.login.LoginScreen
@@ -32,6 +34,8 @@ import sstu.grivvus.ym.startup.StartupScreen
 
 internal fun appProtectedRoutes(): Set<String> = setOf(
     AppDestinations.MUSIC_ROUTE,
+    AppDestinations.ARTIST_ROUTE,
+    AppDestinations.ALBUM_ROUTE,
     AppDestinations.PLAYLIST_ROUTE,
     AppDestinations.PROFILE_ROUTE,
     AppDestinations.LIBRARY_ROUTE,
@@ -130,6 +134,8 @@ fun YMNavGraph(
                     navigateToMusic = { navActions.navigateToMusic() },
                     navigateToLibrary = { navActions.navigateToLibrary() },
                     navigateToProfile = { navActions.navigateToProfile() },
+                    navigateToArtist = { artistId -> navActions.navigateToArtist(artistId) },
+                    navigateToAlbum = { albumId -> navActions.navigateToAlbum(albumId) },
                 )
             }
 
@@ -143,6 +149,40 @@ fun YMNavGraph(
                     { navActions.navigateToProfile() },
                     { playlistId -> navActions.navigateToPlaylist(playlistId) },
                     refreshToken = refreshToken,
+                )
+            }
+
+            composable(
+                route = AppDestinations.ARTIST_ROUTE,
+                arguments = listOf(
+                    navArgument(RouteArguments.ARTIST_ID) {
+                        type = NavType.LongType
+                    },
+                ),
+            ) {
+                ArtistScreen(
+                    navigateToMusic = { navActions.navigateToMusic() },
+                    navigateToLibrary = { navActions.navigateToLibrary() },
+                    navigateToProfile = { navActions.navigateToProfile() },
+                    navigateToAlbum = { albumId -> navActions.navigateToAlbum(albumId) },
+                    onBack = navActions::popBackStack,
+                )
+            }
+
+            composable(
+                route = AppDestinations.ALBUM_ROUTE,
+                arguments = listOf(
+                    navArgument(RouteArguments.ALBUM_ID) {
+                        type = NavType.LongType
+                    },
+                ),
+            ) {
+                AlbumScreen(
+                    navigateToMusic = { navActions.navigateToMusic() },
+                    navigateToLibrary = { navActions.navigateToLibrary() },
+                    navigateToProfile = { navActions.navigateToProfile() },
+                    onOpenPlayer = { trackId -> navActions.navigateToPlayer(trackId) },
+                    onBack = navActions::popBackStack,
                 )
             }
 

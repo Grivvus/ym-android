@@ -48,7 +48,7 @@ private const val MAX_ALBUM_SUGGESTIONS = 5
 @Composable
 fun UploadTrackModal(
     sessionId: Long,
-    playlistId: Long,
+    playlistId: Long?,
     uri: Uri,
     initialTitle: String,
     onDismiss: () -> Unit,

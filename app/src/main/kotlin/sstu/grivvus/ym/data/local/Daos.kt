@@ -73,6 +73,12 @@ interface AudioTrackDao {
     @Query("SELECT * FROM audio_tracks WHERE remote_id = :trackId LIMIT 1")
     suspend fun getById(trackId: Long): AudioTrack?
 
+    @Query("DELETE FROM audio_tracks WHERE remote_id = :trackId")
+    suspend fun deleteById(trackId: Long)
+
+    @Query("DELETE FROM audio_tracks WHERE remote_id IN (:trackIds)")
+    suspend fun deleteByIds(trackIds: Collection<Long>)
+
     @Query("DELETE FROM audio_tracks")
     suspend fun clearAll()
 }

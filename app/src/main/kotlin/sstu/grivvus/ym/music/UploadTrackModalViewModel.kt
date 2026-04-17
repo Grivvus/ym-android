@@ -21,7 +21,7 @@ import sstu.grivvus.ym.logHandledException
 import java.io.IOException
 
 data class UploadTrackModalArgs(
-    val playlistId: Long,
+    val playlistId: Long?,
     val uri: Uri,
     val initialTitle: String,
 )
@@ -38,7 +38,7 @@ data class UploadTrackAlbumOptionUi(
 )
 
 data class UploadTrackModalUiState(
-    val playlistId: Long,
+    val playlistId: Long?,
     val uri: Uri,
     val title: String = "",
     val artistQuery: String = "",
@@ -286,15 +286,27 @@ class UploadTrackModalViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSubmitting = true, errorMessage = null)
             try {
-                repository.uploadTrackAndAddToPlaylist(
-                    playlistId = currentState.playlistId,
-                    trackUri = currentState.uri,
-                    title = title,
-                    artistId = artistId,
-                    albumId = albumId,
-                    isSingle = currentState.isSingle,
-                    isGloballyAvailable = currentState.isGloballyAvailable,
-                )
+                val playlistId = currentState.playlistId
+                if (playlistId != null) {
+                    repository.uploadTrackAndAddToPlaylist(
+                        playlistId = playlistId,
+                        trackUri = currentState.uri,
+                        title = title,
+                        artistId = artistId,
+                        albumId = albumId,
+                        isSingle = currentState.isSingle,
+                        isGloballyAvailable = currentState.isGloballyAvailable,
+                    )
+                } else {
+                    repository.uploadTrackToLibrary(
+                        trackUri = currentState.uri,
+                        title = title,
+                        artistId = artistId,
+                        albumId = albumId,
+                        isSingle = currentState.isSingle,
+                        isGloballyAvailable = currentState.isGloballyAvailable,
+                    )
+                }
                 _events.emit(UploadTrackModalEvent.UploadCompleted)
             } catch (_: SessionExpiredException) {
                 return@launch

@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.IOException
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -18,6 +19,8 @@ import kotlinx.coroutines.launch
 import sstu.grivvus.ym.data.BackupCreationOptions
 import sstu.grivvus.ym.data.BackupRestoreRepository
 import sstu.grivvus.ym.data.DownloadedBackupArchive
+import sstu.grivvus.ym.data.MusicLibraryData
+import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.RestoreOperationState
 import sstu.grivvus.ym.data.RestoreOperationStatus
 import sstu.grivvus.ym.data.UserRepository
@@ -26,7 +29,6 @@ import sstu.grivvus.ym.data.network.core.ApiException
 import sstu.grivvus.ym.data.network.core.ClientApiException
 import sstu.grivvus.ym.data.network.core.UnauthorizedApiException
 import sstu.grivvus.ym.logHandledException
-import java.io.IOException
 
 data class RestoreStatusUi(
     val restoreId: String,
@@ -38,7 +40,12 @@ data class RestoreStatusUi(
 
 data class LibraryUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val isSuperuser: Boolean = false,
+    val tracks: List<LibraryTrackItemUi> = emptyList(),
+    val selectedTrackIds: Set<Long> = emptySet(),
+    val pendingDeleteTrackIds: Set<Long> = emptySet(),
+    val isTrackMutating: Boolean = false,
     val includeImages: Boolean = true,
     val includeTranscodedTracks: Boolean = true,
     val isCreatingBackup: Boolean = false,
@@ -47,16 +54,22 @@ data class LibraryUiState(
     val restoreStatus: RestoreStatusUi? = null,
     val errorMessage: String? = null,
     val infoMessage: String? = null,
-)
+) {
+    val isSelectionMode: Boolean
+        get() = selectedTrackIds.isNotEmpty()
+}
 
 sealed interface LibraryScreenEvent {
     data class RequestBackupSaveLocation(val suggestedFileName: String) : LibraryScreenEvent
+    data class NavigateToAlbum(val albumId: Long) : LibraryScreenEvent
+    data class NavigateToArtist(val artistId: Long) : LibraryScreenEvent
 }
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val backupRestoreRepository: BackupRestoreRepository,
+    private val musicRepository: MusicRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(LibraryUiState())
     private val _events = MutableSharedFlow<LibraryScreenEvent>()
@@ -69,6 +82,7 @@ class LibraryViewModel @Inject constructor(
     init {
         observeCurrentUser()
         refreshCurrentUser()
+        refresh(initialLoad = true)
     }
 
     fun changeIncludeImages(value: Boolean) {
@@ -85,6 +99,141 @@ class LibraryViewModel @Inject constructor(
 
     fun dismissInfo() {
         _uiState.update { it.copy(infoMessage = null) }
+    }
+
+    fun refresh(initialLoad: Boolean = false) {
+        viewModelScope.launch {
+            if (initialLoad) {
+                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            } else {
+                _uiState.update { it.copy(isRefreshing = true, errorMessage = null) }
+            }
+            try {
+                applyLibraryData(musicRepository.loadLibrary(refreshFromNetwork = true))
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                val fallbackData =
+                    runCatching { musicRepository.loadLibrary(refreshFromNetwork = false) }.getOrNull()
+                if (fallbackData != null) {
+                    applyLibraryData(fallbackData)
+                }
+                error.logHandledException("LibraryViewModel.refresh")
+                _uiState.update { state ->
+                    state.copy(errorMessage = error.toReadableMessage())
+                }
+            } finally {
+                _uiState.update { it.copy(isLoading = false, isRefreshing = false) }
+            }
+        }
+    }
+
+    fun reloadFromLocal() {
+        viewModelScope.launch {
+            try {
+                applyLibraryData(musicRepository.loadLibrary(refreshFromNetwork = false))
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                error.logHandledException("LibraryViewModel.reloadFromLocal")
+                _uiState.update { state ->
+                    state.copy(errorMessage = error.toReadableMessage())
+                }
+            }
+        }
+    }
+
+    fun onTrackClick(trackId: Long) {
+        if (_uiState.value.isSelectionMode) {
+            toggleTrackSelection(trackId)
+            return
+        }
+        val track = _uiState.value.tracks.firstOrNull { item -> item.id == trackId } ?: return
+        val albumId = track.albumId
+        if (albumId == null) {
+            _uiState.update { it.copy(errorMessage = "Album is unavailable for this track") }
+            return
+        }
+        viewModelScope.launch {
+            _events.emit(LibraryScreenEvent.NavigateToAlbum(albumId))
+        }
+    }
+
+    fun onTrackLongPress(trackId: Long) {
+        toggleTrackSelection(trackId)
+    }
+
+    fun clearSelection() {
+        _uiState.update { it.copy(selectedTrackIds = emptySet()) }
+    }
+
+    fun requestDeleteSelected() {
+        val selectedTrackIds = _uiState.value.selectedTrackIds
+        if (selectedTrackIds.isEmpty()) {
+            return
+        }
+        _uiState.update { it.copy(pendingDeleteTrackIds = selectedTrackIds) }
+    }
+
+    fun requestDeleteTrack(trackId: Long) {
+        _uiState.update { it.copy(pendingDeleteTrackIds = setOf(trackId)) }
+    }
+
+    fun dismissDeleteDialog() {
+        _uiState.update { it.copy(pendingDeleteTrackIds = emptySet()) }
+    }
+
+    fun deletePendingTracks() {
+        val pendingDeleteTrackIds = _uiState.value.pendingDeleteTrackIds
+        if (pendingDeleteTrackIds.isEmpty()) {
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isTrackMutating = true, errorMessage = null, infoMessage = null) }
+            try {
+                val updatedLibrary = musicRepository.deleteTracks(pendingDeleteTrackIds)
+                applyLibraryData(updatedLibrary)
+                _uiState.update { state ->
+                    state.copy(
+                        infoMessage = if (pendingDeleteTrackIds.size == 1) {
+                            "Track deleted"
+                        } else {
+                            "${pendingDeleteTrackIds.size} tracks deleted"
+                        },
+                        pendingDeleteTrackIds = emptySet(),
+                        selectedTrackIds = emptySet(),
+                    )
+                }
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                error.logHandledException("LibraryViewModel.deletePendingTracks")
+                _uiState.update { state ->
+                    state.copy(errorMessage = error.toReadableMessage())
+                }
+            } finally {
+                _uiState.update { it.copy(isTrackMutating = false) }
+            }
+        }
+    }
+
+    fun openArtist(trackId: Long) {
+        val track = _uiState.value.tracks.firstOrNull { item -> item.id == trackId } ?: return
+        viewModelScope.launch {
+            _events.emit(LibraryScreenEvent.NavigateToArtist(track.artistId))
+        }
+    }
+
+    fun openAlbum(trackId: Long) {
+        val track = _uiState.value.tracks.firstOrNull { item -> item.id == trackId } ?: return
+        val albumId = track.albumId
+        if (albumId == null) {
+            _uiState.update { it.copy(errorMessage = "Album is unavailable for this track") }
+            return
+        }
+        viewModelScope.launch {
+            _events.emit(LibraryScreenEvent.NavigateToAlbum(albumId))
+        }
     }
 
     fun createBackup() {
@@ -197,7 +346,6 @@ class LibraryViewModel @Inject constructor(
             userRepository.observeCurrentUser().collectLatest { currentUser ->
                 _uiState.update { state ->
                     state.copy(
-                        isLoading = false,
                         isSuperuser = currentUser?.isSuperuser == true,
                     )
                 }
@@ -256,6 +404,7 @@ class LibraryViewModel @Inject constructor(
     private suspend fun refreshLocalStateAfterRestore() {
         try {
             backupRestoreRepository.refreshLocalStateAfterRestore()
+            applyLibraryData(musicRepository.loadLibrary(refreshFromNetwork = false))
             _uiState.update { state ->
                 state.copy(infoMessage = "Restore finished. Local data refreshed.")
             }
@@ -272,6 +421,34 @@ class LibraryViewModel @Inject constructor(
     private fun hasRunningRestore(): Boolean {
         val restoreStatus = _uiState.value.restoreStatus ?: return false
         return !restoreStatus.isFinished && !restoreStatus.isFailed
+    }
+
+    private fun toggleTrackSelection(trackId: Long) {
+        _uiState.update { state ->
+            state.copy(
+                selectedTrackIds = if (trackId in state.selectedTrackIds) {
+                    state.selectedTrackIds - trackId
+                } else {
+                    state.selectedTrackIds + trackId
+                },
+            )
+        }
+    }
+
+    private fun applyLibraryData(data: MusicLibraryData) {
+        val artistsById = data.artists.associateBy { artist -> artist.remoteId }
+        val tracks = data.libraryTracks.map { track ->
+            track.toLibraryTrackItemUi(artistsById)
+        }
+        val trackIds = tracks.mapTo(linkedSetOf()) { track -> track.id }
+        _uiState.update { state ->
+            state.copy(
+                tracks = tracks,
+                selectedTrackIds = state.selectedTrackIds.filterTo(linkedSetOf()) { it in trackIds },
+                pendingDeleteTrackIds = state.pendingDeleteTrackIds.filterTo(linkedSetOf()) { it in trackIds },
+                errorMessage = null,
+            )
+        }
     }
 
     private fun RestoreOperationStatus.toUi(): RestoreStatusUi {
