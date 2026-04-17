@@ -16,7 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import sstu.grivvus.ym.components.BlankScreen
+import sstu.grivvus.ym.library.LibraryScreen
 import sstu.grivvus.ym.data.network.auth.SessionState
 import sstu.grivvus.ym.login.LoginScreen
 import sstu.grivvus.ym.music.MusicScreen
@@ -126,8 +126,7 @@ fun YMNavGraph(
             }
 
             composable(AppDestinations.LIBRARY_ROUTE) {
-                BlankScreen(
-                    title = "Library screen is not implemented yet",
+                LibraryScreen(
                     navigateToMusic = { navActions.navigateToMusic() },
                     navigateToLibrary = { navActions.navigateToLibrary() },
                     navigateToProfile = { navActions.navigateToProfile() },

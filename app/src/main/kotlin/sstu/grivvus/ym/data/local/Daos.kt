@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ServerInfoDao {
@@ -44,6 +45,9 @@ interface UserDao {
 
     @Query("select * from user limit 1")
     suspend fun getActiveUser(): LocalUser?
+
+    @Query("select * from user limit 1")
+    fun observeActiveUser(): Flow<LocalUser?>
 
     @Query("select access_token, refresh_token from user where remote_id=:id limit 1")
     suspend fun getUserTokens(id: Long): Tokens

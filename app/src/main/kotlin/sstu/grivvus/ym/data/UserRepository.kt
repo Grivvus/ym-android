@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.core.net.toUri
 import dagger.hilt.android.qualifiers.ApplicationContext
 import sstu.grivvus.ym.data.local.LocalUser
+import sstu.grivvus.ym.data.local.UserDao
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
 import sstu.grivvus.ym.data.network.model.UploadPart
 import sstu.grivvus.ym.data.network.remote.auth.AuthRemoteDataSource
@@ -12,13 +13,15 @@ import sstu.grivvus.ym.data.network.remote.user.UserRemoteDataSource
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 
 class UserRepository @Inject constructor(
     private val authRemoteDataSource: AuthRemoteDataSource,
     private val userRemoteDataSource: UserRemoteDataSource,
     private val authSessionManager: AuthSessionManager,
     private val serverInfoRepository: ServerInfoRepository,
-    @ApplicationContext private val context: Context,
+    private val userDao: UserDao,
+    @param:ApplicationContext private val context: Context,
 ) {
     suspend fun register(username: String, password: String) {
         val session = authRemoteDataSource.register(
@@ -88,6 +91,10 @@ class UserRepository @Inject constructor(
 
     suspend fun requireCurrentUser(): LocalUser {
         return authSessionManager.requireCurrentUser()
+    }
+
+    fun observeCurrentUser(): Flow<LocalUser?> {
+        return userDao.observeActiveUser()
     }
 
     suspend fun logout() {

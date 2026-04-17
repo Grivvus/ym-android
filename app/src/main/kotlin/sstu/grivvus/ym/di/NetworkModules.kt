@@ -7,6 +7,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import sstu.grivvus.ym.data.network.auth.AuthHeaderProvider
+import sstu.grivvus.ym.data.network.auth.AuthenticatedMediaInterceptor
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
 import sstu.grivvus.ym.data.network.auth.DefaultAuthHeaderProvider
 import sstu.grivvus.ym.data.network.auth.DefaultAuthSessionManager
@@ -41,10 +42,16 @@ import javax.inject.Singleton
 
 private const val TRACK_UPLOAD_READ_TIMEOUT_MINUTES = 5L
 private const val TRACK_UPLOAD_WRITE_TIMEOUT_MINUTES = 5L
+private const val ARCHIVE_TRANSFER_READ_TIMEOUT_MINUTES = 5L
+private const val ARCHIVE_TRANSFER_WRITE_TIMEOUT_MINUTES = 5L
 
 @Qualifier
 @Retention(AnnotationRetention.RUNTIME)
 annotation class TrackUploadHttpClient
+
+@Qualifier
+@Retention(AnnotationRetention.RUNTIME)
+annotation class ArchiveTransferHttpClient
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -150,6 +157,19 @@ object NetworkClientModule {
         return OkHttpClient.Builder()
             .readTimeout(TRACK_UPLOAD_READ_TIMEOUT_MINUTES, TimeUnit.MINUTES)
             .writeTimeout(TRACK_UPLOAD_WRITE_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    @ArchiveTransferHttpClient
+    fun provideArchiveTransferHttpClient(
+        authenticatedMediaInterceptor: AuthenticatedMediaInterceptor,
+    ): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addInterceptor(authenticatedMediaInterceptor)
+            .readTimeout(ARCHIVE_TRANSFER_READ_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+            .writeTimeout(ARCHIVE_TRANSFER_WRITE_TIMEOUT_MINUTES, TimeUnit.MINUTES)
             .build()
     }
 }
