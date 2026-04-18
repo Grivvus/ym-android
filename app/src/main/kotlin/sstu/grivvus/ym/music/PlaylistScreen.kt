@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.automirrored.sharp._360
+import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,7 +50,7 @@ import kotlinx.coroutines.flow.collectLatest
 import sstu.grivvus.ym.components.BottomBar
 import sstu.grivvus.ym.components.ErrorSnackbar
 import sstu.grivvus.ym.playback.PlaybackViewModel
-import sstu.grivvus.ym.ui.theme.appIconsMirrored
+import sstu.grivvus.ym.ui.theme.appIcons
 
 private data class RenamePlaylistDraft(
     val value: String,
@@ -126,7 +126,7 @@ fun PlaylistScreen(
                 },
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(appIconsMirrored._360, contentDescription = "refresh screen")
+                        Icon(appIcons.Sync, contentDescription = "fetch data from server")
                     }
                     if (playlist != null) {
                         TextButton(

@@ -13,8 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.automirrored.sharp._360
+import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,7 +37,7 @@ import sstu.grivvus.ym.components.ErrorSnackbar
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.ui.theme.YMTheme
-import sstu.grivvus.ym.ui.theme.appIconsMirrored
+import sstu.grivvus.ym.ui.theme.appIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +64,7 @@ fun ArtistScreen(
                     },
                     actions = {
                         IconButton(onClick = { viewModel.refresh() }) {
-                            Icon(appIconsMirrored._360, contentDescription = "Refresh artist")
+                            Icon(appIcons.Sync, contentDescription = "fetch data from server")
                         }
                     },
                 )

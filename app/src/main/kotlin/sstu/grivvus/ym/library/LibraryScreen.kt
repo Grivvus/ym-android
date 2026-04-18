@@ -18,10 +18,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.sharp._360
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -29,8 +30,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,7 +62,7 @@ import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
 import sstu.grivvus.ym.music.queryDisplayName
 import sstu.grivvus.ym.ui.theme.YMTheme
-import sstu.grivvus.ym.ui.theme.appIconsMirrored
+import sstu.grivvus.ym.ui.theme.appIcons
 
 private data class UploadTrackModalRequest(
     val sessionId: Long,
@@ -82,7 +83,8 @@ fun LibraryScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val restoreStatus = uiState.restoreStatus
-    val isRestoreRunning = restoreStatus != null && !restoreStatus.isFinished && !restoreStatus.isFailed
+    val isRestoreRunning =
+        restoreStatus != null && !restoreStatus.isFinished && !restoreStatus.isFailed
     val isArchiveOperationInProgress =
         uiState.isCreatingBackup || uiState.isSavingBackup || uiState.isStartingRestore
     val pendingDeleteTrackIds = uiState.pendingDeleteTrackIds
@@ -153,10 +155,7 @@ fun LibraryScreen(
                             }
                         } else {
                             IconButton(onClick = { viewModel.refresh() }) {
-                                Icon(
-                                    appIconsMirrored._360,
-                                    contentDescription = "Refresh library",
-                                )
+                                Icon(appIcons.Sync, contentDescription = "fetch data from server")
                             }
                         }
                     },
@@ -372,34 +371,11 @@ private fun TrackSectionHeader(
     isRefreshing: Boolean,
     isBusy: Boolean,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = "Tracks",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-            Text(
-                text = when {
-                    isBusy -> "Applying track changes..."
-                    isRefreshing -> "Refreshing library tracks..."
-                    else -> "Track management starts below. Use the floating action button to add audio."
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-        }
-    }
+    Divider(
+        color = MaterialTheme.colorScheme.error,
+        thickness = 5.dp,
+        modifier = Modifier.padding(vertical = 8.dp)
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)

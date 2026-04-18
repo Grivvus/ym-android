@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,7 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.automirrored.sharp._360
+import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,7 +41,7 @@ import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.playback.PlaybackViewModel
 import sstu.grivvus.ym.ui.theme.YMTheme
-import sstu.grivvus.ym.ui.theme.appIconsMirrored
+import sstu.grivvus.ym.ui.theme.appIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +69,7 @@ fun AlbumScreen(
                     },
                     actions = {
                         IconButton(onClick = { viewModel.refresh() }) {
-                            Icon(appIconsMirrored._360, contentDescription = "Refresh album")
+                            Icon(appIcons.Sync, contentDescription = "fetch data from server")
                         }
                     },
                 )
