@@ -8,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,12 +27,12 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +71,11 @@ private data class UploadTrackModalRequest(
     val initialTitle: String,
 )
 
+private data class RestoreArchiveRequest(
+    val uri: Uri,
+    val displayName: String,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
@@ -88,7 +94,9 @@ fun LibraryScreen(
     val isArchiveOperationInProgress =
         uiState.isCreatingBackup || uiState.isSavingBackup || uiState.isStartingRestore
     val pendingDeleteTrackIds = uiState.pendingDeleteTrackIds
+    var showBackupDialog by rememberSaveable { mutableStateOf(false) }
     var uploadTrackRequest by remember { mutableStateOf<UploadTrackModalRequest?>(null) }
+    var pendingRestoreRequest by remember { mutableStateOf<RestoreArchiveRequest?>(null) }
 
     val backupSaveLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/zip"),
@@ -98,7 +106,12 @@ fun LibraryScreen(
     val restoreArchivePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
-        viewModel.restoreFromArchive(uri)
+        if (uri != null) {
+            pendingRestoreRequest = RestoreArchiveRequest(
+                uri = uri,
+                displayName = context.queryDisplayName(uri),
+            )
+        }
     }
     val trackPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -201,26 +214,9 @@ fun LibraryScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(horizontal = 16.dp),
+                            contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            item {
-                                Column(
-                                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
-                                ) {
-                                    Text(
-                                        text = "Library tools",
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Administrative backup and restore tools live here.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-
                             uiState.infoMessage?.let { infoMessage ->
                                 item {
                                     InfoCard(
@@ -232,23 +228,11 @@ fun LibraryScreen(
 
                             if (uiState.isSuperuser) {
                                 item {
-                                    BackupCard(
-                                        includeImages = uiState.includeImages,
-                                        includeTranscodedTracks = uiState.includeTranscodedTracks,
-                                        isBusy = isArchiveOperationInProgress || isRestoreRunning,
-                                        isCreatingBackup = uiState.isCreatingBackup,
-                                        isSavingBackup = uiState.isSavingBackup,
-                                        onIncludeImagesChange = viewModel::changeIncludeImages,
-                                        onIncludeTranscodedTracksChange = viewModel::changeIncludeTranscodedTracks,
-                                        onCreateBackup = viewModel::createBackup,
-                                    )
-                                }
-                                item {
-                                    RestoreCard(
-                                        restoreStatus = restoreStatus,
+                                    BackupRestoreActionsCard(
                                         isBusy = isArchiveOperationInProgress,
                                         isRestoreRunning = isRestoreRunning,
-                                        onRestore = {
+                                        onCreateBackupClick = { showBackupDialog = true },
+                                        onRestoreClick = {
                                             restoreArchivePicker.launch(
                                                 arrayOf(
                                                     "application/zip",
@@ -259,20 +243,17 @@ fun LibraryScreen(
                                         },
                                     )
                                 }
-                            } else {
-                                item {
-                                    EmptyStateCard(
-                                        title = "Administration tools unavailable",
-                                        description = "Backup and restore controls are shown only to superusers.",
-                                    )
-                                }
+                                restoreStatus
+                                    ?.takeIf { status -> !status.isFinished || status.isFailed }
+                                    ?.let { status ->
+                                        item {
+                                            RestoreStatusBanner(status = status)
+                                        }
+                                    }
                             }
 
                             item {
-                                TrackSectionHeader(
-                                    isRefreshing = uiState.isRefreshing,
-                                    isBusy = uiState.isTrackMutating,
-                                )
+                                TrackSectionHeader()
                             }
 
                             if (uiState.tracks.isEmpty()) {
@@ -296,10 +277,6 @@ fun LibraryScreen(
                                         onGoToAlbum = { viewModel.openAlbum(track.id) },
                                     )
                                 }
-                            }
-
-                            item {
-                                Spacer(modifier = Modifier.height(80.dp))
                             }
                         }
                     }
@@ -350,6 +327,33 @@ fun LibraryScreen(
             )
         }
 
+        if (showBackupDialog) {
+            BackupOptionsDialog(
+                includeImages = uiState.includeImages,
+                includeTranscodedTracks = uiState.includeTranscodedTracks,
+                isBusy = isArchiveOperationInProgress || isRestoreRunning,
+                onDismiss = { showBackupDialog = false },
+                onIncludeImagesChange = viewModel::changeIncludeImages,
+                onIncludeTranscodedTracksChange = viewModel::changeIncludeTranscodedTracks,
+                onConfirm = {
+                    showBackupDialog = false
+                    viewModel.createBackup()
+                },
+            )
+        }
+
+        pendingRestoreRequest?.let { request ->
+            RestoreConfirmationDialog(
+                archiveName = request.displayName,
+                isBusy = isArchiveOperationInProgress || isRestoreRunning,
+                onDismiss = { pendingRestoreRequest = null },
+                onConfirm = {
+                    pendingRestoreRequest = null
+                    viewModel.restoreFromArchive(request.uri)
+                },
+            )
+        }
+
         uploadTrackRequest?.let { request ->
             UploadTrackModal(
                 sessionId = request.sessionId,
@@ -367,11 +371,8 @@ fun LibraryScreen(
 }
 
 @Composable
-private fun TrackSectionHeader(
-    isRefreshing: Boolean,
-    isBusy: Boolean,
-) {
-    Divider(
+private fun TrackSectionHeader() {
+    HorizontalDivider(
         color = MaterialTheme.colorScheme.error,
         thickness = 5.dp,
         modifier = Modifier.padding(vertical = 8.dp)
@@ -479,62 +480,113 @@ private fun LibraryTrackRow(
 }
 
 @Composable
-private fun BackupCard(
-    includeImages: Boolean,
-    includeTranscodedTracks: Boolean,
+private fun BackupRestoreActionsCard(
     isBusy: Boolean,
-    isCreatingBackup: Boolean,
-    isSavingBackup: Boolean,
-    onIncludeImagesChange: (Boolean) -> Unit,
-    onIncludeTranscodedTracksChange: (Boolean) -> Unit,
-    onCreateBackup: () -> Unit,
+    isRestoreRunning: Boolean,
+    onCreateBackupClick: () -> Unit,
+    onRestoreClick: () -> Unit,
 ) {
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Create backup",
-                style = MaterialTheme.typography.titleLarge,
+                text = "Backup & restore",
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "Download the application backup archive to your device.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            BackupOptionRow(
-                title = "Include images",
-                checked = includeImages,
-                onCheckedChange = onIncludeImagesChange,
-                enabled = !isBusy,
-            )
-            BackupOptionRow(
-                title = "Include transcoded tracks",
-                checked = includeTranscodedTracks,
-                onCheckedChange = onIncludeTranscodedTracksChange,
-                enabled = !isBusy,
-            )
-            Text(
-                text = if (isSavingBackup) {
-                    "Saving archive to the selected location..."
-                } else if (isCreatingBackup) {
-                    "Preparing backup archive..."
+                text = if (isRestoreRunning) {
+                    "Restore is running. New archive actions are temporarily disabled."
+                } else if (isBusy) {
+                    "Archive operation in progress."
                 } else {
-                    "The generated archive will be saved through the system document picker."
+                    "Export a backup archive or restore library data from an existing archive."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Button(
-                onClick = onCreateBackup,
-                enabled = !isBusy,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("Create backup")
+                Button(
+                    onClick = onCreateBackupClick,
+                    enabled = !isBusy && !isRestoreRunning,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Create backup")
+                }
+                Button(
+                    onClick = onRestoreClick,
+                    enabled = !isBusy && !isRestoreRunning,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        if (isRestoreRunning) {
+                            "Restoring..."
+                        } else {
+                            "Restore"
+                        },
+                    )
+                }
             }
         }
     }
+}
+
+@Composable
+private fun BackupOptionsDialog(
+    includeImages: Boolean,
+    includeTranscodedTracks: Boolean,
+    isBusy: Boolean,
+    onDismiss: () -> Unit,
+    onIncludeImagesChange: (Boolean) -> Unit,
+    onIncludeTranscodedTracksChange: (Boolean) -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Create backup") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "Choose what to include in the archive before saving it to the selected location.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                BackupOptionRow(
+                    title = "Include images",
+                    checked = includeImages,
+                    onCheckedChange = onIncludeImagesChange,
+                    enabled = !isBusy,
+                )
+                BackupOptionRow(
+                    title = "Include transcoded tracks",
+                    checked = includeTranscodedTracks,
+                    onCheckedChange = onIncludeTranscodedTracksChange,
+                    enabled = !isBusy,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = !isBusy,
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isBusy,
+            ) {
+                Text("Cancel")
+            }
+        },
+    )
 }
 
 @Composable
@@ -561,48 +613,49 @@ private fun BackupOptionRow(
 }
 
 @Composable
-private fun RestoreCard(
-    restoreStatus: RestoreStatusUi?,
+private fun RestoreConfirmationDialog(
+    archiveName: String,
     isBusy: Boolean,
-    isRestoreRunning: Boolean,
-    onRestore: () -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = "Restore from backup",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = "Upload a backup archive and track the restore status until the server finishes processing it.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Button(
-                onClick = onRestore,
-                enabled = !isBusy && !isRestoreRunning,
-            ) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Restore from backup") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    if (isRestoreRunning) {
-                        "Restore in progress"
-                    } else {
-                        "Select backup archive"
-                    },
+                    text = "Start restore from the selected archive?",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = archiveName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            restoreStatus?.let { status ->
-                RestoreStatusCard(status = status)
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = !isBusy,
+            ) {
+                Text("Restore")
             }
-        }
-    }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isBusy,
+            ) {
+                Text("Cancel")
+            }
+        },
+    )
 }
 
 @Composable
-private fun RestoreStatusCard(status: RestoreStatusUi) {
+private fun RestoreStatusBanner(status: RestoreStatusUi) {
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),

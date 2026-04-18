@@ -1,4 +1,4 @@
-package sstu.grivvus.ym.music
+package sstu.grivvus.ym.playlist
 
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle

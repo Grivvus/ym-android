@@ -1,10 +1,11 @@
-package sstu.grivvus.ym.music
+package sstu.grivvus.ym.playlist
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +28,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,6 +51,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 import sstu.grivvus.ym.components.BottomBar
 import sstu.grivvus.ym.components.ErrorSnackbar
+import sstu.grivvus.ym.music.Artwork
+import sstu.grivvus.ym.music.EmptyStateCard
+import sstu.grivvus.ym.music.UploadTrackModal
+import sstu.grivvus.ym.music.queryDisplayName
 import sstu.grivvus.ym.playback.PlaybackViewModel
 import sstu.grivvus.ym.ui.theme.appIcons
 
@@ -154,7 +160,7 @@ fun PlaylistScreen(
             )
         },
     ) { innerPadding ->
-        androidx.compose.foundation.layout.Box(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
@@ -429,7 +435,7 @@ private fun RenamePlaylistDialog(
         onDismissRequest = onDismiss,
         title = { Text("Rename playlist") },
         text = {
-            androidx.compose.material3.OutlinedTextField(
+            OutlinedTextField(
                 value = draft.value,
                 onValueChange = onValueChange,
                 label = { Text("Playlist name") },
@@ -480,7 +486,7 @@ private fun AddTracksDialog(
                                         if (track.id in selectedIds) selectedIds - track.id
                                         else selectedIds + track.id
                                 },
-                            shape = RoundedCornerShape(18.dp),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
                             tonalElevation = if (track.id in selectedIds) 4.dp else 0.dp,
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {

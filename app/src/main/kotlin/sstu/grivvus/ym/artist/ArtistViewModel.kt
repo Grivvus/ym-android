@@ -1,12 +1,10 @@
-package sstu.grivvus.ym.library
+package sstu.grivvus.ym.artist
 
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.io.IOException
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +13,11 @@ import sstu.grivvus.ym.RouteArguments
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
+import sstu.grivvus.ym.library.albumDisplayName
+import sstu.grivvus.ym.library.artistDisplayName
 import sstu.grivvus.ym.logHandledException
+import java.io.IOException
+import javax.inject.Inject
 
 data class ArtistAlbumItemUi(
     val id: Long,

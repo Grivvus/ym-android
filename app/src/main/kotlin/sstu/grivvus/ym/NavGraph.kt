@@ -1,11 +1,11 @@
 package sstu.grivvus.ym
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -16,17 +16,17 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import sstu.grivvus.ym.library.AlbumScreen
-import sstu.grivvus.ym.library.ArtistScreen
-import sstu.grivvus.ym.library.LibraryScreen
+import sstu.grivvus.ym.album.AlbumScreen
+import sstu.grivvus.ym.artist.ArtistScreen
 import sstu.grivvus.ym.data.network.auth.SessionState
+import sstu.grivvus.ym.library.LibraryScreen
 import sstu.grivvus.ym.login.LoginScreen
 import sstu.grivvus.ym.music.MusicScreen
-import sstu.grivvus.ym.music.PlaylistScreen
 import sstu.grivvus.ym.music.UploadScreen
 import sstu.grivvus.ym.playback.MiniPlayerOverlay
 import sstu.grivvus.ym.playback.PlaybackViewModel
 import sstu.grivvus.ym.playback.PlayerScreen
+import sstu.grivvus.ym.playlist.PlaylistScreen
 import sstu.grivvus.ym.profile.ProfileScreen
 import sstu.grivvus.ym.register.RegistrationScreen
 import sstu.grivvus.ym.serverSetup.ServerSetup
