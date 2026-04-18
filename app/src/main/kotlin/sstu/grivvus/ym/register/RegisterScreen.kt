@@ -1,44 +1,29 @@
 package sstu.grivvus.ym.register
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.sharp.Login
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.sharp.LockReset
 import androidx.compose.material.icons.sharp.Password
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import sstu.grivvus.ym.components.CenteredFormScreen
 import sstu.grivvus.ym.components.ErrorTooltip
+import sstu.grivvus.ym.components.FormActionRow
+import sstu.grivvus.ym.components.PasswordOutlinedField
 import sstu.grivvus.ym.ui.theme.YMTheme
 import sstu.grivvus.ym.ui.theme.appIcons
 import sstu.grivvus.ym.ui.theme.appIconsMirrored
@@ -51,140 +36,75 @@ fun RegistrationScreen(
     viewModel: RegisterViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var passwordVisible by rememberSaveable { mutableStateOf(false) }
-    var passwordCheckVisible by rememberSaveable { mutableStateOf(false) }
 
     YMTheme {
-        Surface(
-            modifier = modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
+        CenteredFormScreen(
+            modifier = modifier,
+            overlay = {
                 ErrorTooltip(
                     uiState.errorMessage ?: "",
                     uiState.showError,
                     onTimeout = { viewModel.dismissErrorMessage() },
                 )
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 32.dp)
-                        .align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Create Account",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onBackground
+            },
+        ) {
+            Text(
+                text = "Create Account",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = uiState.username,
+                onValueChange = { viewModel.updateUsername(it) },
+                label = { Text("Username") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = appIconsMirrored.Login,
+                        contentDescription = "Username icon",
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = uiState.username,
-                        onValueChange = { viewModel.updateUsername(it) },
-                        label = { Text("Username") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = appIconsMirrored.Login,
-                                contentDescription = "Username icon"
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                    )
-                    OutlinedTextField(
-                        value = uiState.password,
-                        onValueChange = { viewModel.updatePassword(it) },
-                        label = { Text("Password") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = appIcons.Password,
-                                contentDescription = "Password icon"
-                            )
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                    contentDescription = if (passwordVisible) "Hide password" else "Show password"
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = if (passwordVisible) {
-                            VisualTransformation.None
-                        } else {
-                            PasswordVisualTransformation()
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            imeAction = ImeAction.Next,
-                            keyboardType = KeyboardType.Password
-                        )
-                    )
-                    OutlinedTextField(
-                        value = uiState.passwordCheck,
-                        onValueChange = { viewModel.updatePasswordCheck(it) },
-                        label = { Text("Confirm Password") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = appIcons.LockReset,
-                                contentDescription = "Confirm password icon"
-                            )
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = { passwordCheckVisible = !passwordCheckVisible }) {
-                                Icon(
-                                    imageVector = if (passwordCheckVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                    contentDescription = if (passwordCheckVisible) "Hide password" else "Show password"
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        visualTransformation = if (passwordCheckVisible) {
-                            VisualTransformation.None
-                        } else {
-                            PasswordVisualTransformation()
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            imeAction = ImeAction.Done,
-                            keyboardType = KeyboardType.Password
-                        )
-                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            )
+            PasswordOutlinedField(
+                value = uiState.password,
+                onValueChange = { viewModel.updatePassword(it) },
+                label = "Password",
+                leadingIcon = appIcons.Password,
+                leadingIconContentDescription = "Password icon",
+                modifier = Modifier.fillMaxWidth(),
+                imeAction = ImeAction.Next,
+            )
+            PasswordOutlinedField(
+                value = uiState.passwordCheck,
+                onValueChange = { viewModel.updatePasswordCheck(it) },
+                label = "Confirm Password",
+                leadingIcon = appIcons.LockReset,
+                leadingIconContentDescription = "Confirm password icon",
+                modifier = Modifier.fillMaxWidth(),
+                imeAction = ImeAction.Done,
+            )
 
-                    TextButton(
-                        onClick = onSignInClick,
-                        modifier = Modifier.align(Alignment.End)
-                    ) {
-                        Text("Sign In")
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Button(
-                            onClick = { viewModel.clearForm() },
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text("Clear")
-                        }
-                        Button(
-                            onClick = { viewModel.proceedRegistration(onSuccess) },
-                            modifier = Modifier.weight(1f),
-                            enabled = uiState.username.isNotBlank() &&
-                                    uiState.password.isNotBlank() &&
-                                    uiState.passwordCheck.isNotBlank()
-                        ) {
-                            Text("Register")
-                        }
-                    }
-                }
+            TextButton(
+                onClick = onSignInClick,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text("Sign In")
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            FormActionRow(
+                secondaryButtonLabel = "Clear",
+                onSecondaryButtonClick = { viewModel.clearForm() },
+                primaryButtonLabel = "Register",
+                onPrimaryButtonClick = { viewModel.proceedRegistration(onSuccess) },
+                primaryButtonEnabled = uiState.username.isNotBlank() &&
+                        uiState.password.isNotBlank() &&
+                        uiState.passwordCheck.isNotBlank(),
+            )
         }
     }
 }
