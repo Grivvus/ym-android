@@ -5,7 +5,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -49,8 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
-import sstu.grivvus.ym.components.BottomBar
-import sstu.grivvus.ym.components.ErrorSnackbar
+import sstu.grivvus.ym.components.BottomNavScaffold
+import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
@@ -119,7 +117,10 @@ fun PlaylistScreen(
         }
     }
 
-    Scaffold(
+    BottomNavScaffold(
+        navigateToMusic = navigateToMusic,
+        navigateToLibrary = navigateToLibrary,
+        navigateToProfile = navigateToProfile,
         topBar = {
             TopAppBar(
                 title = {
@@ -152,68 +153,48 @@ fun PlaylistScreen(
                 },
             )
         },
-        bottomBar = {
-            BottomBar(
-                onMusicClick = navigateToMusic,
-                onLibraryClick = navigateToLibrary,
-                onProfileClick = navigateToProfile,
-            )
-        },
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+        ScreenStateHost(
+            isLoading = uiState.isLoading && playlist == null,
+            errorMessage = uiState.errorMessage,
+            onDismissError = viewModel::dismissError,
+            modifier = Modifier.padding(innerPadding),
         ) {
-            when {
-                uiState.isLoading && playlist == null -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-
-                playlist != null -> {
-                    PlaylistDetails(
-                        playlist = playlist,
-                        isBusy = uiState.isMutating || uiState.isRefreshing,
-                        onPlayAll = {
-                            viewModel.playbackQueueFromStart()?.let { queue ->
-                                playbackViewModel.play(queue)
-                                val trackId = queue.items.getOrNull(queue.startIndex)?.id
-                                    ?: return@let
-                                onOpenPlayer(trackId)
-                            }
-                        },
-                        onAddExistingTrack = { showAddTracksDialog = true },
-                        onUploadTrack = { audioPicker.launch("audio/*") },
-                        onTrackClick = { trackId ->
-                            viewModel.playbackQueueFor(trackId)?.let { queue ->
-                                playbackViewModel.play(queue)
-                                onOpenPlayer(trackId)
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize(),
+            if (playlist != null) {
+                PlaylistDetails(
+                    playlist = playlist,
+                    isBusy = uiState.isMutating || uiState.isRefreshing,
+                    onPlayAll = {
+                        viewModel.playbackQueueFromStart()?.let { queue ->
+                            playbackViewModel.play(queue)
+                            val trackId = queue.items.getOrNull(queue.startIndex)?.id
+                                ?: return@let
+                            onOpenPlayer(trackId)
+                        }
+                    },
+                    onAddExistingTrack = { showAddTracksDialog = true },
+                    onUploadTrack = { audioPicker.launch("audio/*") },
+                    onTrackClick = { trackId ->
+                        viewModel.playbackQueueFor(trackId)?.let { queue ->
+                            playbackViewModel.play(queue)
+                            onOpenPlayer(trackId)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    EmptyStateCard(
+                        title = "Playlist unavailable",
+                        description = "This playlist could not be loaded. Go back to the list and refresh.",
                     )
                 }
-
-                else -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        EmptyStateCard(
-                            title = "Playlist unavailable",
-                            description = "This playlist could not be loaded. Go back to the list and refresh.",
-                        )
-                    }
-                }
             }
-
-            ErrorSnackbar(
-                errorMessage = uiState.errorMessage,
-                onDismiss = viewModel::dismissError,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
         }
     }
 

@@ -26,7 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -43,8 +42,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import sstu.grivvus.ym.components.BottomBar
-import sstu.grivvus.ym.components.ErrorSnackbar
+import sstu.grivvus.ym.components.BottomNavScaffold
+import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.ui.theme.YMTheme
 import sstu.grivvus.ym.ui.theme.appIcons
 
@@ -81,7 +80,10 @@ fun MusicScreen(
     }
 
     YMTheme {
-        Scaffold(
+        BottomNavScaffold(
+            navigateToMusic = navigateToMusic,
+            navigateToLibrary = navigateToLibrary,
+            navigateToProfile = navigateToProfile,
             topBar = {
                 TopAppBar(
                     title = {
@@ -99,38 +101,18 @@ fun MusicScreen(
                     Text("+")
                 }
             },
-            bottomBar = {
-                BottomBar(
-                    onMusicClick = navigateToMusic,
-                    onLibraryClick = navigateToLibrary,
-                    onProfileClick = navigateToProfile,
-                )
-            },
         ) { innerPadding ->
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+            ScreenStateHost(
+                isLoading = uiState.isLoading && uiState.playlists.isEmpty(),
+                errorMessage = uiState.errorMessage,
+                onDismissError = viewModel::dismissError,
+                modifier = Modifier.padding(innerPadding),
             ) {
-                when {
-                    uiState.isLoading && uiState.playlists.isEmpty() -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
-
-                    else -> {
-                        PlaylistOverview(
-                            playlists = uiState.playlists,
-                            isBusy = uiState.isMutating || uiState.isRefreshing,
-                            onPlaylistClick = navigateToPlaylist,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
-                }
-
-                ErrorSnackbar(
-                    errorMessage = uiState.errorMessage,
-                    onDismiss = viewModel::dismissError,
-                    modifier = Modifier.align(Alignment.BottomCenter),
+                PlaylistOverview(
+                    playlists = uiState.playlists,
+                    isBusy = uiState.isMutating || uiState.isRefreshing,
+                    onPlaylistClick = navigateToPlaylist,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }

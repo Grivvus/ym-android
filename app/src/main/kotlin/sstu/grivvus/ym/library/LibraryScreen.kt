@@ -36,7 +36,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -57,8 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
-import sstu.grivvus.ym.components.BottomBar
-import sstu.grivvus.ym.components.ErrorSnackbar
+import sstu.grivvus.ym.components.BottomNavScaffold
+import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
 import sstu.grivvus.ym.music.queryDisplayName
@@ -139,7 +138,10 @@ fun LibraryScreen(
     }
 
     YMTheme {
-        Scaffold(
+        BottomNavScaffold(
+            navigateToMusic = navigateToMusic,
+            navigateToLibrary = navigateToLibrary,
+            navigateToProfile = navigateToProfile,
             topBar = {
                 TopAppBar(
                     title = {
@@ -191,102 +193,82 @@ fun LibraryScreen(
                     )
                 }
             },
-            bottomBar = {
-                BottomBar(
-                    onMusicClick = navigateToMusic,
-                    onLibraryClick = navigateToLibrary,
-                    onProfileClick = navigateToProfile,
-                )
-            },
         ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+            ScreenStateHost(
+                isLoading = uiState.isLoading,
+                errorMessage = uiState.errorMessage,
+                onDismissError = viewModel::dismissError,
+                modifier = Modifier.padding(innerPadding),
             ) {
-                when {
-                    uiState.isLoading -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    uiState.infoMessage?.let { infoMessage ->
+                        item {
+                            InfoCard(
+                                message = infoMessage,
+                                onDismiss = viewModel::dismissInfo,
+                            )
+                        }
                     }
 
-                    else -> {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            uiState.infoMessage?.let { infoMessage ->
+                    if (uiState.isSuperuser) {
+                        item {
+                            BackupRestoreActionsCard(
+                                isBusy = isArchiveOperationInProgress,
+                                isRestoreRunning = isRestoreRunning,
+                                onCreateBackupClick = { showBackupDialog = true },
+                                onRestoreClick = {
+                                    restoreArchivePicker.launch(
+                                        arrayOf(
+                                            "application/zip",
+                                            "application/x-zip-compressed",
+                                            "application/octet-stream",
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+                        restoreStatus
+                            ?.takeIf { status -> !status.isFinished || status.isFailed }
+                            ?.let { status ->
                                 item {
-                                    InfoCard(
-                                        message = infoMessage,
-                                        onDismiss = viewModel::dismissInfo,
-                                    )
+                                    RestoreStatusBanner(status = status)
                                 }
                             }
+                    }
 
-                            if (uiState.isSuperuser) {
-                                item {
-                                    BackupRestoreActionsCard(
-                                        isBusy = isArchiveOperationInProgress,
-                                        isRestoreRunning = isRestoreRunning,
-                                        onCreateBackupClick = { showBackupDialog = true },
-                                        onRestoreClick = {
-                                            restoreArchivePicker.launch(
-                                                arrayOf(
-                                                    "application/zip",
-                                                    "application/x-zip-compressed",
-                                                    "application/octet-stream",
-                                                ),
-                                            )
-                                        },
-                                    )
-                                }
-                                restoreStatus
-                                    ?.takeIf { status -> !status.isFinished || status.isFailed }
-                                    ?.let { status ->
-                                        item {
-                                            RestoreStatusBanner(status = status)
-                                        }
-                                    }
-                            }
+                    item {
+                        TrackSectionHeader()
+                    }
 
-                            item {
-                                TrackSectionHeader()
-                            }
-
-                            if (uiState.tracks.isEmpty()) {
-                                item {
-                                    EmptyStateCard(
-                                        title = "No tracks yet",
-                                        description = "Upload tracks from local storage to populate the library.",
-                                    )
-                                }
-                            } else {
-                                items(uiState.tracks, key = { it.id }) { track ->
-                                    LibraryTrackRow(
-                                        track = track,
-                                        isSelected = track.id in uiState.selectedTrackIds,
-                                        isSelectionMode = uiState.isSelectionMode,
-                                        isBusy = uiState.isTrackMutating,
-                                        onClick = { viewModel.onTrackClick(track.id) },
-                                        onLongClick = { viewModel.onTrackLongPress(track.id) },
-                                        onDelete = { viewModel.requestDeleteTrack(track.id) },
-                                        onGoToArtist = { viewModel.openArtist(track.id) },
-                                        onGoToAlbum = { viewModel.openAlbum(track.id) },
-                                    )
-                                }
-                            }
+                    if (uiState.tracks.isEmpty()) {
+                        item {
+                            EmptyStateCard(
+                                title = "No tracks yet",
+                                description = "Upload tracks from local storage to populate the library.",
+                            )
+                        }
+                    } else {
+                        items(uiState.tracks, key = { it.id }) { track ->
+                            LibraryTrackRow(
+                                track = track,
+                                isSelected = track.id in uiState.selectedTrackIds,
+                                isSelectionMode = uiState.isSelectionMode,
+                                isBusy = uiState.isTrackMutating,
+                                onClick = { viewModel.onTrackClick(track.id) },
+                                onLongClick = { viewModel.onTrackLongPress(track.id) },
+                                onDelete = { viewModel.requestDeleteTrack(track.id) },
+                                onGoToArtist = { viewModel.openArtist(track.id) },
+                                onGoToAlbum = { viewModel.openAlbum(track.id) },
+                            )
                         }
                     }
                 }
-
-                ErrorSnackbar(
-                    errorMessage = uiState.errorMessage,
-                    onDismiss = viewModel::dismissError,
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
             }
         }
 

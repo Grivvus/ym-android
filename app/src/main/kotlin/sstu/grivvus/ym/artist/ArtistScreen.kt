@@ -2,7 +2,6 @@ package sstu.grivvus.ym.artist
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,7 +19,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -32,8 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import sstu.grivvus.ym.components.BottomBar
-import sstu.grivvus.ym.components.ErrorSnackbar
+import sstu.grivvus.ym.components.BottomNavScaffold
+import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.ui.theme.YMTheme
@@ -53,7 +51,10 @@ fun ArtistScreen(
     val artist = uiState.artist
 
     YMTheme {
-        Scaffold(
+        BottomNavScaffold(
+            navigateToMusic = navigateToMusic,
+            navigateToLibrary = navigateToLibrary,
+            navigateToProfile = navigateToProfile,
             topBar = {
                 TopAppBar(
                     title = { Text(artist?.name ?: "Artist") },
@@ -69,53 +70,33 @@ fun ArtistScreen(
                     },
                 )
             },
-            bottomBar = {
-                BottomBar(
-                    onMusicClick = navigateToMusic,
-                    onLibraryClick = navigateToLibrary,
-                    onProfileClick = navigateToProfile,
-                )
-            },
         ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+            ScreenStateHost(
+                isLoading = uiState.isLoading && artist == null,
+                errorMessage = uiState.errorMessage,
+                onDismissError = viewModel::dismissError,
+                modifier = Modifier.padding(innerPadding),
             ) {
-                when {
-                    uiState.isLoading && artist == null -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
-
-                    artist != null -> {
-                        ArtistDetails(
-                            artist = artist,
-                            isBusy = uiState.isRefreshing,
-                            onAlbumClick = navigateToAlbum,
-                            modifier = Modifier.fillMaxSize(),
+                if (artist != null) {
+                    ArtistDetails(
+                        artist = artist,
+                        isBusy = uiState.isRefreshing,
+                        onAlbumClick = navigateToAlbum,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        EmptyStateCard(
+                            title = "Artist unavailable",
+                            description = "This artist could not be loaded from the current library state.",
                         )
                     }
-
-                    else -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            EmptyStateCard(
-                                title = "Artist unavailable",
-                                description = "This artist could not be loaded from the current library state.",
-                            )
-                        }
-                    }
                 }
-
-                ErrorSnackbar(
-                    errorMessage = uiState.errorMessage,
-                    onDismiss = viewModel::dismissError,
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
             }
         }
     }

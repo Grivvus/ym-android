@@ -2,7 +2,6 @@ package sstu.grivvus.ym.album
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -21,7 +20,6 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,8 +33,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import sstu.grivvus.ym.components.BottomBar
-import sstu.grivvus.ym.components.ErrorSnackbar
+import sstu.grivvus.ym.components.BottomNavScaffold
+import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.playback.PlaybackViewModel
@@ -58,7 +56,10 @@ fun AlbumScreen(
     val album = uiState.album
 
     YMTheme {
-        Scaffold(
+        BottomNavScaffold(
+            navigateToMusic = navigateToMusic,
+            navigateToLibrary = navigateToLibrary,
+            navigateToProfile = navigateToProfile,
             topBar = {
                 TopAppBar(
                     title = { Text(album?.name ?: "Album") },
@@ -74,66 +75,46 @@ fun AlbumScreen(
                     },
                 )
             },
-            bottomBar = {
-                BottomBar(
-                    onMusicClick = navigateToMusic,
-                    onLibraryClick = navigateToLibrary,
-                    onProfileClick = navigateToProfile,
-                )
-            },
         ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+            ScreenStateHost(
+                isLoading = uiState.isLoading && album == null,
+                errorMessage = uiState.errorMessage,
+                onDismissError = viewModel::dismissError,
+                modifier = Modifier.padding(innerPadding),
             ) {
-                when {
-                    uiState.isLoading && album == null -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
-
-                    album != null -> {
-                        AlbumDetails(
-                            album = album,
-                            isBusy = uiState.isRefreshing,
-                            onPlayAll = {
-                                viewModel.playbackQueueFromStart()?.let { queue ->
-                                    playbackViewModel.play(queue)
-                                    val trackId = queue.items.getOrNull(queue.startIndex)?.id
-                                        ?: return@let
-                                    onOpenPlayer(trackId)
-                                }
-                            },
-                            onTrackClick = { trackId ->
-                                viewModel.playbackQueueFor(trackId)?.let { queue ->
-                                    playbackViewModel.play(queue)
-                                    onOpenPlayer(trackId)
-                                }
-                            },
-                            modifier = Modifier.fillMaxSize(),
+                if (album != null) {
+                    AlbumDetails(
+                        album = album,
+                        isBusy = uiState.isRefreshing,
+                        onPlayAll = {
+                            viewModel.playbackQueueFromStart()?.let { queue ->
+                                playbackViewModel.play(queue)
+                                val trackId = queue.items.getOrNull(queue.startIndex)?.id
+                                    ?: return@let
+                                onOpenPlayer(trackId)
+                            }
+                        },
+                        onTrackClick = { trackId ->
+                            viewModel.playbackQueueFor(trackId)?.let { queue ->
+                                playbackViewModel.play(queue)
+                                onOpenPlayer(trackId)
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        EmptyStateCard(
+                            title = "Album unavailable",
+                            description = "This album could not be loaded from the current library state.",
                         )
                     }
-
-                    else -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            EmptyStateCard(
-                                title = "Album unavailable",
-                                description = "This album could not be loaded from the current library state.",
-                            )
-                        }
-                    }
                 }
-
-                ErrorSnackbar(
-                    errorMessage = uiState.errorMessage,
-                    onDismiss = viewModel::dismissError,
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
             }
         }
     }
