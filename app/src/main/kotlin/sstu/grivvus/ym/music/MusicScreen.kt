@@ -304,25 +304,3 @@ fun UploadScreen(onBack: () -> Unit) {
         }
     }
 }
-
-@Composable
-fun PlayerPlaceholderScreen(
-    trackId: Long,
-    onBack: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text("Player screen is not implemented yet", style = MaterialTheme.typography.titleSmall)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("Track ID: $trackId")
-        Spacer(modifier = Modifier.height(24.dp))
-        androidx.compose.material3.Button(onClick = onBack) {
-            Text("Back")
-        }
-    }
-}
