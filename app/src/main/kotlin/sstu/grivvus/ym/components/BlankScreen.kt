@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import sstu.grivvus.ym.ui.theme.YMTheme
 
 @Composable
 fun BlankScreen(
@@ -19,25 +18,23 @@ fun BlankScreen(
     navigateToLibrary: () -> Unit,
     navigateToProfile: () -> Unit,
 ) {
-    YMTheme {
-        Scaffold(
-            bottomBar = {
-                BottomBar(
-                    onMusicClick = navigateToMusic,
-                    onLibraryClick = navigateToLibrary,
-                    onProfileClick = navigateToProfile,
-                )
-            },
-        ) { padding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .background(Color.Black),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(title)
-            }
+    Scaffold(
+        bottomBar = {
+            BottomBar(
+                onMusicClick = navigateToMusic,
+                onLibraryClick = navigateToLibrary,
+                onProfileClick = navigateToProfile,
+            )
+        },
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color.Black),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(title)
         }
     }
 }

@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.sharp.Sync
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -26,7 +25,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,7 +36,6 @@ import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.playback.PlaybackViewModel
-import sstu.grivvus.ym.ui.theme.YMTheme
 import sstu.grivvus.ym.ui.theme.appIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,66 +51,63 @@ fun AlbumScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val album = uiState.album
-
-    YMTheme {
-        BottomNavScaffold(
-            navigateToMusic = navigateToMusic,
-            navigateToLibrary = navigateToLibrary,
-            navigateToProfile = navigateToProfile,
-            topBar = {
-                TopAppBar(
-                    title = { Text(album?.name ?: "Album") },
-                    navigationIcon = {
-                        TextButton(onClick = onBack) {
-                            Text("Back")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { viewModel.refresh() }) {
-                            Icon(appIcons.Sync, contentDescription = "fetch data from server")
-                        }
-                    },
-                )
-            },
-        ) { innerPadding ->
-            ScreenStateHost(
-                isLoading = uiState.isLoading && album == null,
-                errorMessage = uiState.errorMessage,
-                onDismissError = viewModel::dismissError,
-                modifier = Modifier.padding(innerPadding),
-            ) {
-                if (album != null) {
-                    AlbumDetails(
-                        album = album,
-                        isBusy = uiState.isRefreshing,
-                        onPlayAll = {
-                            viewModel.playbackQueueFromStart()?.let { queue ->
-                                playbackViewModel.play(queue)
-                                val trackId = queue.items.getOrNull(queue.startIndex)?.id
-                                    ?: return@let
-                                onOpenPlayer(trackId)
-                            }
-                        },
-                        onTrackClick = { trackId ->
-                            viewModel.playbackQueueFor(trackId)?.let { queue ->
-                                playbackViewModel.play(queue)
-                                onOpenPlayer(trackId)
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        EmptyStateCard(
-                            title = "Album unavailable",
-                            description = "This album could not be loaded from the current library state.",
-                        )
+    BottomNavScaffold(
+        navigateToMusic = navigateToMusic,
+        navigateToLibrary = navigateToLibrary,
+        navigateToProfile = navigateToProfile,
+        topBar = {
+            TopAppBar(
+                title = { Text(album?.name ?: "Album") },
+                navigationIcon = {
+                    TextButton(onClick = onBack) {
+                        Text("Back")
                     }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.refresh() }) {
+                        Icon(appIcons.Sync, contentDescription = "fetch data from server")
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        ScreenStateHost(
+            isLoading = uiState.isLoading && album == null,
+            errorMessage = uiState.errorMessage,
+            onDismissError = viewModel::dismissError,
+            modifier = Modifier.padding(innerPadding),
+        ) {
+            if (album != null) {
+                AlbumDetails(
+                    album = album,
+                    isBusy = uiState.isRefreshing,
+                    onPlayAll = {
+                        viewModel.playbackQueueFromStart()?.let { queue ->
+                            playbackViewModel.play(queue)
+                            val trackId = queue.items.getOrNull(queue.startIndex)?.id
+                                ?: return@let
+                            onOpenPlayer(trackId)
+                        }
+                    },
+                    onTrackClick = { trackId ->
+                        viewModel.playbackQueueFor(trackId)?.let { queue ->
+                            playbackViewModel.play(queue)
+                            onOpenPlayer(trackId)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    EmptyStateCard(
+                        title = "Album unavailable",
+                        description = "This album could not be loaded from the current library state.",
+                    )
                 }
             }
         }

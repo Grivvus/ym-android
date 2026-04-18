@@ -23,7 +23,6 @@ import sstu.grivvus.ym.components.CenteredFormScreen
 import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.components.FormActionRow
 import sstu.grivvus.ym.components.PasswordOutlinedField
-import sstu.grivvus.ym.ui.theme.YMTheme
 import sstu.grivvus.ym.ui.theme.appIcons
 import sstu.grivvus.ym.ui.theme.appIconsMirrored
 
@@ -36,65 +35,63 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    YMTheme {
-        CenteredFormScreen(
-            modifier = modifier,
-            overlay = {
-                ErrorTooltip(
-                    uiState.errorMessage ?: "",
-                    uiState.showError,
-                    onTimeout = { viewModel.dismissErrorMessage() },
+    CenteredFormScreen(
+        modifier = modifier,
+        overlay = {
+            ErrorTooltip(
+                uiState.errorMessage ?: "",
+                uiState.showError,
+                onTimeout = { viewModel.dismissErrorMessage() },
+            )
+        },
+    ) {
+        Text(
+            text = "Sign in your account",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = uiState.username,
+            onValueChange = { viewModel.updateUsername(it) },
+            label = { Text("Login") },
+            leadingIcon = {
+                Icon(
+                    imageVector = appIconsMirrored.Login,
+                    contentDescription = null,
                 )
             },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+        )
+
+        PasswordOutlinedField(
+            value = uiState.password,
+            onValueChange = { viewModel.updatePassword(it) },
+            label = "Password",
+            leadingIcon = appIcons.Password,
+            modifier = Modifier.fillMaxWidth(),
+            imeAction = ImeAction.Done,
+        )
+
+        TextButton(
+            onClick = onSignUpClick,
+            modifier = Modifier.align(Alignment.End),
         ) {
-            Text(
-                text = "Sign in your account",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = uiState.username,
-                onValueChange = { viewModel.updateUsername(it) },
-                label = { Text("Login") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = appIconsMirrored.Login,
-                        contentDescription = null,
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            )
-
-            PasswordOutlinedField(
-                value = uiState.password,
-                onValueChange = { viewModel.updatePassword(it) },
-                label = "Password",
-                leadingIcon = appIcons.Password,
-                modifier = Modifier.fillMaxWidth(),
-                imeAction = ImeAction.Done,
-            )
-
-            TextButton(
-                onClick = onSignUpClick,
-                modifier = Modifier.align(Alignment.End),
-            ) {
-                Text("Sign Up")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            FormActionRow(
-                secondaryButtonLabel = "Clear",
-                onSecondaryButtonClick = { viewModel.clearForm() },
-                primaryButtonLabel = "Login",
-                onPrimaryButtonClick = { viewModel.proceedLogin(onSuccess) },
-                primaryButtonEnabled = uiState.username.isNotBlank() && uiState.password.isNotBlank(),
-            )
+            Text("Sign Up")
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        FormActionRow(
+            secondaryButtonLabel = "Clear",
+            onSecondaryButtonClick = { viewModel.clearForm() },
+            primaryButtonLabel = "Login",
+            onPrimaryButtonClick = { viewModel.proceedLogin(onSuccess) },
+            primaryButtonEnabled = uiState.username.isNotBlank() && uiState.password.isNotBlank(),
+        )
     }
 }

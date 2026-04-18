@@ -58,7 +58,6 @@ import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.data.network.model.TrackQuality
 import sstu.grivvus.ym.data.network.model.toDisplayName
 import sstu.grivvus.ym.passwordChange.PasswordChangeDialog
-import sstu.grivvus.ym.ui.theme.YMTheme
 import sstu.grivvus.ym.ui.theme.appIcons
 import sstu.grivvus.ym.ui.theme.appIconsMirrored
 
@@ -86,140 +85,138 @@ fun ProfileScreen(
         }
     )
 
-    YMTheme {
-        Scaffold(
-            bottomBar = { BottomBar(navigateToMusic, navigateToLibrary, navigateToProfile) }
-        ) { innerPadding ->
-            Box(
+    Scaffold(
+        bottomBar = { BottomBar(navigateToMusic, navigateToLibrary, navigateToProfile) }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .pullRefresh(refreshState)
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .pullRefresh(refreshState)
+                    .verticalScroll(scrollState)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(scrollState)
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    ErrorTooltip(
-                        uiState.errorMsg ?: "",
-                        uiState.errorMsg != null,
-                        onTimeout = { viewModel.dismissErrorMessage() },
+                ErrorTooltip(
+                    uiState.errorMsg ?: "",
+                    uiState.errorMsg != null,
+                    onTimeout = { viewModel.dismissErrorMessage() },
+                )
+                if (showPasswordDialog) {
+                    PasswordChangeDialog(
+                        onDismiss = { showPasswordDialog = false }
                     )
-                    if (showPasswordDialog) {
-                        PasswordChangeDialog(
-                            onDismiss = { showPasswordDialog = false }
+                }
+                Spacer(Modifier.height(50.dp))
+                Box(
+                    contentAlignment = Alignment.BottomEnd,
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(120.dp))
+                    } else {
+                        AsyncImage(
+                            model = uiState.avatarUri,
+                            contentDescription = "User Avatar",
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(CircleShape)
+                                .border(1.dp, Color.LightGray, CircleShape),
+                            contentScale = ContentScale.Crop,
+                            error = painterResource(id = R.drawable.ic_placeholder_avatar)
                         )
                     }
-                    Spacer(Modifier.height(50.dp))
-                    Box(
-                        contentAlignment = Alignment.BottomEnd,
-                    ) {
-                        if (uiState.isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(120.dp))
-                        } else {
-                            AsyncImage(
-                                model = uiState.avatarUri,
-                                contentDescription = "User Avatar",
-                                modifier = Modifier
-                                    .size(120.dp)
-                                    .clip(CircleShape)
-                                    .border(1.dp, Color.LightGray, CircleShape),
-                                contentScale = ContentScale.Crop,
-                                error = painterResource(id = R.drawable.ic_placeholder_avatar)
-                            )
-                        }
 
-                        IconButton(
-                            onClick = { imagePicker.launch("image/*") },
-                            modifier = Modifier
-                                .background(Color.White, CircleShape)
-                                .size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = appIcons.AddAPhoto,
-                                contentDescription = "Upload avatar"
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(32.dp))
-
-                    UserInfoItem(
-                        label = "Username",
-                        value = uiState.username,
-                    ) { viewModel.changeUsername(it) }
-
-                    Spacer(Modifier.height(16.dp))
-
-                    UserInfoItem(
-                        label = "Email",
-                        value = uiState.email ?: "",
-                        { viewModel.changeEmail(it) },
-                    )
-
-                    Spacer(Modifier.height(32.dp))
-
-                    UserInfoItem(
-                        label = "Server host",
-                        value = uiState.serverHost,
-                    ) { viewModel.changeServerHost(it) }
-
-                    Spacer(Modifier.height(32.dp))
-
-                    UserInfoItem(
-                        label = "Server port",
-                        value = uiState.serverPort,
-                        { viewModel.changeServerPort(it) }
-                    )
-
-                    Spacer(Modifier.height(32.dp))
-
-                    TrackQualitySettings(
-                        selectedQuality = uiState.preferredTrackQuality,
-                        onQualitySelected = viewModel::changePreferredTrackQuality,
-                    )
-
-                    Spacer(Modifier.height(32.dp))
-
-                    Button(
-                        onClick = { showPasswordDialog = true },
-                        enabled = !uiState.isLoading,
+                    IconButton(
+                        onClick = { imagePicker.launch("image/*") },
                         modifier = Modifier
-                            .fillMaxWidth(0.8f)
-                            .height(48.dp)
+                            .background(Color.White, CircleShape)
+                            .size(36.dp)
                     ) {
-                        if (uiState.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = Color.White
-                            )
-                        } else {
-                            Text("Change Password")
+                        Icon(
+                            imageVector = appIcons.AddAPhoto,
+                            contentDescription = "Upload avatar"
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(32.dp))
+
+                UserInfoItem(
+                    label = "Username",
+                    value = uiState.username,
+                ) { viewModel.changeUsername(it) }
+
+                Spacer(Modifier.height(16.dp))
+
+                UserInfoItem(
+                    label = "Email",
+                    value = uiState.email ?: "",
+                    { viewModel.changeEmail(it) },
+                )
+
+                Spacer(Modifier.height(32.dp))
+
+                UserInfoItem(
+                    label = "Server host",
+                    value = uiState.serverHost,
+                ) { viewModel.changeServerHost(it) }
+
+                Spacer(Modifier.height(32.dp))
+
+                UserInfoItem(
+                    label = "Server port",
+                    value = uiState.serverPort,
+                    { viewModel.changeServerPort(it) }
+                )
+
+                Spacer(Modifier.height(32.dp))
+
+                TrackQualitySettings(
+                    selectedQuality = uiState.preferredTrackQuality,
+                    onQualitySelected = viewModel::changePreferredTrackQuality,
+                )
+
+                Spacer(Modifier.height(32.dp))
+
+                Button(
+                    onClick = { showPasswordDialog = true },
+                    enabled = !uiState.isLoading,
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(48.dp)
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color.White
+                        )
+                    } else {
+                        Text("Change Password")
+                    }
+                }
+                Spacer(Modifier.height(32.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                    Column {
+                        Button(onClick = { viewModel.tryToApplyChanges() }) {
+                            Text("Save changes")
                         }
                     }
-                    Spacer(Modifier.height(32.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                        Column {
-                            Button(onClick = { viewModel.tryToApplyChanges() }) {
-                                Text("Save changes")
-                            }
-                        }
-                        Column {
-                            IconButton(onClick = viewModel::logOut) {
-                                Icon(appIconsMirrored.Logout, "Logout button")
-                            }
+                    Column {
+                        IconButton(onClick = viewModel::logOut) {
+                            Icon(appIconsMirrored.Logout, "Logout button")
                         }
                     }
                 }
-                PullRefreshIndicator(
-                    refreshing = uiState.isRefreshing,
-                    state = refreshState,
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
             }
+            PullRefreshIndicator(
+                refreshing = uiState.isRefreshing,
+                state = refreshState,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
         }
     }
 }

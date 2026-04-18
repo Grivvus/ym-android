@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.sharp.Sync
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,7 +33,6 @@ import sstu.grivvus.ym.components.BottomNavScaffold
 import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
-import sstu.grivvus.ym.ui.theme.YMTheme
 import sstu.grivvus.ym.ui.theme.appIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,52 +48,50 @@ fun ArtistScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val artist = uiState.artist
 
-    YMTheme {
-        BottomNavScaffold(
-            navigateToMusic = navigateToMusic,
-            navigateToLibrary = navigateToLibrary,
-            navigateToProfile = navigateToProfile,
-            topBar = {
-                TopAppBar(
-                    title = { Text(artist?.name ?: "Artist") },
-                    navigationIcon = {
-                        TextButton(onClick = onBack) {
-                            Text("Back")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { viewModel.refresh() }) {
-                            Icon(appIcons.Sync, contentDescription = "fetch data from server")
-                        }
-                    },
-                )
-            },
-        ) { innerPadding ->
-            ScreenStateHost(
-                isLoading = uiState.isLoading && artist == null,
-                errorMessage = uiState.errorMessage,
-                onDismissError = viewModel::dismissError,
-                modifier = Modifier.padding(innerPadding),
-            ) {
-                if (artist != null) {
-                    ArtistDetails(
-                        artist = artist,
-                        isBusy = uiState.isRefreshing,
-                        onAlbumClick = navigateToAlbum,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        EmptyStateCard(
-                            title = "Artist unavailable",
-                            description = "This artist could not be loaded from the current library state.",
-                        )
+    BottomNavScaffold(
+        navigateToMusic = navigateToMusic,
+        navigateToLibrary = navigateToLibrary,
+        navigateToProfile = navigateToProfile,
+        topBar = {
+            TopAppBar(
+                title = { Text(artist?.name ?: "Artist") },
+                navigationIcon = {
+                    TextButton(onClick = onBack) {
+                        Text("Back")
                     }
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.refresh() }) {
+                        Icon(appIcons.Sync, contentDescription = "fetch data from server")
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        ScreenStateHost(
+            isLoading = uiState.isLoading && artist == null,
+            errorMessage = uiState.errorMessage,
+            onDismissError = viewModel::dismissError,
+            modifier = Modifier.padding(innerPadding),
+        ) {
+            if (artist != null) {
+                ArtistDetails(
+                    artist = artist,
+                    isBusy = uiState.isRefreshing,
+                    onAlbumClick = navigateToAlbum,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    EmptyStateCard(
+                        title = "Artist unavailable",
+                        description = "This artist could not be loaded from the current library state.",
+                    )
                 }
             }
         }

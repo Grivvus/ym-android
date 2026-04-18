@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -44,7 +43,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import sstu.grivvus.ym.components.BottomNavScaffold
 import sstu.grivvus.ym.components.ScreenStateHost
-import sstu.grivvus.ym.ui.theme.YMTheme
 import sstu.grivvus.ym.ui.theme.appIcons
 
 private data class CreatePlaylistDraft(
@@ -79,68 +77,66 @@ fun MusicScreen(
         }
     }
 
-    YMTheme {
-        BottomNavScaffold(
-            navigateToMusic = navigateToMusic,
-            navigateToLibrary = navigateToLibrary,
-            navigateToProfile = navigateToProfile,
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text("Playlists")
-                    },
-                    actions = {
-                        IconButton(onClick = { viewModel.refresh() }) {
-                            Icon(appIcons.Sync, contentDescription = "fetch data from server")
-                        }
-                    },
-                )
-            },
-            floatingActionButton = {
-                FloatingActionButton(onClick = { showCreateDialog = true }) {
-                    Text("+")
-                }
-            },
-        ) { innerPadding ->
-            ScreenStateHost(
-                isLoading = uiState.isLoading && uiState.playlists.isEmpty(),
-                errorMessage = uiState.errorMessage,
-                onDismissError = viewModel::dismissError,
-                modifier = Modifier.padding(innerPadding),
-            ) {
-                PlaylistOverview(
-                    playlists = uiState.playlists,
-                    isBusy = uiState.isMutating || uiState.isRefreshing,
-                    onPlaylistClick = navigateToPlaylist,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        }
-
-        if (showCreateDialog) {
-            CreatePlaylistDialog(
-                draft = createDraft,
-                isBusy = uiState.isMutating,
-                onDismiss = {
-                    showCreateDialog = false
-                    createDraft = CreatePlaylistDraft()
+    BottomNavScaffold(
+        navigateToMusic = navigateToMusic,
+        navigateToLibrary = navigateToLibrary,
+        navigateToProfile = navigateToProfile,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text("Playlists")
                 },
-                onNameChange = { value -> createDraft = createDraft.copy(name = value) },
-                onVisibilityChange = { isPublic ->
-                    createDraft = createDraft.copy(isPublic = isPublic)
-                },
-                onSelectCover = { coverPicker.launch("image/*") },
-                onConfirm = {
-                    viewModel.createPlaylist(
-                        name = createDraft.name.trim(),
-                        coverUri = createDraft.coverUri,
-                        isPublic = createDraft.isPublic,
-                    )
-                    showCreateDialog = false
-                    createDraft = CreatePlaylistDraft()
+                actions = {
+                    IconButton(onClick = { viewModel.refresh() }) {
+                        Icon(appIcons.Sync, contentDescription = "fetch data from server")
+                    }
                 },
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showCreateDialog = true }) {
+                Text("+")
+            }
+        },
+    ) { innerPadding ->
+        ScreenStateHost(
+            isLoading = uiState.isLoading && uiState.playlists.isEmpty(),
+            errorMessage = uiState.errorMessage,
+            onDismissError = viewModel::dismissError,
+            modifier = Modifier.padding(innerPadding),
+        ) {
+            PlaylistOverview(
+                playlists = uiState.playlists,
+                isBusy = uiState.isMutating || uiState.isRefreshing,
+                onPlaylistClick = navigateToPlaylist,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
+    }
+
+    if (showCreateDialog) {
+        CreatePlaylistDialog(
+            draft = createDraft,
+            isBusy = uiState.isMutating,
+            onDismiss = {
+                showCreateDialog = false
+                createDraft = CreatePlaylistDraft()
+            },
+            onNameChange = { value -> createDraft = createDraft.copy(name = value) },
+            onVisibilityChange = { isPublic ->
+                createDraft = createDraft.copy(isPublic = isPublic)
+            },
+            onSelectCover = { coverPicker.launch("image/*") },
+            onConfirm = {
+                viewModel.createPlaylist(
+                    name = createDraft.name.trim(),
+                    coverUri = createDraft.coverUri,
+                    isPublic = createDraft.isPublic,
+                )
+                showCreateDialog = false
+                createDraft = CreatePlaylistDraft()
+            },
+        )
     }
 }
 

@@ -61,7 +61,6 @@ import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
 import sstu.grivvus.ym.music.queryDisplayName
-import sstu.grivvus.ym.ui.theme.YMTheme
 import sstu.grivvus.ym.ui.theme.appIcons
 
 private data class UploadTrackModalRequest(
@@ -137,218 +136,216 @@ fun LibraryScreen(
         }
     }
 
-    YMTheme {
-        BottomNavScaffold(
-            navigateToMusic = navigateToMusic,
-            navigateToLibrary = navigateToLibrary,
-            navigateToProfile = navigateToProfile,
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            if (uiState.isSelectionMode) {
-                                "${uiState.selectedTrackIds.size} selected"
-                            } else {
-                                "Library"
-                            },
-                        )
-                    },
-                    navigationIcon = {
+    BottomNavScaffold(
+        navigateToMusic = navigateToMusic,
+        navigateToLibrary = navigateToLibrary,
+        navigateToProfile = navigateToProfile,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
                         if (uiState.isSelectionMode) {
-                            TextButton(onClick = viewModel::clearSelection) {
-                                Text("Cancel")
-                            }
-                        }
-                    },
-                    actions = {
-                        if (uiState.isSelectionMode) {
-                            TextButton(
-                                onClick = viewModel::requestDeleteSelected,
-                                enabled = !uiState.isTrackMutating,
-                            ) {
-                                Text("Delete")
-                            }
+                            "${uiState.selectedTrackIds.size} selected"
                         } else {
-                            IconButton(onClick = { viewModel.refresh() }) {
-                                Icon(appIcons.Sync, contentDescription = "fetch data from server")
-                            }
-                        }
-                    },
-                )
-            },
-            floatingActionButton = {
-                if (!uiState.isSelectionMode) {
-                    ExtendedFloatingActionButton(
-                        onClick = { trackPicker.launch("audio/*") },
-                        expanded = true,
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                            )
-                        },
-                        text = {
-                            Text("Add track")
+                            "Library"
                         },
                     )
-                }
-            },
-        ) { innerPadding ->
-            ScreenStateHost(
-                isLoading = uiState.isLoading,
-                errorMessage = uiState.errorMessage,
-                onDismissError = viewModel::dismissError,
-                modifier = Modifier.padding(innerPadding),
-            ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    uiState.infoMessage?.let { infoMessage ->
-                        item {
-                            InfoCard(
-                                message = infoMessage,
-                                onDismiss = viewModel::dismissInfo,
-                            )
+                },
+                navigationIcon = {
+                    if (uiState.isSelectionMode) {
+                        TextButton(onClick = viewModel::clearSelection) {
+                            Text("Cancel")
                         }
                     }
-
-                    if (uiState.isSuperuser) {
-                        item {
-                            BackupRestoreActionsCard(
-                                isBusy = isArchiveOperationInProgress,
-                                isRestoreRunning = isRestoreRunning,
-                                onCreateBackupClick = { showBackupDialog = true },
-                                onRestoreClick = {
-                                    restoreArchivePicker.launch(
-                                        arrayOf(
-                                            "application/zip",
-                                            "application/x-zip-compressed",
-                                            "application/octet-stream",
-                                        ),
-                                    )
-                                },
-                            )
-                        }
-                        restoreStatus
-                            ?.takeIf { status -> !status.isFinished || status.isFailed }
-                            ?.let { status ->
-                                item {
-                                    RestoreStatusBanner(status = status)
-                                }
-                            }
-                    }
-
-                    item {
-                        TrackSectionHeader()
-                    }
-
-                    if (uiState.tracks.isEmpty()) {
-                        item {
-                            EmptyStateCard(
-                                title = "No tracks yet",
-                                description = "Upload tracks from local storage to populate the library.",
-                            )
+                },
+                actions = {
+                    if (uiState.isSelectionMode) {
+                        TextButton(
+                            onClick = viewModel::requestDeleteSelected,
+                            enabled = !uiState.isTrackMutating,
+                        ) {
+                            Text("Delete")
                         }
                     } else {
-                        items(uiState.tracks, key = { it.id }) { track ->
-                            LibraryTrackRow(
-                                track = track,
-                                isSelected = track.id in uiState.selectedTrackIds,
-                                isSelectionMode = uiState.isSelectionMode,
-                                isBusy = uiState.isTrackMutating,
-                                onClick = { viewModel.onTrackClick(track.id) },
-                                onLongClick = { viewModel.onTrackLongPress(track.id) },
-                                onDelete = { viewModel.requestDeleteTrack(track.id) },
-                                onGoToArtist = { viewModel.openArtist(track.id) },
-                                onGoToAlbum = { viewModel.openAlbum(track.id) },
-                            )
+                        IconButton(onClick = { viewModel.refresh() }) {
+                            Icon(appIcons.Sync, contentDescription = "fetch data from server")
                         }
+                    }
+                },
+            )
+        },
+        floatingActionButton = {
+            if (!uiState.isSelectionMode) {
+                ExtendedFloatingActionButton(
+                    onClick = { trackPicker.launch("audio/*") },
+                    expanded = true,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                        )
+                    },
+                    text = {
+                        Text("Add track")
+                    },
+                )
+            }
+        },
+    ) { innerPadding ->
+        ScreenStateHost(
+            isLoading = uiState.isLoading,
+            errorMessage = uiState.errorMessage,
+            onDismissError = viewModel::dismissError,
+            modifier = Modifier.padding(innerPadding),
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                uiState.infoMessage?.let { infoMessage ->
+                    item {
+                        InfoCard(
+                            message = infoMessage,
+                            onDismiss = viewModel::dismissInfo,
+                        )
+                    }
+                }
+
+                if (uiState.isSuperuser) {
+                    item {
+                        BackupRestoreActionsCard(
+                            isBusy = isArchiveOperationInProgress,
+                            isRestoreRunning = isRestoreRunning,
+                            onCreateBackupClick = { showBackupDialog = true },
+                            onRestoreClick = {
+                                restoreArchivePicker.launch(
+                                    arrayOf(
+                                        "application/zip",
+                                        "application/x-zip-compressed",
+                                        "application/octet-stream",
+                                    ),
+                                )
+                            },
+                        )
+                    }
+                    restoreStatus
+                        ?.takeIf { status -> !status.isFinished || status.isFailed }
+                        ?.let { status ->
+                            item {
+                                RestoreStatusBanner(status = status)
+                            }
+                        }
+                }
+
+                item {
+                    TrackSectionHeader()
+                }
+
+                if (uiState.tracks.isEmpty()) {
+                    item {
+                        EmptyStateCard(
+                            title = "No tracks yet",
+                            description = "Upload tracks from local storage to populate the library.",
+                        )
+                    }
+                } else {
+                    items(uiState.tracks, key = { it.id }) { track ->
+                        LibraryTrackRow(
+                            track = track,
+                            isSelected = track.id in uiState.selectedTrackIds,
+                            isSelectionMode = uiState.isSelectionMode,
+                            isBusy = uiState.isTrackMutating,
+                            onClick = { viewModel.onTrackClick(track.id) },
+                            onLongClick = { viewModel.onTrackLongPress(track.id) },
+                            onDelete = { viewModel.requestDeleteTrack(track.id) },
+                            onGoToArtist = { viewModel.openArtist(track.id) },
+                            onGoToAlbum = { viewModel.openAlbum(track.id) },
+                        )
                     }
                 }
             }
         }
+    }
 
-        if (pendingDeleteTrackIds.isNotEmpty()) {
-            AlertDialog(
-                onDismissRequest = viewModel::dismissDeleteDialog,
-                title = {
-                    Text(
-                        if (pendingDeleteTrackIds.size == 1) {
-                            "Delete track"
-                        } else {
-                            "Delete tracks"
-                        },
-                    )
-                },
-                text = {
-                    Text(
-                        if (pendingDeleteTrackIds.size == 1) {
-                            "The selected track will be removed from the server and local storage."
-                        } else {
-                            "The selected ${pendingDeleteTrackIds.size} tracks will be removed from the server and local storage."
-                        },
-                    )
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = viewModel::deletePendingTracks,
-                        enabled = !uiState.isTrackMutating,
-                    ) {
-                        Text("Delete")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = viewModel::dismissDeleteDialog) {
-                        Text("Cancel")
-                    }
-                },
-            )
-        }
+    if (pendingDeleteTrackIds.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissDeleteDialog,
+            title = {
+                Text(
+                    if (pendingDeleteTrackIds.size == 1) {
+                        "Delete track"
+                    } else {
+                        "Delete tracks"
+                    },
+                )
+            },
+            text = {
+                Text(
+                    if (pendingDeleteTrackIds.size == 1) {
+                        "The selected track will be removed from the server and local storage."
+                    } else {
+                        "The selected ${pendingDeleteTrackIds.size} tracks will be removed from the server and local storage."
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::deletePendingTracks,
+                    enabled = !uiState.isTrackMutating,
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissDeleteDialog) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
 
-        if (showBackupDialog) {
-            BackupOptionsDialog(
-                includeImages = uiState.includeImages,
-                includeTranscodedTracks = uiState.includeTranscodedTracks,
-                isBusy = isArchiveOperationInProgress || isRestoreRunning,
-                onDismiss = { showBackupDialog = false },
-                onIncludeImagesChange = viewModel::changeIncludeImages,
-                onIncludeTranscodedTracksChange = viewModel::changeIncludeTranscodedTracks,
-                onConfirm = {
-                    showBackupDialog = false
-                    viewModel.createBackup()
-                },
-            )
-        }
+    if (showBackupDialog) {
+        BackupOptionsDialog(
+            includeImages = uiState.includeImages,
+            includeTranscodedTracks = uiState.includeTranscodedTracks,
+            isBusy = isArchiveOperationInProgress || isRestoreRunning,
+            onDismiss = { showBackupDialog = false },
+            onIncludeImagesChange = viewModel::changeIncludeImages,
+            onIncludeTranscodedTracksChange = viewModel::changeIncludeTranscodedTracks,
+            onConfirm = {
+                showBackupDialog = false
+                viewModel.createBackup()
+            },
+        )
+    }
 
-        pendingRestoreRequest?.let { request ->
-            RestoreConfirmationDialog(
-                archiveName = request.displayName,
-                isBusy = isArchiveOperationInProgress || isRestoreRunning,
-                onDismiss = { pendingRestoreRequest = null },
-                onConfirm = {
-                    pendingRestoreRequest = null
-                    viewModel.restoreFromArchive(request.uri)
-                },
-            )
-        }
+    pendingRestoreRequest?.let { request ->
+        RestoreConfirmationDialog(
+            archiveName = request.displayName,
+            isBusy = isArchiveOperationInProgress || isRestoreRunning,
+            onDismiss = { pendingRestoreRequest = null },
+            onConfirm = {
+                pendingRestoreRequest = null
+                viewModel.restoreFromArchive(request.uri)
+            },
+        )
+    }
 
-        uploadTrackRequest?.let { request ->
-            UploadTrackModal(
-                sessionId = request.sessionId,
-                playlistId = null,
-                uri = request.uri,
-                initialTitle = request.initialTitle,
-                onDismiss = { uploadTrackRequest = null },
-                onUploadSuccess = {
-                    uploadTrackRequest = null
-                    viewModel.reloadFromLocal()
-                },
-            )
-        }
+    uploadTrackRequest?.let { request ->
+        UploadTrackModal(
+            sessionId = request.sessionId,
+            playlistId = null,
+            uri = request.uri,
+            initialTitle = request.initialTitle,
+            onDismiss = { uploadTrackRequest = null },
+            onUploadSuccess = {
+                uploadTrackRequest = null
+                viewModel.reloadFromLocal()
+            },
+        )
     }
 }
 
