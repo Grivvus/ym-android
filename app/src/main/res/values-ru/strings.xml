@@ -1,0 +1,179 @@
+<resources>
+    <string name="app_name">ym</string>
+
+    <string name="nav_music">Музыка</string>
+    <string name="nav_library">Библиотека</string>
+    <string name="nav_profile">Профиль</string>
+
+    <string name="common_title_tracks">Треки</string>
+    <string name="common_title_albums">Альбомы</string>
+
+    <string name="common_action_back">Назад</string>
+    <string name="common_action_cancel">Отмена</string>
+    <string name="common_action_delete">Удалить</string>
+    <string name="common_action_create">Создать</string>
+    <string name="common_action_save">Сохранить</string>
+    <string name="common_action_add">Добавить</string>
+    <string name="common_action_restore">Восстановить</string>
+    <string name="common_action_dismiss">Закрыть</string>
+    <string name="common_action_clear">Очистить</string>
+    <string name="common_action_sign_in">Войти</string>
+    <string name="common_action_sign_up">Регистрация</string>
+    <string name="common_action_login">Войти</string>
+    <string name="common_action_register">Зарегистрироваться</string>
+    <string name="common_action_test_and_save">Проверить и сохранить</string>
+    <string name="common_action_change">Изменить</string>
+    <string name="common_action_minimize">Свернуть</string>
+    <string name="common_action_previous">Назад</string>
+    <string name="common_action_next">Далее</string>
+    <string name="common_action_play">Воспроизвести</string>
+    <string name="common_action_pause">Пауза</string>
+    <string name="common_action_open">Открыть</string>
+    <string name="common_action_select_cover">Выбрать обложку</string>
+    <string name="common_action_upload">Загрузить</string>
+    <string name="common_action_upload_track">Загрузить трек</string>
+    <string name="common_action_play_all">Воспроизвести всё</string>
+    <string name="common_action_add_from_library">Добавить из библиотеки</string>
+    <string name="common_action_change_password">Сменить пароль</string>
+    <string name="common_action_save_changes">Сохранить изменения</string>
+    <string name="common_action_create_backup">Создать резервную копию</string>
+    <string name="common_action_rename">Переименовать</string>
+    <string name="common_action_cover">Обложка</string>
+    <string name="common_action_go_to_artist">Перейти к исполнителю</string>
+    <string name="common_action_go_to_album">Перейти к альбому</string>
+    <string name="common_action_add_track">Добавить трек</string>
+
+    <string name="common_label_password">Пароль</string>
+    <string name="common_label_confirm_password">Подтвердите пароль</string>
+    <string name="common_label_username">Имя пользователя</string>
+    <string name="common_label_email">Электронная почта</string>
+    <string name="common_label_server_host">Хост сервера</string>
+    <string name="common_label_server_port">Порт сервера</string>
+    <string name="common_label_playlist_name">Название плейлиста</string>
+    <string name="common_label_track_title">Название трека</string>
+    <string name="common_label_artist">Исполнитель</string>
+    <string name="common_label_album">Альбом</string>
+    <string name="common_label_current_password">Текущий пароль</string>
+    <string name="common_label_new_password">Новый пароль</string>
+
+    <string name="common_cd_fetch_data_from_server">Обновить данные с сервера</string>
+    <string name="common_cd_show_password">Показать пароль</string>
+    <string name="common_cd_hide_password">Скрыть пароль</string>
+    <string name="common_cd_error">Ошибка</string>
+    <string name="common_cd_dismiss">Закрыть</string>
+    <string name="common_cd_previous_track">Предыдущий трек</string>
+    <string name="common_cd_next_track">Следующий трек</string>
+    <string name="common_cd_pause_playback">Поставить на паузу</string>
+    <string name="common_cd_resume_playback">Продолжить воспроизведение</string>
+    <string name="common_cd_open_full_player">Открыть полный плеер</string>
+
+    <string name="login_title_sign_in_account">Войдите в аккаунт</string>
+    <string name="login_label_login">Логин</string>
+
+    <string name="register_title_create_account">Создать аккаунт</string>
+    <string name="register_cd_username_icon">Иконка имени пользователя</string>
+    <string name="register_cd_password_icon">Иконка пароля</string>
+    <string name="register_cd_confirm_password_icon">Иконка подтверждения пароля</string>
+
+    <string name="server_setup_title">Настройка сервера</string>
+    <string name="server_setup_label_host_or_url">Хост или URL сервера</string>
+    <string name="server_setup_description_all_requests">Приложение будет использовать этот сервер для всех запросов.</string>
+    <string name="server_setup_cd_server_host_icon">Иконка хоста сервера</string>
+    <string name="server_setup_cd_server_port_icon">Иконка порта сервера</string>
+
+    <string name="music_title_playlists">Плейлисты</string>
+    <string name="music_heading_your_playlists">Ваши плейлисты</string>
+    <string name="music_status_updating_library">Обновление библиотеки...</string>
+    <string name="music_description_manage_playlists">Откройте плейлист, чтобы управлять треками и обложкой.</string>
+    <string name="music_empty_title">Плейлистов пока нет</string>
+    <string name="music_empty_description">Создайте первый плейлист с помощью кнопки добавления.</string>
+    <string name="music_create_playlist_title">Создать плейлист</string>
+    <string name="music_public_playlist">Публичный плейлист</string>
+    <string name="music_upload_route_unused">Этот экран загрузки больше не используется</string>
+
+    <string name="playlist_default_title">Плейлист</string>
+    <string name="playlist_unavailable_title">Плейлист недоступен</string>
+    <string name="playlist_unavailable_description">Не удалось загрузить этот плейлист. Вернитесь к списку и обновите его.</string>
+    <string name="playlist_delete_title">Удалить плейлист</string>
+    <string name="playlist_delete_message">Плейлист будет удалён с сервера и из локального хранилища.</string>
+    <string name="playlist_status_applying_changes">Применение изменений...</string>
+    <string name="playlist_empty_title">Плейлист пуст</string>
+    <string name="playlist_empty_description">Добавьте треки из библиотеки или загрузите новые прямо здесь.</string>
+    <string name="playlist_rename_title">Переименовать плейлист</string>
+    <string name="playlist_add_tracks_title">Добавить треки</string>
+    <string name="playlist_all_library_tracks_added">Все треки из библиотеки уже добавлены в этот плейлист.</string>
+
+    <string name="album_default_title">Альбом</string>
+    <string name="album_unavailable_title">Альбом недоступен</string>
+    <string name="album_unavailable_description">Не удалось загрузить этот альбом из текущего состояния библиотеки.</string>
+    <string name="album_status_refreshing">Обновление альбома...</string>
+    <string name="album_empty_title">Альбом пуст</string>
+    <string name="album_empty_description">В локальной библиотеке нет треков, связанных с этим альбомом.</string>
+
+    <string name="artist_default_title">Исполнитель</string>
+    <string name="artist_unavailable_title">Исполнитель недоступен</string>
+    <string name="artist_unavailable_description">Не удалось загрузить этого исполнителя из текущего состояния библиотеки.</string>
+    <string name="artist_status_refreshing">Обновление исполнителя...</string>
+    <string name="artist_empty_title">Альбомов нет</string>
+    <string name="artist_empty_description">В локальной библиотеке нет альбомов этого исполнителя.</string>
+
+    <string name="library_default_title">Библиотека</string>
+    <string name="library_empty_title">Треков пока нет</string>
+    <string name="library_empty_description">Загрузите треки из локального хранилища, чтобы заполнить библиотеку.</string>
+    <string name="library_backup_restore_title">Резервное копирование и восстановление</string>
+    <string name="library_backup_restore_status_running">Восстановление уже запущено. Новые действия с архивами временно недоступны.</string>
+    <string name="library_backup_restore_status_busy">Выполняется операция с архивом.</string>
+    <string name="library_backup_restore_status_idle">Экспортируйте резервную копию или восстановите данные библиотеки из существующего архива.</string>
+    <string name="library_restoring">Восстановление...</string>
+    <string name="library_backup_options_title">Создать резервную копию</string>
+    <string name="library_backup_options_description">Выберите, что включить в архив, прежде чем сохранить его в выбранное место.</string>
+    <string name="library_include_images">Включить изображения</string>
+    <string name="library_include_transcoded_tracks">Включить перекодированные треки</string>
+    <string name="library_restore_from_backup_title">Восстановить из резервной копии</string>
+    <string name="library_restore_confirmation_message">Начать восстановление из выбранного архива?</string>
+    <string name="library_restore_id">ID восстановления: %1$s</string>
+    <string name="library_restore_polling_status">Приложение запрашивает у сервера актуальный статус.</string>
+    <string name="library_cd_track_actions">Действия с треком</string>
+
+    <string name="player_nothing_playing_title">Сейчас ничего не воспроизводится</string>
+    <string name="player_nothing_playing_description">Откройте трек из плейлиста, чтобы начать воспроизведение.</string>
+    <string name="player_nothing_playing_description_requested">Откройте трек из плейлиста, чтобы начать воспроизведение. Запрошенный ID трека: %1$d.</string>
+    <string name="player_title_queue">Очередь</string>
+
+    <string name="profile_cd_user_avatar">Аватар пользователя</string>
+    <string name="profile_cd_upload_avatar">Загрузить аватар</string>
+    <string name="profile_cd_logout_button">Кнопка выхода</string>
+    <string name="profile_title_playback_quality">Качество воспроизведения</string>
+    <string name="profile_playback_quality_hint">Новое качество будет использовано при следующем запуске трека.</string>
+    <string name="track_quality_fast">Быстрое</string>
+    <string name="track_quality_standard">Стандартное</string>
+    <string name="track_quality_high">Высокое</string>
+    <string name="track_quality_lossless">Без потерь</string>
+
+    <string name="password_change_title">Смена пароля</string>
+    <string name="password_change_success">Пароль изменён</string>
+
+    <string name="upload_track_title">Загрузка трека</string>
+    <string name="upload_loading_catalog">Загрузка локальных исполнителей и альбомов...</string>
+    <string name="upload_available_for_all_users">Доступно всем пользователям</string>
+    <string name="upload_add_artist_loading">Добавление исполнителя...</string>
+    <string name="upload_add_artist">Добавить исполнителя «%1$s»</string>
+    <string name="upload_no_local_artists">Локальные исполнители не найдены. Введите имя и добавьте исполнителя.</string>
+    <string name="upload_search_artists_hint">Начните вводить, чтобы искать исполнителей в локальной библиотеке.</string>
+    <string name="upload_selected_artist">Выбранный исполнитель: %1$s</string>
+    <string name="upload_select_or_add_artist">Выберите исполнителя из подсказок или добавьте нового.</string>
+    <string name="upload_artist_not_found">Исполнитель не найден в локальной библиотеке. Вы можете добавить нового.</string>
+    <string name="upload_select_artist_suggestion">Выберите исполнителя из подсказок.</string>
+    <string name="upload_single">Сингл</string>
+    <string name="upload_choose_artist_first">Сначала выберите исполнителя</string>
+    <string name="upload_select_album">Выберите альбом</string>
+    <string name="upload_add_album_loading">Добавление альбома...</string>
+    <string name="upload_add_album">Добавить альбом «%1$s»</string>
+    <string name="upload_select_artist_for_albums">Выберите исполнителя, чтобы увидеть доступные альбомы.</string>
+    <string name="upload_loading_albums_for">Загрузка альбомов для %1$s...</string>
+    <string name="upload_selected_album">Выбранный альбом: %1$s</string>
+    <string name="upload_no_albums_for_artist">Для этого исполнителя не найдено альбомов. Добавьте новый альбом или отметьте трек как сингл.</string>
+    <string name="upload_select_or_add_album">Выберите альбом из подсказок или добавьте новый.</string>
+    <string name="upload_album_not_found">Альбом этого исполнителя не найден. Вы можете добавить новый.</string>
+    <string name="upload_uploading">Загрузка...</string>
+</resources>

@@ -1,0 +1,36 @@
+<resources>
+    <plurals name="track_count">
+        <item quantity="one">%d трек</item>
+        <item quantity="few">%d трека</item>
+        <item quantity="many">%d треков</item>
+        <item quantity="other">%d трека</item>
+    </plurals>
+
+    <plurals name="album_count">
+        <item quantity="one">%d альбом</item>
+        <item quantity="few">%d альбома</item>
+        <item quantity="many">%d альбомов</item>
+        <item quantity="other">%d альбома</item>
+    </plurals>
+
+    <plurals name="selected_count">
+        <item quantity="one">Выбрано: %d</item>
+        <item quantity="few">Выбрано: %d</item>
+        <item quantity="many">Выбрано: %d</item>
+        <item quantity="other">Выбрано: %d</item>
+    </plurals>
+
+    <plurals name="library_delete_title">
+        <item quantity="one">Удалить трек</item>
+        <item quantity="few">Удалить треки</item>
+        <item quantity="many">Удалить треки</item>
+        <item quantity="other">Удалить треки</item>
+    </plurals>
+
+    <plurals name="library_delete_message">
+        <item quantity="one">Выбранный трек будет удалён с сервера и из локального хранилища.</item>
+        <item quantity="few">Выбранные %d трека будут удалены с сервера и из локального хранилища.</item>
+        <item quantity="many">Выбранные %d треков будут удалены с сервера и из локального хранилища.</item>
+        <item quantity="other">Выбранные %d трека будут удалены с сервера и из локального хранилища.</item>
+    </plurals>
+</resources>
