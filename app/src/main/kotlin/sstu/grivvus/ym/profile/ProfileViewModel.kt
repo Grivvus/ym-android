@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.data.AppLanguage
+import sstu.grivvus.ym.data.AppLanguageRepository
 import sstu.grivvus.ym.data.PlaybackPreferencesRepository
 import sstu.grivvus.ym.WhileUiSubscribed
 import sstu.grivvus.ym.data.ServerInfoRepository
@@ -31,6 +33,7 @@ data class ProfileUiState(
     val errorMsg: String? = null,
     val avatarUri: Uri? = null,
     val preferredTrackQuality: TrackQuality = TrackQuality.STANDARD,
+    val selectedAppLanguage: AppLanguage = AppLanguage.SYSTEM_DEFAULT,
 )
 
 @HiltViewModel
@@ -39,6 +42,7 @@ class ProfileViewModel
     private val userRepository: UserRepository,
     private val serverInfoRepository: ServerInfoRepository,
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
+    private val appLanguageRepository: AppLanguageRepository,
 ) : ViewModel() {
     private val _username: MutableStateFlow<String> = MutableStateFlow("")
     private val _email: MutableStateFlow<String?> = MutableStateFlow(null)
@@ -70,12 +74,14 @@ class ProfileViewModel
                 _serverHost,
                 _serverPort,
                 _preferredTrackQuality,
-            ) { isRefreshing, serverHost, serverPort, preferredTrackQuality ->
+                appLanguageRepository.selectedLanguage,
+            ) { isRefreshing, serverHost, serverPort, preferredTrackQuality, selectedAppLanguage ->
                 ProfileUiState(
                     isRefreshing = isRefreshing,
                     serverHost = serverHost,
                     serverPort = serverPort,
                     preferredTrackQuality = preferredTrackQuality,
+                    selectedAppLanguage = selectedAppLanguage,
                 )
             }
         ) { baseState, otherState ->
@@ -89,11 +95,13 @@ class ProfileViewModel
                 errorMsg = baseState.errorMsg,
                 avatarUri = baseState.avatarUri,
                 preferredTrackQuality = otherState.preferredTrackQuality,
+                selectedAppLanguage = otherState.selectedAppLanguage,
             )
         }.stateIn(viewModelScope, WhileUiSubscribed, ProfileUiState())
 
     init {
         _isLoading.value = true
+        appLanguageRepository.refreshSelectedLanguage()
         loadUserFromLocal()
         loadServerSettings()
         _isLoading.value = false
@@ -151,6 +159,10 @@ class ProfileViewModel
 
     fun changePreferredTrackQuality(value: TrackQuality) {
         _preferredTrackQuality.value = value
+    }
+
+    fun changeAppLanguage(value: AppLanguage) {
+        appLanguageRepository.applyLanguage(value)
     }
 
     fun logOut() {

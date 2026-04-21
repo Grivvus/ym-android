@@ -21,11 +21,14 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.sharp.Logout
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.sharp.AddAPhoto
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -36,6 +39,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +60,7 @@ import coil3.compose.AsyncImage
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomBar
 import sstu.grivvus.ym.components.ErrorTooltip
+import sstu.grivvus.ym.data.AppLanguage
 import sstu.grivvus.ym.data.network.model.TrackQuality
 import sstu.grivvus.ym.data.network.model.toDisplayNameRes
 import sstu.grivvus.ym.passwordChange.PasswordChangeDialog
@@ -71,6 +76,7 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     var showPasswordDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -107,12 +113,35 @@ fun ProfileScreen(
                     uiState.errorMsg != null,
                     onTimeout = { viewModel.dismissErrorMessage() },
                 )
+                if (showSettingsDialog) {
+                    ProfileSettingsDialog(
+                        selectedLanguage = uiState.selectedAppLanguage,
+                        onLanguageSelected = { language ->
+                            showSettingsDialog = false
+                            if (language != uiState.selectedAppLanguage) {
+                                viewModel.changeAppLanguage(language)
+                            }
+                        },
+                        onDismiss = { showSettingsDialog = false },
+                    )
+                }
                 if (showPasswordDialog) {
                     PasswordChangeDialog(
                         onDismiss = { showPasswordDialog = false }
                     )
                 }
-                Spacer(Modifier.height(50.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    IconButton(onClick = { showSettingsDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.profile_cd_open_settings),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
                 Box(
                     contentAlignment = Alignment.BottomEnd,
                 ) {
@@ -226,6 +255,61 @@ fun ProfileScreen(
 }
 
 @Composable
+private fun ProfileSettingsDialog(
+    selectedLanguage: AppLanguage,
+    onLanguageSelected: (AppLanguage) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.profile_settings_title),
+                style = MaterialTheme.typography.headlineSmall,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .selectableGroup(),
+            ) {
+                Text(
+                    text = stringResource(R.string.profile_settings_language_title),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                AppLanguage.entries.forEach { language ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onLanguageSelected(language) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = selectedLanguage == language,
+                            onClick = { onLanguageSelected(language) },
+                        )
+                        Text(
+                            text = stringResource(language.toLabelResId()),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_action_dismiss))
+            }
+        },
+    )
+}
+
+@Composable
 private fun TrackQualitySettings(
     selectedQuality: TrackQuality,
     onQualitySelected: (TrackQuality) -> Unit,
@@ -271,6 +355,13 @@ private fun TrackQualitySettings(
         )
     }
 }
+
+private fun AppLanguage.toLabelResId(): Int =
+    when (this) {
+        AppLanguage.SYSTEM_DEFAULT -> R.string.profile_settings_language_system_default
+        AppLanguage.ENGLISH -> R.string.profile_settings_language_english
+        AppLanguage.RUSSIAN -> R.string.profile_settings_language_russian
+    }
 
 @Composable
 fun UserInfoItem(label: String, value: String, onValueChange: (String) -> Unit) {

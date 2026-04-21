@@ -143,8 +143,14 @@
     <string name="profile_cd_user_avatar">Аватар пользователя</string>
     <string name="profile_cd_upload_avatar">Загрузить аватар</string>
     <string name="profile_cd_logout_button">Кнопка выхода</string>
+    <string name="profile_cd_open_settings">Открыть настройки</string>
     <string name="profile_title_playback_quality">Качество воспроизведения</string>
     <string name="profile_playback_quality_hint">Новое качество будет использовано при следующем запуске трека.</string>
+    <string name="profile_settings_title">Настройки</string>
+    <string name="profile_settings_language_title">Язык приложения</string>
+    <string name="profile_settings_language_system_default">Как в системе</string>
+    <string name="profile_settings_language_english">Английский</string>
+    <string name="profile_settings_language_russian">Русский</string>
     <string name="track_quality_fast">Быстрое</string>
     <string name="track_quality_standard">Стандартное</string>
     <string name="track_quality_high">Высокое</string>

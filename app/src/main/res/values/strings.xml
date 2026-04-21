@@ -143,8 +143,14 @@
     <string name="profile_cd_user_avatar">User Avatar</string>
     <string name="profile_cd_upload_avatar">Upload avatar</string>
     <string name="profile_cd_logout_button">Logout button</string>
+    <string name="profile_cd_open_settings">Open settings</string>
     <string name="profile_title_playback_quality">Playback quality</string>
     <string name="profile_playback_quality_hint">The new quality will be used from the next track start.</string>
+    <string name="profile_settings_title">Settings</string>
+    <string name="profile_settings_language_title">App language</string>
+    <string name="profile_settings_language_system_default">System default</string>
+    <string name="profile_settings_language_english">English</string>
+    <string name="profile_settings_language_russian">Russian</string>
     <string name="track_quality_fast">Fast</string>
     <string name="track_quality_standard">Standard</string>
     <string name="track_quality_high">High</string>
