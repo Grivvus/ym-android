@@ -23,8 +23,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import sstu.grivvus.ym.R
 
 @Composable
 fun ErrorSnackbar(
@@ -53,7 +55,7 @@ fun ErrorSnackbar(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Error,
-                        contentDescription = "Error",
+                        contentDescription = stringResource(R.string.common_cd_error),
                         tint = MaterialTheme.colorScheme.error
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -69,7 +71,7 @@ fun ErrorSnackbar(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Dismiss",
+                            contentDescription = stringResource(R.string.common_cd_dismiss),
                             tint = MaterialTheme.colorScheme.onErrorContainer
                         )
                     }

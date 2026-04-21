@@ -50,12 +50,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomNavScaffold
 import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.EmptyStateCard
@@ -145,16 +148,20 @@ fun LibraryScreen(
                 title = {
                     Text(
                         if (uiState.isSelectionMode) {
-                            "${uiState.selectedTrackIds.size} selected"
+                            pluralStringResource(
+                                R.plurals.selected_count,
+                                uiState.selectedTrackIds.size,
+                                uiState.selectedTrackIds.size,
+                            )
                         } else {
-                            "Library"
+                            stringResource(R.string.library_default_title)
                         },
                     )
                 },
                 navigationIcon = {
                     if (uiState.isSelectionMode) {
                         TextButton(onClick = viewModel::clearSelection) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.common_action_cancel))
                         }
                     }
                 },
@@ -164,11 +171,14 @@ fun LibraryScreen(
                             onClick = viewModel::requestDeleteSelected,
                             enabled = !uiState.isTrackMutating,
                         ) {
-                            Text("Delete")
+                            Text(stringResource(R.string.common_action_delete))
                         }
                     } else {
                         IconButton(onClick = { viewModel.refresh() }) {
-                            Icon(appIcons.Sync, contentDescription = "fetch data from server")
+                            Icon(
+                                appIcons.Sync,
+                                contentDescription = stringResource(R.string.common_cd_fetch_data_from_server),
+                            )
                         }
                     }
                 },
@@ -186,7 +196,7 @@ fun LibraryScreen(
                         )
                     },
                     text = {
-                        Text("Add track")
+                        Text(stringResource(R.string.common_action_add_track))
                     },
                 )
             }
@@ -247,8 +257,8 @@ fun LibraryScreen(
                 if (uiState.tracks.isEmpty()) {
                     item {
                         EmptyStateCard(
-                            title = "No tracks yet",
-                            description = "Upload tracks from local storage to populate the library.",
+                            title = stringResource(R.string.library_empty_title),
+                            description = stringResource(R.string.library_empty_description),
                         )
                     }
                 } else {
@@ -275,20 +285,20 @@ fun LibraryScreen(
             onDismissRequest = viewModel::dismissDeleteDialog,
             title = {
                 Text(
-                    if (pendingDeleteTrackIds.size == 1) {
-                        "Delete track"
-                    } else {
-                        "Delete tracks"
-                    },
+                    pluralStringResource(
+                        R.plurals.library_delete_title,
+                        pendingDeleteTrackIds.size,
+                        pendingDeleteTrackIds.size,
+                    ),
                 )
             },
             text = {
                 Text(
-                    if (pendingDeleteTrackIds.size == 1) {
-                        "The selected track will be removed from the server and local storage."
-                    } else {
-                        "The selected ${pendingDeleteTrackIds.size} tracks will be removed from the server and local storage."
-                    },
+                    pluralStringResource(
+                        R.plurals.library_delete_message,
+                        pendingDeleteTrackIds.size,
+                        pendingDeleteTrackIds.size,
+                    ),
                 )
             },
             confirmButton = {
@@ -296,12 +306,12 @@ fun LibraryScreen(
                     onClick = viewModel::deletePendingTracks,
                     enabled = !uiState.isTrackMutating,
                 ) {
-                    Text("Delete")
+                    Text(stringResource(R.string.common_action_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = viewModel::dismissDeleteDialog) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_action_cancel))
                 }
             },
         )
@@ -423,7 +433,7 @@ private fun LibraryTrackRow(
                 ) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Track actions",
+                        contentDescription = stringResource(R.string.library_cd_track_actions),
                     )
                 }
                 DropdownMenu(
@@ -431,21 +441,21 @@ private fun LibraryTrackRow(
                     onDismissRequest = { menuExpanded = false },
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Delete") },
+                        text = { Text(stringResource(R.string.common_action_delete)) },
                         onClick = {
                             menuExpanded = false
                             onDelete()
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text("Go to artist") },
+                        text = { Text(stringResource(R.string.common_action_go_to_artist)) },
                         onClick = {
                             menuExpanded = false
                             onGoToArtist()
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text("Go to album") },
+                        text = { Text(stringResource(R.string.common_action_go_to_album)) },
                         enabled = track.albumId != null,
                         onClick = {
                             menuExpanded = false
@@ -471,17 +481,17 @@ private fun BackupRestoreActionsCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Backup & restore",
+                text = stringResource(R.string.library_backup_restore_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = if (isRestoreRunning) {
-                    "Restore is running. New archive actions are temporarily disabled."
+                    stringResource(R.string.library_backup_restore_status_running)
                 } else if (isBusy) {
-                    "Archive operation in progress."
+                    stringResource(R.string.library_backup_restore_status_busy)
                 } else {
-                    "Export a backup archive or restore library data from an existing archive."
+                    stringResource(R.string.library_backup_restore_status_idle)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -495,7 +505,7 @@ private fun BackupRestoreActionsCard(
                     enabled = !isBusy && !isRestoreRunning,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("Create backup")
+                    Text(stringResource(R.string.common_action_create_backup))
                 }
                 Button(
                     onClick = onRestoreClick,
@@ -504,9 +514,9 @@ private fun BackupRestoreActionsCard(
                 ) {
                     Text(
                         if (isRestoreRunning) {
-                            "Restoring..."
+                            stringResource(R.string.library_restoring)
                         } else {
-                            "Restore"
+                            stringResource(R.string.common_action_restore)
                         },
                     )
                 }
@@ -527,22 +537,22 @@ private fun BackupOptionsDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create backup") },
+        title = { Text(stringResource(R.string.library_backup_options_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = "Choose what to include in the archive before saving it to the selected location.",
+                    text = stringResource(R.string.library_backup_options_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 BackupOptionRow(
-                    title = "Include images",
+                    title = stringResource(R.string.library_include_images),
                     checked = includeImages,
                     onCheckedChange = onIncludeImagesChange,
                     enabled = !isBusy,
                 )
                 BackupOptionRow(
-                    title = "Include transcoded tracks",
+                    title = stringResource(R.string.library_include_transcoded_tracks),
                     checked = includeTranscodedTracks,
                     onCheckedChange = onIncludeTranscodedTracksChange,
                     enabled = !isBusy,
@@ -554,7 +564,7 @@ private fun BackupOptionsDialog(
                 onClick = onConfirm,
                 enabled = !isBusy,
             ) {
-                Text("Create")
+                Text(stringResource(R.string.common_action_create))
             }
         },
         dismissButton = {
@@ -562,7 +572,7 @@ private fun BackupOptionsDialog(
                 onClick = onDismiss,
                 enabled = !isBusy,
             ) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_action_cancel))
             }
         },
     )
@@ -600,11 +610,11 @@ private fun RestoreConfirmationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Restore from backup") },
+        title = { Text(stringResource(R.string.library_restore_from_backup_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Start restore from the selected archive?",
+                    text = stringResource(R.string.library_restore_confirmation_message),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
@@ -619,7 +629,7 @@ private fun RestoreConfirmationDialog(
                 onClick = onConfirm,
                 enabled = !isBusy,
             ) {
-                Text("Restore")
+                Text(stringResource(R.string.common_action_restore))
             }
         },
         dismissButton = {
@@ -627,7 +637,7 @@ private fun RestoreConfirmationDialog(
                 onClick = onDismiss,
                 enabled = !isBusy,
             ) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_action_cancel))
             }
         },
     )
@@ -646,7 +656,7 @@ private fun RestoreStatusBanner(status: RestoreStatusUi) {
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "Restore ID: ${status.restoreId}",
+                text = stringResource(R.string.library_restore_id, status.restoreId),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -657,7 +667,7 @@ private fun RestoreStatusBanner(status: RestoreStatusUi) {
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp))
                     Text(
-                        text = "The app is polling the server for the latest status.",
+                        text = stringResource(R.string.library_restore_polling_status),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -692,7 +702,7 @@ private fun InfoCard(
                 onClick = onDismiss,
                 modifier = Modifier.align(Alignment.End),
             ) {
-                Text("Dismiss")
+                Text(stringResource(R.string.common_action_dismiss))
             }
         }
     }

@@ -15,10 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.CenteredFormScreen
 import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.components.FormActionRow
@@ -46,7 +48,7 @@ fun LoginScreen(
         },
     ) {
         Text(
-            text = "Sign in your account",
+            text = stringResource(R.string.login_title_sign_in_account),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -56,7 +58,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = uiState.username,
             onValueChange = { viewModel.updateUsername(it) },
-            label = { Text("Login") },
+            label = { Text(stringResource(R.string.login_label_login)) },
             leadingIcon = {
                 Icon(
                     imageVector = appIconsMirrored.Login,
@@ -71,7 +73,7 @@ fun LoginScreen(
         PasswordOutlinedField(
             value = uiState.password,
             onValueChange = { viewModel.updatePassword(it) },
-            label = "Password",
+            label = stringResource(R.string.common_label_password),
             leadingIcon = appIcons.Password,
             modifier = Modifier.fillMaxWidth(),
             imeAction = ImeAction.Done,
@@ -81,15 +83,15 @@ fun LoginScreen(
             onClick = onSignUpClick,
             modifier = Modifier.align(Alignment.End),
         ) {
-            Text("Sign Up")
+            Text(stringResource(R.string.common_action_sign_up))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         FormActionRow(
-            secondaryButtonLabel = "Clear",
+            secondaryButtonLabel = stringResource(R.string.common_action_clear),
             onSecondaryButtonClick = { viewModel.clearForm() },
-            primaryButtonLabel = "Login",
+            primaryButtonLabel = stringResource(R.string.common_action_login),
             onPrimaryButtonClick = { viewModel.proceedLogin(onSuccess) },
             primaryButtonEnabled = uiState.username.isNotBlank() && uiState.password.isNotBlank(),
         )

@@ -41,12 +41,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomNavScaffold
 import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
@@ -124,16 +127,19 @@ fun PlaylistScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(playlist?.name ?: "Playlist")
+                    Text(playlist?.name ?: stringResource(R.string.playlist_default_title))
                 },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
-                        Text("Back")
+                        Text(stringResource(R.string.common_action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(appIcons.Sync, contentDescription = "fetch data from server")
+                        Icon(
+                            appIcons.Sync,
+                            contentDescription = stringResource(R.string.common_cd_fetch_data_from_server),
+                        )
                     }
                     if (playlist != null) {
                         TextButton(
@@ -141,13 +147,13 @@ fun PlaylistScreen(
                                 renameDraft = RenamePlaylistDraft(value = playlist.name)
                             },
                         ) {
-                            Text("Rename")
+                            Text(stringResource(R.string.common_action_rename))
                         }
                         TextButton(onClick = { coverPicker.launch("image/*") }) {
-                            Text("Cover")
+                            Text(stringResource(R.string.common_action_cover))
                         }
                         TextButton(onClick = { showDeleteDialog = true }) {
-                            Text("Delete")
+                            Text(stringResource(R.string.common_action_delete))
                         }
                     }
                 },
@@ -190,8 +196,8 @@ fun PlaylistScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     EmptyStateCard(
-                        title = "Playlist unavailable",
-                        description = "This playlist could not be loaded. Go back to the list and refresh.",
+                        title = stringResource(R.string.playlist_unavailable_title),
+                        description = stringResource(R.string.playlist_unavailable_description),
                     )
                 }
             }
@@ -214,8 +220,8 @@ fun PlaylistScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete playlist") },
-            text = { Text("Playlist will be removed from the server and local storage.") },
+            title = { Text(stringResource(R.string.playlist_delete_title)) },
+            text = { Text(stringResource(R.string.playlist_delete_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -223,12 +229,12 @@ fun PlaylistScreen(
                         showDeleteDialog = false
                     },
                 ) {
-                    Text("Delete")
+                    Text(stringResource(R.string.common_action_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_action_cancel))
                 }
             },
         )
@@ -297,7 +303,11 @@ private fun PlaylistDetails(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "${playlist.tracks.size} tracks",
+                        text = pluralStringResource(
+                            R.plurals.track_count,
+                            playlist.tracks.size,
+                            playlist.tracks.size,
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -307,21 +317,21 @@ private fun PlaylistDetails(
                             onClick = onPlayAll,
                             enabled = playlist.tracks.isNotEmpty(),
                         ) {
-                            Text("Play all")
+                            Text(stringResource(R.string.common_action_play_all))
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         FilledTonalButton(onClick = onAddExistingTrack) {
-                            Text("Add from library")
+                            Text(stringResource(R.string.common_action_add_from_library))
                         }
                         Button(onClick = onUploadTrack) {
-                            Text("Upload track")
+                            Text(stringResource(R.string.common_action_upload_track))
                         }
                     }
                     if (isBusy) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Applying changes...",
+                            text = stringResource(R.string.playlist_status_applying_changes),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -332,7 +342,7 @@ private fun PlaylistDetails(
 
         item {
             Text(
-                text = "Tracks",
+                text = stringResource(R.string.common_title_tracks),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(top = 8.dp),
             )
@@ -341,8 +351,8 @@ private fun PlaylistDetails(
         if (playlist.tracks.isEmpty()) {
             item {
                 EmptyStateCard(
-                    title = "Playlist is empty",
-                    description = "Add tracks from the library or upload new ones directly here.",
+                    title = stringResource(R.string.playlist_empty_title),
+                    description = stringResource(R.string.playlist_empty_description),
                 )
             }
         } else {
@@ -414,12 +424,12 @@ private fun RenamePlaylistDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename playlist") },
+        title = { Text(stringResource(R.string.playlist_rename_title)) },
         text = {
             OutlinedTextField(
                 value = draft.value,
                 onValueChange = onValueChange,
-                label = { Text("Playlist name") },
+                label = { Text(stringResource(R.string.common_label_playlist_name)) },
                 singleLine = true,
             )
         },
@@ -428,12 +438,12 @@ private fun RenamePlaylistDialog(
                 onClick = onConfirm,
                 enabled = draft.value.isNotBlank() && !isBusy,
             ) {
-                Text("Save")
+                Text(stringResource(R.string.common_action_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_action_cancel))
             }
         },
     )
@@ -449,10 +459,10 @@ private fun AddTracksDialog(
     var selectedIds by remember(tracks) { mutableStateOf(emptySet<Long>()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add tracks") },
+        title = { Text(stringResource(R.string.playlist_add_tracks_title)) },
         text = {
             if (tracks.isEmpty()) {
-                Text("All library tracks are already in this playlist.")
+                Text(stringResource(R.string.playlist_all_library_tracks_added))
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
@@ -492,12 +502,12 @@ private fun AddTracksDialog(
                 onClick = { onConfirm(selectedIds) },
                 enabled = selectedIds.isNotEmpty() && !isBusy,
             ) {
-                Text("Add")
+                Text(stringResource(R.string.common_action_add))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_action_cancel))
             }
         },
     )

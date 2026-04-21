@@ -1,5 +1,8 @@
 package sstu.grivvus.ym.data.network.model
 
+import androidx.annotation.StringRes
+import sstu.grivvus.ym.R
+
 enum class TrackQuality {
     FAST, STANDARD, HIGH, LOSSLESS
 }
@@ -13,12 +16,13 @@ fun TrackQuality.toQueryValue(): String {
     }
 }
 
-fun TrackQuality.toDisplayName(): String {
+@StringRes
+fun TrackQuality.toDisplayNameRes(): Int {
     return when (this) {
-        TrackQuality.FAST -> "Fast"
-        TrackQuality.STANDARD -> "Standard"
-        TrackQuality.HIGH -> "High"
-        TrackQuality.LOSSLESS -> "Lossless"
+        TrackQuality.FAST -> R.string.track_quality_fast
+        TrackQuality.STANDARD -> R.string.track_quality_standard
+        TrackQuality.HIGH -> R.string.track_quality_high
+        TrackQuality.LOSSLESS -> R.string.track_quality_lossless
     }
 }
 

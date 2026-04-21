@@ -20,11 +20,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 
@@ -47,14 +49,14 @@ fun PlayerScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 EmptyStateCard(
-                    title = "Nothing is playing",
+                    title = stringResource(R.string.player_nothing_playing_title),
                     description = requestedTrackId?.let { trackId ->
-                        "Open a track from a playlist to start playback. Requested track id: $trackId."
-                    } ?: "Open a track from a playlist to start playback.",
+                        stringResource(R.string.player_nothing_playing_description_requested, trackId)
+                    } ?: stringResource(R.string.player_nothing_playing_description),
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 TextButton(onClick = onBack) {
-                    Text("Back")
+                    Text(stringResource(R.string.common_action_back))
                 }
             }
             return@Surface
@@ -68,7 +70,7 @@ fun PlayerScreen(
         ) {
             item {
                 TextButton(onClick = onBack) {
-                    Text("Minimize")
+                    Text(stringResource(R.string.common_action_minimize))
                 }
             }
 
@@ -119,17 +121,25 @@ fun PlayerScreen(
                         onClick = viewModel::skipToPrevious,
                         enabled = playbackState.currentIndex > 0,
                     ) {
-                        Text("Previous")
+                        Text(stringResource(R.string.common_action_previous))
                     }
                     Button(onClick = viewModel::togglePlayback) {
-                        Text(if (playbackState.isPlaying) "Pause" else "Play")
+                        Text(
+                            stringResource(
+                                if (playbackState.isPlaying) {
+                                    R.string.common_action_pause
+                                } else {
+                                    R.string.common_action_play
+                                },
+                            ),
+                        )
                     }
                     Button(
                         onClick = viewModel::skipToNext,
                         enabled = playbackState.currentIndex >= 0 &&
                                 playbackState.currentIndex < playbackState.queue.lastIndex,
                     ) {
-                        Text("Next")
+                        Text(stringResource(R.string.common_action_next))
                     }
                 }
             }
@@ -138,7 +148,7 @@ fun PlayerScreen(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Queue",
+                        text = stringResource(R.string.player_title_queue),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                     )

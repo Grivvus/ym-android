@@ -22,11 +22,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.PasswordOutlinedField
 import sstu.grivvus.ym.ui.theme.appIcons
 
@@ -38,13 +40,14 @@ fun PasswordChangeDialog(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    val successMessage = stringResource(R.string.password_change_success)
 
     LaunchedEffect(uiState.success) {
         if (uiState.success) {
             delay(1000)
             viewModel.clear()
             onDismiss()
-            Toast.makeText(context, "Password has change", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, successMessage, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -57,7 +60,7 @@ fun PasswordChangeDialog(
         },
         title = {
             Text(
-                text = "Password change",
+                text = stringResource(R.string.password_change_title),
                 style = MaterialTheme.typography.headlineSmall
             )
         },
@@ -66,9 +69,9 @@ fun PasswordChangeDialog(
                 PasswordOutlinedField(
                     value = uiState.currentPassword,
                     onValueChange = viewModel::updateCurrentPassword,
-                    label = "Current password",
+                    label = stringResource(R.string.common_label_current_password),
                     leadingIcon = appIcons.Lock,
-                    leadingIconContentDescription = "Current password",
+                    leadingIconContentDescription = stringResource(R.string.common_label_current_password),
                     modifier = Modifier.fillMaxWidth(),
                     imeAction = ImeAction.Next,
                     isError = uiState.errorMessage != null,
@@ -79,9 +82,9 @@ fun PasswordChangeDialog(
                 PasswordOutlinedField(
                     value = uiState.newPassword,
                     onValueChange = viewModel::updateNewPassword,
-                    label = "new password",
+                    label = stringResource(R.string.common_label_new_password),
                     leadingIcon = appIcons.Password,
-                    leadingIconContentDescription = "New password",
+                    leadingIconContentDescription = stringResource(R.string.common_label_new_password),
                     modifier = Modifier.fillMaxWidth(),
                     imeAction = ImeAction.Next,
                     isError = uiState.errorMessage != null,
@@ -92,9 +95,9 @@ fun PasswordChangeDialog(
                 PasswordOutlinedField(
                     value = uiState.newPasswordConfirm,
                     onValueChange = viewModel::updateConfirmPassword,
-                    label = "Confirm password",
+                    label = stringResource(R.string.common_label_confirm_password),
                     leadingIcon = appIcons.LockReset,
-                    leadingIconContentDescription = "Confirm password",
+                    leadingIconContentDescription = stringResource(R.string.common_label_confirm_password),
                     modifier = Modifier.fillMaxWidth(),
                     imeAction = ImeAction.Done,
                     isError = uiState.errorMessage != null,
@@ -111,7 +114,7 @@ fun PasswordChangeDialog(
 
                 if (uiState.success) {
                     Text(
-                        text = "Password has change",
+                        text = successMessage,
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 8.dp)
@@ -132,7 +135,7 @@ fun PasswordChangeDialog(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("Change")
+                    Text(stringResource(R.string.common_action_change))
                 }
             }
         },
@@ -146,7 +149,7 @@ fun PasswordChangeDialog(
                 },
                 enabled = !uiState.isLoading
             ) {
-                Text("Dismiss")
+                Text(stringResource(R.string.common_action_dismiss))
             }
         }
     )

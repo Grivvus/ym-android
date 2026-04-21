@@ -26,11 +26,14 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomNavScaffold
 import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
@@ -57,15 +60,18 @@ fun AlbumScreen(
         navigateToProfile = navigateToProfile,
         topBar = {
             TopAppBar(
-                title = { Text(album?.name ?: "Album") },
+                title = { Text(album?.name ?: stringResource(R.string.album_default_title)) },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
-                        Text("Back")
+                        Text(stringResource(R.string.common_action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(appIcons.Sync, contentDescription = "fetch data from server")
+                        Icon(
+                            appIcons.Sync,
+                            contentDescription = stringResource(R.string.common_cd_fetch_data_from_server),
+                        )
                     }
                 },
             )
@@ -105,8 +111,8 @@ fun AlbumScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     EmptyStateCard(
-                        title = "Album unavailable",
-                        description = "This album could not be loaded from the current library state.",
+                        title = stringResource(R.string.album_unavailable_title),
+                        description = stringResource(R.string.album_unavailable_description),
                     )
                 }
             }
@@ -153,7 +159,11 @@ private fun AlbumDetails(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "${album.tracks.size} tracks",
+                        text = pluralStringResource(
+                            R.plurals.track_count,
+                            album.tracks.size,
+                            album.tracks.size,
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -162,12 +172,12 @@ private fun AlbumDetails(
                         onClick = onPlayAll,
                         enabled = album.tracks.isNotEmpty(),
                     ) {
-                        Text("Play all")
+                        Text(stringResource(R.string.common_action_play_all))
                     }
                     if (isBusy) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Refreshing album...",
+                            text = stringResource(R.string.album_status_refreshing),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -178,7 +188,7 @@ private fun AlbumDetails(
 
         item {
             Text(
-                text = "Tracks",
+                text = stringResource(R.string.common_title_tracks),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(top = 8.dp),
             )
@@ -187,8 +197,8 @@ private fun AlbumDetails(
         if (album.tracks.isEmpty()) {
             item {
                 EmptyStateCard(
-                    title = "Album is empty",
-                    description = "No tracks linked to this album are available in the local library.",
+                    title = stringResource(R.string.album_empty_title),
+                    description = stringResource(R.string.album_empty_description),
                 )
             }
         } else {

@@ -12,11 +12,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.CenteredFormScreen
 import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.components.FormActionRow
@@ -41,7 +43,7 @@ fun ServerSetup(
         },
     ) {
         Text(
-            text = "Server Setup",
+            text = stringResource(R.string.server_setup_title),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -49,11 +51,11 @@ fun ServerSetup(
         OutlinedTextField(
             value = uiState.host,
             onValueChange = { viewModel.updateHost(it) },
-            label = { Text("Server host or URL") },
+            label = { Text(stringResource(R.string.server_setup_label_host_or_url)) },
             leadingIcon = {
                 Icon(
                     imageVector = appIconsMirrored.Login,
-                    contentDescription = "Server host icon",
+                    contentDescription = stringResource(R.string.server_setup_cd_server_host_icon),
                 )
             },
             modifier = Modifier.fillMaxWidth(),
@@ -63,11 +65,11 @@ fun ServerSetup(
         OutlinedTextField(
             value = uiState.port,
             onValueChange = { viewModel.updatePort(it) },
-            label = { Text("Server port") },
+            label = { Text(stringResource(R.string.common_label_server_port)) },
             leadingIcon = {
                 Icon(
                     imageVector = appIconsMirrored.Login,
-                    contentDescription = "Server port icon",
+                    contentDescription = stringResource(R.string.server_setup_cd_server_port_icon),
                 )
             },
             modifier = Modifier.fillMaxWidth(),
@@ -81,9 +83,9 @@ fun ServerSetup(
         Spacer(modifier = Modifier.height(16.dp))
 
         FormActionRow(
-            secondaryButtonLabel = "Clear",
+            secondaryButtonLabel = stringResource(R.string.common_action_clear),
             onSecondaryButtonClick = { viewModel.clearForm() },
-            primaryButtonLabel = "Test & Save",
+            primaryButtonLabel = stringResource(R.string.common_action_test_and_save),
             onPrimaryButtonClick = { viewModel.proceed(onProceed) },
             secondaryButtonEnabled = !uiState.isLoading &&
                     (uiState.host.isNotBlank() || uiState.port.isNotBlank()),
@@ -96,7 +98,7 @@ fun ServerSetup(
         if (!uiState.isLoading) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "The app will use this server for all requests.",
+                text = stringResource(R.string.server_setup_description_all_requests),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             )

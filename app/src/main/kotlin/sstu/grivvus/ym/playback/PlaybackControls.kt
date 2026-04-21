@@ -29,10 +29,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.music.Artwork
 
 @Composable
@@ -147,7 +149,10 @@ fun MiniPlayer(
                     onClick = viewModel::skipToPrevious,
                     enabled = playbackState.currentIndex > 0,
                 ) {
-                    Icon(Icons.Default.SkipPrevious, contentDescription = "previous track")
+                    Icon(
+                        Icons.Default.SkipPrevious,
+                        contentDescription = stringResource(R.string.common_cd_previous_track),
+                    )
                 }
                 IconButton(onClick = viewModel::togglePlayback) {
                     Icon(
@@ -157,9 +162,9 @@ fun MiniPlayer(
                             Icons.Default.PlayArrow
                         },
                         contentDescription = if (playbackState.isPlaying) {
-                            "pause playback"
+                            stringResource(R.string.common_cd_pause_playback)
                         } else {
-                            "resume playback"
+                            stringResource(R.string.common_cd_resume_playback)
                         },
                     )
                 }
@@ -167,12 +172,15 @@ fun MiniPlayer(
                     onClick = viewModel::skipToNext,
                     enabled = playbackState.currentIndex in 0 until playbackState.queue.lastIndex,
                 ) {
-                    Icon(Icons.Default.SkipNext, contentDescription = "next track")
+                    Icon(
+                        Icons.Default.SkipNext,
+                        contentDescription = stringResource(R.string.common_cd_next_track),
+                    )
                 }
                 IconButton(onClick = { onOpenPlayer(currentTrack.id) }) {
                     Icon(
                         Icons.AutoMirrored.Filled.OpenInNew,
-                        contentDescription = "open full player",
+                        contentDescription = stringResource(R.string.common_cd_open_full_player),
                     )
                 }
             }

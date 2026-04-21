@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
@@ -40,6 +41,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.collectLatest
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.data.MusicRepository
 
 private const val MAX_ARTIST_SUGGESTIONS = 5
@@ -190,7 +192,7 @@ private fun UploadTrackModalContent(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Upload track") },
+        title = { Text(stringResource(R.string.upload_track_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -207,7 +209,7 @@ private fun UploadTrackModalContent(
                     ) {
                         CircularProgressIndicator()
                         Text(
-                            text = "Loading local artists and albums...",
+                            text = stringResource(R.string.upload_loading_catalog),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -218,7 +220,7 @@ private fun UploadTrackModalContent(
                             onDismissError()
                             onTitleChange(it)
                         },
-                        label = { Text("Track title") },
+                        label = { Text(stringResource(R.string.common_label_track_title)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -231,7 +233,7 @@ private fun UploadTrackModalContent(
                             onAvailabilityChange(it)
                         })
                         Text(
-                            text = "Available for all users",
+                            text = stringResource(R.string.upload_available_for_all_users),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -242,7 +244,7 @@ private fun UploadTrackModalContent(
                                 onDismissError()
                                 onArtistQueryChange(value)
                             },
-                            label = { Text("Artist") },
+                            label = { Text(stringResource(R.string.common_label_artist)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -286,9 +288,12 @@ private fun UploadTrackModalContent(
                                     ) {
                                         Text(
                                             text = if (uiState.isCreatingArtist) {
-                                                "Adding artist..."
+                                                stringResource(R.string.upload_add_artist_loading)
                                             } else {
-                                                "Add artist \"$normalizedArtistQuery\""
+                                                stringResource(
+                                                    R.string.upload_add_artist,
+                                                    normalizedArtistQuery,
+                                                )
                                             },
                                             modifier = Modifier.fillMaxWidth(),
                                         )
@@ -300,7 +305,7 @@ private fun UploadTrackModalContent(
                     when {
                         uiState.artists.isEmpty() -> {
                             Text(
-                                text = "No local artists found. Enter a name and add the artist.",
+                                text = stringResource(R.string.upload_no_local_artists),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -308,7 +313,7 @@ private fun UploadTrackModalContent(
 
                         uiState.artistQuery.isBlank() -> {
                             Text(
-                                text = "Start typing to search artists from the local library.",
+                                text = stringResource(R.string.upload_search_artists_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -316,7 +321,10 @@ private fun UploadTrackModalContent(
 
                         selectedArtist != null -> {
                             Text(
-                                text = "Selected artist: ${selectedArtist.displayName}",
+                                text = stringResource(
+                                    R.string.upload_selected_artist,
+                                    selectedArtist.displayName,
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -324,7 +332,7 @@ private fun UploadTrackModalContent(
 
                         shouldShowCreateArtist && hasArtistSuggestions -> {
                             Text(
-                                text = "Select an artist from the suggestions or add a new one.",
+                                text = stringResource(R.string.upload_select_or_add_artist),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -332,7 +340,7 @@ private fun UploadTrackModalContent(
 
                         shouldShowCreateArtist -> {
                             Text(
-                                text = "Artist not found in the local library. You can add a new one.",
+                                text = stringResource(R.string.upload_artist_not_found),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -340,7 +348,7 @@ private fun UploadTrackModalContent(
 
                         else -> {
                             Text(
-                                text = "Select an artist from the suggestions.",
+                                text = stringResource(R.string.upload_select_artist_suggestion),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -358,7 +366,7 @@ private fun UploadTrackModalContent(
                             },
                         )
                         Text(
-                            text = "Single",
+                            text = stringResource(R.string.upload_single),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -370,15 +378,15 @@ private fun UploadTrackModalContent(
                                     onDismissError()
                                     onAlbumQueryChange(value)
                                 },
-                                label = { Text("Album") },
+                                label = { Text(stringResource(R.string.common_label_album)) },
                                 singleLine = true,
                                 enabled = selectedArtist != null,
                                 placeholder = {
                                     Text(
                                         if (selectedArtist == null) {
-                                            "Choose artist first"
+                                            stringResource(R.string.upload_choose_artist_first)
                                         } else {
-                                            "Select album"
+                                            stringResource(R.string.upload_select_album)
                                         }
                                     )
                                 },
@@ -425,9 +433,12 @@ private fun UploadTrackModalContent(
                                         ) {
                                             Text(
                                                 text = if (uiState.isCreatingAlbum) {
-                                                    "Adding album..."
+                                                    stringResource(R.string.upload_add_album_loading)
                                                 } else {
-                                                    "Add album \"$normalizedAlbumQuery\""
+                                                    stringResource(
+                                                        R.string.upload_add_album,
+                                                        normalizedAlbumQuery,
+                                                    )
                                                 },
                                                 modifier = Modifier.fillMaxWidth(),
                                             )
@@ -439,7 +450,7 @@ private fun UploadTrackModalContent(
                         when {
                             selectedArtist == null -> {
                                 Text(
-                                    text = "Select an artist to see available albums.",
+                                    text = stringResource(R.string.upload_select_artist_for_albums),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -453,7 +464,10 @@ private fun UploadTrackModalContent(
                                 ) {
                                     CircularProgressIndicator()
                                     Text(
-                                        text = "Loading albums for ${selectedArtist.displayName}...",
+                                        text = stringResource(
+                                            R.string.upload_loading_albums_for,
+                                            selectedArtist.displayName,
+                                        ),
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                 }
@@ -461,7 +475,10 @@ private fun UploadTrackModalContent(
 
                             selectedAlbum != null -> {
                                 Text(
-                                    text = "Selected album: ${selectedAlbum.displayName}",
+                                    text = stringResource(
+                                        R.string.upload_selected_album,
+                                        selectedAlbum.displayName,
+                                    ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -469,7 +486,7 @@ private fun UploadTrackModalContent(
 
                             artistAlbums.isEmpty() -> {
                                 Text(
-                                    text = "No albums found for this artist. Add a new album or mark the track as single.",
+                                    text = stringResource(R.string.upload_no_albums_for_artist),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -477,7 +494,7 @@ private fun UploadTrackModalContent(
 
                             shouldShowCreateAlbum && albumSuggestions.isNotEmpty() -> {
                                 Text(
-                                    text = "Select an album from the suggestions or add a new one.",
+                                    text = stringResource(R.string.upload_select_or_add_album),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -485,7 +502,7 @@ private fun UploadTrackModalContent(
 
                             shouldShowCreateAlbum -> {
                                 Text(
-                                    text = "Album not found for this artist. You can add a new one.",
+                                    text = stringResource(R.string.upload_album_not_found),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -507,12 +524,20 @@ private fun UploadTrackModalContent(
                 onClick = onConfirm,
                 enabled = isValid && !isBusy,
             ) {
-                Text(if (uiState.isSubmitting) "Uploading..." else "Upload")
+                Text(
+                    stringResource(
+                        if (uiState.isSubmitting) {
+                            R.string.upload_uploading
+                        } else {
+                            R.string.common_action_upload
+                        },
+                    ),
+                )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !uiState.isSubmitting) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_action_cancel))
             }
         },
     )

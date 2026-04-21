@@ -31,12 +31,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import sstu.grivvus.ym.R
 
 @Composable
 fun CenteredFormScreen(
@@ -97,7 +99,11 @@ fun PasswordOutlinedField(
                     } else {
                         Icons.Filled.Visibility
                     },
-                    contentDescription = if (isVisible) "Hide password" else "Show password",
+                    contentDescription = if (isVisible) {
+                        stringResource(R.string.common_cd_hide_password)
+                    } else {
+                        stringResource(R.string.common_cd_show_password)
+                    },
                 )
             }
         },

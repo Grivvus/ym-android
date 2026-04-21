@@ -16,10 +16,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.CenteredFormScreen
 import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.components.FormActionRow
@@ -49,7 +51,7 @@ fun RegistrationScreen(
             },
         ) {
             Text(
-                text = "Create Account",
+                text = stringResource(R.string.register_title_create_account),
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onBackground,
             )
@@ -57,11 +59,11 @@ fun RegistrationScreen(
             OutlinedTextField(
                 value = uiState.username,
                 onValueChange = { viewModel.updateUsername(it) },
-                label = { Text("Username") },
+                label = { Text(stringResource(R.string.common_label_username)) },
                 leadingIcon = {
                     Icon(
                         imageVector = appIconsMirrored.Login,
-                        contentDescription = "Username icon",
+                        contentDescription = stringResource(R.string.register_cd_username_icon),
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -71,35 +73,35 @@ fun RegistrationScreen(
             PasswordOutlinedField(
                 value = uiState.password,
                 onValueChange = { viewModel.updatePassword(it) },
-                label = "Password",
+                label = stringResource(R.string.common_label_password),
                 leadingIcon = appIcons.Password,
-                leadingIconContentDescription = "Password icon",
+                leadingIconContentDescription = stringResource(R.string.register_cd_password_icon),
                 modifier = Modifier.fillMaxWidth(),
                 imeAction = ImeAction.Next,
             )
             PasswordOutlinedField(
                 value = uiState.passwordCheck,
                 onValueChange = { viewModel.updatePasswordCheck(it) },
-                label = "Confirm Password",
+                label = stringResource(R.string.common_label_confirm_password),
                 leadingIcon = appIcons.LockReset,
-                leadingIconContentDescription = "Confirm password icon",
+                leadingIconContentDescription = stringResource(R.string.register_cd_confirm_password_icon),
                 modifier = Modifier.fillMaxWidth(),
                 imeAction = ImeAction.Done,
             )
 
             TextButton(
-                onClick = onSignInClick,
-                modifier = Modifier.align(Alignment.End),
-            ) {
-                Text("Sign In")
-            }
+            onClick = onSignInClick,
+            modifier = Modifier.align(Alignment.End),
+        ) {
+            Text(stringResource(R.string.common_action_sign_in))
+        }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             FormActionRow(
-                secondaryButtonLabel = "Clear",
+                secondaryButtonLabel = stringResource(R.string.common_action_clear),
                 onSecondaryButtonClick = { viewModel.clearForm() },
-                primaryButtonLabel = "Register",
+                primaryButtonLabel = stringResource(R.string.common_action_register),
                 onPrimaryButtonClick = { viewModel.proceedRegistration(onSuccess) },
                 primaryButtonEnabled = uiState.username.isNotBlank() &&
                         uiState.password.isNotBlank() &&

@@ -37,10 +37,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomNavScaffold
 import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.ui.theme.appIcons
@@ -84,11 +87,14 @@ fun MusicScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Playlists")
+                    Text(stringResource(R.string.music_title_playlists))
                 },
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(appIcons.Sync, contentDescription = "fetch data from server")
+                        Icon(
+                            appIcons.Sync,
+                            contentDescription = stringResource(R.string.common_cd_fetch_data_from_server),
+                        )
                     }
                 },
             )
@@ -154,16 +160,16 @@ private fun PlaylistOverview(
         item {
             Column(modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)) {
                 Text(
-                    text = "Your playlists",
+                    text = stringResource(R.string.music_heading_your_playlists),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = if (isBusy) {
-                        "Updating library..."
+                        stringResource(R.string.music_status_updating_library)
                     } else {
-                        "Open a playlist to manage tracks and cover art."
+                        stringResource(R.string.music_description_manage_playlists)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -174,8 +180,8 @@ private fun PlaylistOverview(
         if (playlists.isEmpty()) {
             item {
                 EmptyStateCard(
-                    title = "No playlists yet",
-                    description = "Create the first playlist from the floating action button.",
+                    title = stringResource(R.string.music_empty_title),
+                    description = stringResource(R.string.music_empty_description),
                 )
             }
         } else {
@@ -207,13 +213,17 @@ private fun PlaylistOverview(
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "${playlist.trackCount} tracks",
+                                text = pluralStringResource(
+                                    R.plurals.track_count,
+                                    playlist.trackCount,
+                                    playlist.trackCount,
+                                ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                         Text(
-                            text = "Open",
+                            text = stringResource(R.string.common_action_open),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -239,13 +249,13 @@ private fun CreatePlaylistDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create playlist") },
+        title = { Text(stringResource(R.string.music_create_playlist_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = draft.name,
                     onValueChange = onNameChange,
-                    label = { Text("Playlist name") },
+                    label = { Text(stringResource(R.string.common_label_playlist_name)) },
                     singleLine = true,
                 )
                 Row(
@@ -257,7 +267,7 @@ private fun CreatePlaylistDialog(
                         onCheckedChange = onVisibilityChange,
                     )
                     Text(
-                        text = "Public playlist",
+                        text = stringResource(R.string.music_public_playlist),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -268,7 +278,7 @@ private fun CreatePlaylistDialog(
                         .height(240.dp),
                 )
                 TextButton(onClick = onSelectCover) {
-                    Text("Select cover")
+                    Text(stringResource(R.string.common_action_select_cover))
                 }
             }
         },
@@ -277,12 +287,12 @@ private fun CreatePlaylistDialog(
                 onClick = onConfirm,
                 enabled = draft.name.isNotBlank() && !isBusy,
             ) {
-                Text("Create")
+                Text(stringResource(R.string.common_action_create))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_action_cancel))
             }
         },
     )
@@ -297,10 +307,13 @@ fun UploadScreen(onBack: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Upload route is no longer used", style = MaterialTheme.typography.titleSmall)
+        Text(
+            stringResource(R.string.music_upload_route_unused),
+            style = MaterialTheme.typography.titleSmall,
+        )
         Spacer(modifier = Modifier.height(24.dp))
         androidx.compose.material3.Button(onClick = onBack) {
-            Text("Back")
+            Text(stringResource(R.string.common_action_back))
         }
     }
 }

@@ -19,8 +19,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.ui.theme.appIconsMirrored
 
 @Composable
@@ -52,7 +54,7 @@ fun BottomBar(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(appIconsMirrored.QueueMusic, "music")
+            Icon(appIconsMirrored.QueueMusic, stringResource(R.string.nav_music))
 
         }
         Column(
@@ -64,7 +66,7 @@ fun BottomBar(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(appIconsMirrored.InsertDriveFile, "Library")
+            Icon(appIconsMirrored.InsertDriveFile, stringResource(R.string.nav_library))
         }
         Column(
             modifier
@@ -75,7 +77,7 @@ fun BottomBar(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(appIconsMirrored.AddToHomeScreen, "profile")
+            Icon(appIconsMirrored.AddToHomeScreen, stringResource(R.string.nav_profile))
         }
     }
 }

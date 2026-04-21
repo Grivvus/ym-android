@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -56,7 +57,7 @@ import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomBar
 import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.data.network.model.TrackQuality
-import sstu.grivvus.ym.data.network.model.toDisplayName
+import sstu.grivvus.ym.data.network.model.toDisplayNameRes
 import sstu.grivvus.ym.passwordChange.PasswordChangeDialog
 import sstu.grivvus.ym.ui.theme.appIcons
 import sstu.grivvus.ym.ui.theme.appIconsMirrored
@@ -120,7 +121,7 @@ fun ProfileScreen(
                     } else {
                         AsyncImage(
                             model = uiState.avatarUri,
-                            contentDescription = "User Avatar",
+                            contentDescription = stringResource(R.string.profile_cd_user_avatar),
                             modifier = Modifier
                                 .size(120.dp)
                                 .clip(CircleShape)
@@ -138,7 +139,7 @@ fun ProfileScreen(
                     ) {
                         Icon(
                             imageVector = appIcons.AddAPhoto,
-                            contentDescription = "Upload avatar"
+                            contentDescription = stringResource(R.string.profile_cd_upload_avatar)
                         )
                     }
                 }
@@ -146,14 +147,14 @@ fun ProfileScreen(
                 Spacer(Modifier.height(32.dp))
 
                 UserInfoItem(
-                    label = "Username",
+                    label = stringResource(R.string.common_label_username),
                     value = uiState.username,
                 ) { viewModel.changeUsername(it) }
 
                 Spacer(Modifier.height(16.dp))
 
                 UserInfoItem(
-                    label = "Email",
+                    label = stringResource(R.string.common_label_email),
                     value = uiState.email ?: "",
                     { viewModel.changeEmail(it) },
                 )
@@ -161,14 +162,14 @@ fun ProfileScreen(
                 Spacer(Modifier.height(32.dp))
 
                 UserInfoItem(
-                    label = "Server host",
+                    label = stringResource(R.string.common_label_server_host),
                     value = uiState.serverHost,
                 ) { viewModel.changeServerHost(it) }
 
                 Spacer(Modifier.height(32.dp))
 
                 UserInfoItem(
-                    label = "Server port",
+                    label = stringResource(R.string.common_label_server_port),
                     value = uiState.serverPort,
                     { viewModel.changeServerPort(it) }
                 )
@@ -195,19 +196,22 @@ fun ProfileScreen(
                             color = Color.White
                         )
                     } else {
-                        Text("Change Password")
+                        Text(stringResource(R.string.common_action_change_password))
                     }
                 }
                 Spacer(Modifier.height(32.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                     Column {
                         Button(onClick = { viewModel.tryToApplyChanges() }) {
-                            Text("Save changes")
+                            Text(stringResource(R.string.common_action_save_changes))
                         }
                     }
                     Column {
                         IconButton(onClick = viewModel::logOut) {
-                            Icon(appIconsMirrored.Logout, "Logout button")
+                            Icon(
+                                appIconsMirrored.Logout,
+                                stringResource(R.string.profile_cd_logout_button),
+                            )
                         }
                     }
                 }
@@ -232,7 +236,7 @@ private fun TrackQualitySettings(
             .selectableGroup(),
     ) {
         Text(
-            text = "Playback quality",
+            text = stringResource(R.string.profile_title_playback_quality),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -250,13 +254,13 @@ private fun TrackQualitySettings(
                     onClick = { onQualitySelected(quality) },
                 )
                 Text(
-                    text = quality.toDisplayName(),
+                    text = stringResource(quality.toDisplayNameRes()),
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }
         }
         Text(
-            text = "The new quality will be used from the next track start.",
+            text = stringResource(R.string.profile_playback_quality_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp),

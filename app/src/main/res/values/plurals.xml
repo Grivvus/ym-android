@@ -1,0 +1,26 @@
+<resources>
+    <plurals name="track_count">
+        <item quantity="one">%d track</item>
+        <item quantity="other">%d tracks</item>
+    </plurals>
+
+    <plurals name="album_count">
+        <item quantity="one">%d album</item>
+        <item quantity="other">%d albums</item>
+    </plurals>
+
+    <plurals name="selected_count">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+
+    <plurals name="library_delete_title">
+        <item quantity="one">Delete track</item>
+        <item quantity="other">Delete tracks</item>
+    </plurals>
+
+    <plurals name="library_delete_message">
+        <item quantity="one">The selected track will be removed from the server and local storage.</item>
+        <item quantity="other">The selected %d tracks will be removed from the server and local storage.</item>
+    </plurals>
+</resources>
