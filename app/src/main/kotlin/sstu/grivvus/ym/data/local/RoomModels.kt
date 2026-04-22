@@ -7,6 +7,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
+import java.time.LocalDate
 
 @Entity(tableName = "server_info", primaryKeys = ["host", "port"])
 data class ServerInfo(
@@ -74,7 +75,10 @@ data class Artist(
     ],
     indices = [Index("artist_id")],
 )
-@TypeConverters(UriConverter::class)
+@TypeConverters(
+    UriConverter::class,
+    DateConverter::class,
+)
 data class Album(
     @PrimaryKey
     @ColumnInfo(name = "remote_id")
@@ -82,6 +86,8 @@ data class Album(
     @ColumnInfo(name = "artist_id") val artistId: Long,
     @ColumnInfo() val name: String = "",
     @ColumnInfo(name = "cover_uri") val coverUri: Uri? = null,
+    @ColumnInfo(name = "release_year") val releaseYear: Int? = null,
+    @ColumnInfo(name = "release_full_date") val releaseDate: LocalDate? = null,
 )
 
 @Entity(tableName = "playlist")

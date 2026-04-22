@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "8d46108074e5771b84498db0a771277d",
+    "identityHash": "f7a888fa497b1ed08cc7a1b4d2d775e7",
     "entities": [
       {
         "tableName": "user",
@@ -201,7 +201,7 @@
       },
       {
         "tableName": "album",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`remote_id` INTEGER NOT NULL, `artist_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `cover_uri` TEXT, PRIMARY KEY(`remote_id`), FOREIGN KEY(`artist_id`) REFERENCES `artist`(`remote_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`remote_id` INTEGER NOT NULL, `artist_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `cover_uri` TEXT, `release_year` INTEGER, `release_full_date` TEXT, PRIMARY KEY(`remote_id`), FOREIGN KEY(`artist_id`) REFERENCES `artist`(`remote_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
           {
             "fieldPath": "remoteId",
@@ -224,6 +224,16 @@
           {
             "fieldPath": "coverUri",
             "columnName": "cover_uri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "releaseYear",
+            "columnName": "release_year",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "releaseDate",
+            "columnName": "release_full_date",
             "affinity": "TEXT"
           }
         ],
@@ -428,7 +438,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8d46108074e5771b84498db0a771277d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f7a888fa497b1ed08cc7a1b4d2d775e7')"
     ]
   }
 }
