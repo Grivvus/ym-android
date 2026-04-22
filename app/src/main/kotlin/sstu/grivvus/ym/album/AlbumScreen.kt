@@ -39,6 +39,7 @@ import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.playback.PlaybackViewModel
+import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,7 +61,7 @@ fun AlbumScreen(
         navigateToProfile = navigateToProfile,
         topBar = {
             TopAppBar(
-                title = { Text(album?.name ?: stringResource(R.string.album_default_title)) },
+                title = { Text(album?.name?.resolve() ?: stringResource(R.string.album_default_title)) },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
                         Text(stringResource(R.string.common_action_back))
@@ -147,13 +148,13 @@ private fun AlbumDetails(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = album.name,
+                        text = album.name.resolve(),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = album.artistName,
+                        text = album.artistName.resolve(),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -223,7 +224,7 @@ private fun AlbumDetails(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = track.subtitle,
+                            text = track.subtitle.resolve(),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

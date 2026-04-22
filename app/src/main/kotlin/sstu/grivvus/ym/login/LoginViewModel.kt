@@ -8,9 +8,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.WhileUiSubscribed
 import sstu.grivvus.ym.data.UserRepository
 import sstu.grivvus.ym.data.network.core.ApiException
+import sstu.grivvus.ym.ui.UiText
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -18,7 +20,7 @@ data class LoginUiState(
     val username: String = "",
     val password: String = "",
     val showError: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 )
 
 @HiltViewModel
@@ -30,7 +32,7 @@ constructor(
     private val _username: MutableStateFlow<String> = MutableStateFlow("")
     private val _password: MutableStateFlow<String> = MutableStateFlow("")
     private val _showError: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    private val _errorMessage: MutableStateFlow<String?> = MutableStateFlow(null)
+    private val _errorMessage: MutableStateFlow<UiText?> = MutableStateFlow(null)
 
     val uiState: StateFlow<LoginUiState> =
         combine(
@@ -51,10 +53,12 @@ constructor(
                 _password.value.length < 6
             ) {
                 _showError.value = true
-                if (_username.value == "") {
-                    _errorMessage.value = "username shouldn't be empty"
+                if (_username.value.isBlank()) {
+                    _errorMessage.value =
+                        UiText.StringResource(R.string.common_validation_username_required)
                 } else if (_password.value.length < 6) {
-                    _errorMessage.value = "password's length couldn't be less than 6 symbols"
+                    _errorMessage.value =
+                        UiText.StringResource(R.string.common_validation_password_min_length)
                 }
             } else {
                 try {
@@ -62,15 +66,17 @@ constructor(
                     onSuccess()
                 } catch (e: ApiException) {
                     _showError.value = true
-                    if (e.statusCode != null && e.statusCode!! >= 400 && e.statusCode!! < 500) {
-                        _errorMessage.value = "Wrong login or password"
+                    if (e.statusCode in 400..499) {
+                        _errorMessage.value =
+                            UiText.StringResource(R.string.login_error_wrong_credentials)
                     } else {
-                        _errorMessage.value = "Can't proceed login due to server error"
+                        _errorMessage.value = UiText.StringResource(R.string.login_error_server)
                     }
                 } catch (e: Exception) {
                     Timber.tag("NetworkError").e(e)
                     _showError.value = true
-                    _errorMessage.value = "Can't proceed login due to unknown server error"
+                    _errorMessage.value =
+                        UiText.StringResource(R.string.login_error_unknown_server)
                 }
             }
         }
@@ -92,5 +98,6 @@ constructor(
         _username.value = ""
         _password.value = ""
         _showError.value = false
+        _errorMessage.value = null
     }
 }

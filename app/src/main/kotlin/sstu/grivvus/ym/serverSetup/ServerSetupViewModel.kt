@@ -9,10 +9,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.WhileUiSubscribed
 import sstu.grivvus.ym.data.ServerInfoRepository
 import sstu.grivvus.ym.data.network.remote.server.ServerProbeRemoteDataSource
 import sstu.grivvus.ym.logHandledException
+import sstu.grivvus.ym.ui.UiText
 import java.io.IOException
 import javax.inject.Inject
 
@@ -21,7 +23,7 @@ data class ServerSetupUiState(
     val port: String = "8000",
     val isLoading: Boolean = false,
     val showError: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 )
 
 @HiltViewModel
@@ -35,7 +37,7 @@ constructor(
     private val _port: MutableStateFlow<String> = MutableStateFlow("8000")
     private val _isLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
     private val _showError: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    private val _errorMessage: MutableStateFlow<String?> = MutableStateFlow(null)
+    private val _errorMessage: MutableStateFlow<UiText?> = MutableStateFlow(null)
 
     val uiState: StateFlow<ServerSetupUiState> = combine(
         _host, _port, _isLoading, _showError, _errorMessage
@@ -50,17 +52,19 @@ constructor(
             val portInt = portValue.toIntOrNull()
 
             if (rawHost.isBlank()) {
-                showError("Host value must not be empty")
+                showError(UiText.StringResource(R.string.server_setup_error_host_required))
                 return@launch
             }
             if (portInt == null || portInt !in 1..65535) {
-                showError("Port value must be in range 1..65535")
+                showError(UiText.StringResource(R.string.server_setup_error_port_out_of_range))
                 return@launch
             }
 
             val host = normalizeHost(rawHost) ?: return@launch
             if ("http://$host:$portInt/ping".toHttpUrlOrNull() == null) {
-                showError("Host or port format is invalid")
+                showError(
+                    UiText.StringResource(R.string.server_setup_error_invalid_host_or_port_format),
+                )
                 return@launch
             }
 
@@ -71,10 +75,10 @@ constructor(
                 onSuccess()
             } catch (e: IOException) {
                 e.logHandledException("ServerSetupViewModel.proceed")
-                showError("Unable to connect to server. Check host, port and /ping endpoint")
+                showError(UiText.StringResource(R.string.server_setup_error_connection_failed))
             } catch (e: Exception) {
                 e.logHandledException("ServerSetupViewModel.proceed")
-                showError("Can't proceed setup due to server error")
+                showError(UiText.StringResource(R.string.server_setup_error_server))
             } finally {
                 _isLoading.value = false
             }
@@ -100,14 +104,14 @@ constructor(
         _port.value = value.filter { it.isDigit() }
     }
 
-    private fun showError(message: String) {
+    private fun showError(message: UiText) {
         _showError.value = true
         _errorMessage.value = message
     }
 
     private fun normalizeHost(value: String): String? {
         if (value.contains(' ')) {
-            showError("Host should not contain spaces")
+            showError(UiText.StringResource(R.string.server_setup_error_host_spaces))
             return null
         }
 
@@ -117,11 +121,13 @@ constructor(
 
         val parsed = value.toHttpUrlOrNull()
         if (parsed == null) {
-            showError("Invalid URL format")
+            showError(UiText.StringResource(R.string.server_setup_error_invalid_url))
             return null
         }
         if (parsed.encodedPath != "/" || parsed.query != null || parsed.fragment != null) {
-            showError("Use only host URL without path or query")
+            showError(
+                UiText.StringResource(R.string.server_setup_error_url_without_path_or_query),
+            )
             return null
         }
 

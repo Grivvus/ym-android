@@ -36,6 +36,7 @@ import sstu.grivvus.ym.components.BottomNavScaffold
 import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
+import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,7 +58,9 @@ fun ArtistScreen(
         navigateToProfile = navigateToProfile,
         topBar = {
             TopAppBar(
-                title = { Text(artist?.name ?: stringResource(R.string.artist_default_title)) },
+                title = {
+                    Text(artist?.name?.resolve() ?: stringResource(R.string.artist_default_title))
+                },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
                         Text(stringResource(R.string.common_action_back))
@@ -128,7 +131,7 @@ private fun ArtistDetails(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = artist.name,
+                        text = artist.name.resolve(),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                     )
@@ -192,7 +195,7 @@ private fun ArtistDetails(
                                 .padding(start = 16.dp),
                         ) {
                             Text(
-                                text = album.name,
+                                text = album.name.resolve(),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )

@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -57,6 +56,7 @@ import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
 import sstu.grivvus.ym.music.queryDisplayName
 import sstu.grivvus.ym.playback.PlaybackViewModel
+import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
 
 private data class RenamePlaylistDraft(
@@ -127,7 +127,7 @@ fun PlaylistScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(playlist?.name ?: stringResource(R.string.playlist_default_title))
+                    Text("")
                 },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
@@ -405,7 +405,7 @@ private fun TrackRow(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = track.subtitle,
+                    text = track.subtitle.resolve(),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -487,7 +487,7 @@ private fun AddTracksDialog(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = track.subtitle,
+                                    text = track.subtitle.resolve(),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

@@ -64,6 +64,8 @@ import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
 import sstu.grivvus.ym.music.queryDisplayName
+import sstu.grivvus.ym.ui.UiText
+import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
 
 private data class UploadTrackModalRequest(
@@ -419,7 +421,7 @@ private fun LibraryTrackRow(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = track.subtitle,
+                    text = track.subtitle.resolve(),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -651,7 +653,7 @@ private fun RestoreStatusBanner(status: RestoreStatusUi) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = status.title,
+                text = status.title.resolve(),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -673,9 +675,9 @@ private fun RestoreStatusBanner(status: RestoreStatusUi) {
                     )
                 }
             }
-            status.errorMessage?.takeIf { it.isNotBlank() }?.let { errorMessage ->
+            status.errorMessage?.let { errorMessage ->
                 Text(
-                    text = errorMessage,
+                    text = errorMessage.resolve(),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -686,7 +688,7 @@ private fun RestoreStatusBanner(status: RestoreStatusUi) {
 
 @Composable
 private fun InfoCard(
-    message: String,
+    message: UiText,
     onDismiss: () -> Unit,
 ) {
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
@@ -695,7 +697,7 @@ private fun InfoCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = message,
+                text = message.resolve(),
                 style = MaterialTheme.typography.bodyMedium,
             )
             TextButton(

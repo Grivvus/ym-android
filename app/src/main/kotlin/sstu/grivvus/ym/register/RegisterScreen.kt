@@ -26,6 +26,7 @@ import sstu.grivvus.ym.components.CenteredFormScreen
 import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.components.FormActionRow
 import sstu.grivvus.ym.components.PasswordOutlinedField
+import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.YMTheme
 import sstu.grivvus.ym.ui.theme.appIcons
 import sstu.grivvus.ym.ui.theme.appIconsMirrored
@@ -44,7 +45,7 @@ fun RegistrationScreen(
             modifier = modifier,
             overlay = {
                 ErrorTooltip(
-                    uiState.errorMessage ?: "",
+                    uiState.errorMessage?.resolve().orEmpty(),
                     uiState.showError,
                     onTimeout = { viewModel.dismissErrorMessage() },
                 )

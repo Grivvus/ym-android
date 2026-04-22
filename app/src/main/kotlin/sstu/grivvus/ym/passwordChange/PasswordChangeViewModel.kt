@@ -8,8 +8,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.WhileUiSubscribed
 import sstu.grivvus.ym.data.UserRepository
+import sstu.grivvus.ym.ui.UiText
+import sstu.grivvus.ym.ui.asUiTextOrNull
 import java.io.IOException
 import javax.inject.Inject
 
@@ -19,7 +22,7 @@ data class PasswordChangeUiState(
     val newPassword: String = "",
     val newPasswordConfirm: String = "",
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
     val success: Boolean = false
 )
 
@@ -31,7 +34,7 @@ class PasswordChangeViewModel @Inject constructor(
     private val _newPassword: MutableStateFlow<String> = MutableStateFlow("")
     private val _newPasswordConfirm: MutableStateFlow<String> = MutableStateFlow("")
     private val _isLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    private val _errorMessage: MutableStateFlow<String?> = MutableStateFlow(null)
+    private val _errorMessage: MutableStateFlow<UiText?> = MutableStateFlow(null)
     private val _success: MutableStateFlow<Boolean> = MutableStateFlow(false)
 
     val uiState: StateFlow<PasswordChangeUiState> = combine(
@@ -65,17 +68,20 @@ class PasswordChangeViewModel @Inject constructor(
         _success.value = false
 
         if (_currentPassword.value.isBlank()) {
-            _errorMessage.value = "current password shouldn't be empty"
+            _errorMessage.value =
+                UiText.StringResource(R.string.password_change_error_current_password_required)
             return@launch
         }
 
         if (_newPassword.value.length < 6) {
-            _errorMessage.value = "password's length should be 6 symbols or more"
+            _errorMessage.value =
+                UiText.StringResource(R.string.common_validation_password_min_length)
             return@launch
         }
 
         if (_newPassword.value != _newPasswordConfirm.value) {
-            _errorMessage.value = "new password and confirm didn't match"
+            _errorMessage.value =
+                UiText.StringResource(R.string.password_change_error_new_password_confirm_mismatch)
             return@launch
         }
 
@@ -87,9 +93,11 @@ class PasswordChangeViewModel @Inject constructor(
             )
             _success.value = true
         } catch (e: IOException) {
-            _errorMessage.value = e.message ?: "Failed to change password"
+            _errorMessage.value = e.message.asUiTextOrNull()
+                ?: UiText.StringResource(R.string.password_change_error_failed)
         } catch (_: Exception) {
-            _errorMessage.value = "Can't change password due to unexpected error"
+            _errorMessage.value =
+                UiText.StringResource(R.string.password_change_error_unexpected)
         } finally {
             _isLoading.value = false
         }

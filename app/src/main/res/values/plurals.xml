@@ -23,4 +23,9 @@
         <item quantity="one">The selected track will be removed from the server and local storage.</item>
         <item quantity="other">The selected %d tracks will be removed from the server and local storage.</item>
     </plurals>
+
+    <plurals name="library_deleted_tracks_info">
+        <item quantity="one">Track deleted</item>
+        <item quantity="other">%d tracks deleted</item>
+    </plurals>
 </resources>

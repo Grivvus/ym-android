@@ -12,25 +12,29 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.RouteArguments
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.PlaylistBundle
 import sstu.grivvus.ym.data.PlaylistCreationConflict
 import sstu.grivvus.ym.data.TrackBundle
-import sstu.grivvus.ym.data.local.Album
 import sstu.grivvus.ym.data.local.Artist
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
+import sstu.grivvus.ym.library.albumDisplayName
+import sstu.grivvus.ym.library.artistDisplayName
 import sstu.grivvus.ym.logHandledException
 import sstu.grivvus.ym.playback.model.PlaybackQueue
 import sstu.grivvus.ym.playback.queue.PlaybackQueueFactory
+import sstu.grivvus.ym.ui.UiText
+import sstu.grivvus.ym.ui.asUiTextOrNull
 import java.io.IOException
 import javax.inject.Inject
 
 data class TrackItemUi(
     val id: Long,
     val name: String,
-    val subtitle: String,
+    val subtitle: UiText,
     val coverUri: Uri? = null,
 )
 
@@ -47,7 +51,7 @@ data class PlaylistUiState(
     val isMutating: Boolean = false,
     val playlist: PlaylistDetailUi? = null,
     val libraryTracks: List<TrackItemUi> = emptyList(),
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 )
 
 sealed interface PlaylistScreenEvent {
@@ -199,7 +203,7 @@ class PlaylistViewModel @Inject constructor(
                 toTrackUi(track, artistsById)
             },
             errorMessage = if (playlistBundle == null) {
-                "Playlist was not found"
+                UiText.StringResource(R.string.playlist_error_not_found)
             } else {
                 null
             },
@@ -216,27 +220,18 @@ class PlaylistViewModel @Inject constructor(
         return TrackItemUi(
             id = track.track.remoteId,
             name = track.track.name,
-            subtitle = listOfNotNull(
-                artistName?.takeIf { it.isNotBlank() },
-                albumName?.takeIf { it.isNotBlank() },
-            ).joinToString(" • ").ifBlank { "Single" },
+            subtitle = listOfNotNull(artistName, albumName)
+                .takeIf { parts -> parts.isNotEmpty() }
+                ?.let(UiText::Joined)
+                ?: UiText.StringResource(R.string.common_placeholder_single),
             coverUri = primaryAlbum?.coverUri,
         )
     }
 
-    private fun artistDisplayName(artist: Artist): String {
-        return artist.name.ifBlank { "Artist #${artist.remoteId}" }
-    }
-
-    private fun albumDisplayName(album: Album): String {
-        return album.name.ifBlank { "Album #${album.remoteId}" }
-    }
-
-    private fun Throwable.toReadableMessage(): String {
-        val messageText = message?.takeIf { it.isNotBlank() }
-        return messageText ?: when (this) {
-            is IOException -> "Network request failed"
-            else -> "Unexpected error"
+    private fun Throwable.toReadableMessage(): UiText {
+        return message.asUiTextOrNull() ?: when (this) {
+            is IOException -> UiText.StringResource(R.string.common_error_network_request_failed)
+            else -> UiText.StringResource(R.string.common_error_unexpected)
         }
     }
 }

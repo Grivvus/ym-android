@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.PlaylistCreationConflict
 import sstu.grivvus.ym.data.UploadTrackCatalog
@@ -18,6 +19,9 @@ import sstu.grivvus.ym.data.local.Album
 import sstu.grivvus.ym.data.local.Artist
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.logHandledException
+import sstu.grivvus.ym.ui.UiText
+import sstu.grivvus.ym.ui.asUiText
+import sstu.grivvus.ym.ui.asUiTextOrNull
 import java.io.IOException
 
 data class UploadTrackModalArgs(
@@ -54,7 +58,7 @@ data class UploadTrackModalUiState(
     val isCreatingArtist: Boolean = false,
     val isCreatingAlbum: Boolean = false,
     val isSubmitting: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 )
 
 sealed interface UploadTrackModalEvent {
@@ -117,7 +121,9 @@ class UploadTrackModalViewModel(
         val currentState = _uiState.value
         val artistName = currentState.artistQuery.trim()
         if (artistName.isBlank()) {
-            _uiState.value = currentState.copy(errorMessage = "Artist name is required")
+            _uiState.value = currentState.copy(
+                errorMessage = UiText.StringResource(R.string.common_validation_artist_name_required),
+            )
             return
         }
 
@@ -202,11 +208,15 @@ class UploadTrackModalViewModel(
         val artistId = currentState.selectedArtistId
         val albumName = currentState.albumQuery.trim()
         if (artistId == null) {
-            _uiState.value = currentState.copy(errorMessage = "Select an artist first")
+            _uiState.value = currentState.copy(
+                errorMessage = UiText.StringResource(R.string.upload_error_select_artist_first),
+            )
             return
         }
         if (albumName.isBlank()) {
-            _uiState.value = currentState.copy(errorMessage = "Album name is required")
+            _uiState.value = currentState.copy(
+                errorMessage = UiText.StringResource(R.string.common_validation_album_name_required),
+            )
             return
         }
 
@@ -279,7 +289,11 @@ class UploadTrackModalViewModel(
         val artistId = currentState.selectedArtistId
         val albumId = if (currentState.isSingle) null else currentState.selectedAlbumId
         if (title.isBlank() || artistId == null || (!currentState.isSingle && albumId == null)) {
-            _uiState.value = currentState.copy(errorMessage = "Complete all required fields")
+            _uiState.value = currentState.copy(
+                errorMessage = UiText.StringResource(
+                    R.string.common_validation_complete_required_fields,
+                ),
+            )
             return
         }
 
@@ -410,12 +424,11 @@ class UploadTrackModalViewModel(
             )
     }
 
-    private fun Throwable.toReadableMessage(): String {
-        val messageText = message?.takeIf { it.isNotBlank() }
-        return messageText ?: when (this) {
-            is IOException -> "Network request failed"
-            is PlaylistCreationConflict -> this.msg
-            else -> "Unexpected error"
+    private fun Throwable.toReadableMessage(): UiText {
+        return message.asUiTextOrNull() ?: when (this) {
+            is IOException -> UiText.StringResource(R.string.common_error_network_request_failed)
+            is PlaylistCreationConflict -> this.msg.asUiText()
+            else -> UiText.StringResource(R.string.common_error_unexpected)
         }
     }
 

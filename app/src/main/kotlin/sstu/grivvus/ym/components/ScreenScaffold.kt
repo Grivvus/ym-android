@@ -9,6 +9,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import sstu.grivvus.ym.ui.UiText
+import sstu.grivvus.ym.ui.resolve
 
 @Composable
 fun BottomNavScaffold(
@@ -38,7 +40,7 @@ fun BottomNavScaffold(
 @Composable
 fun ScreenStateHost(
     isLoading: Boolean,
-    errorMessage: String?,
+    errorMessage: UiText?,
     onDismissError: () -> Unit,
     modifier: Modifier = Modifier,
     loadingContent: @Composable BoxScope.() -> Unit = {
@@ -56,7 +58,7 @@ fun ScreenStateHost(
         }
 
         ErrorSnackbar(
-            errorMessage = errorMessage,
+            errorMessage = errorMessage?.resolve(),
             onDismiss = onDismissError,
             modifier = Modifier.align(Alignment.BottomCenter),
         )

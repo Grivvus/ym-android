@@ -1,13 +1,16 @@
 package sstu.grivvus.ym.library
 
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.data.TrackBundle
 import sstu.grivvus.ym.data.local.Album
 import sstu.grivvus.ym.data.local.Artist
+import sstu.grivvus.ym.ui.UiText
+import sstu.grivvus.ym.ui.asUiText
 
 data class LibraryTrackItemUi(
     val id: Long,
     val name: String,
-    val subtitle: String,
+    val subtitle: UiText,
     val artistId: Long,
     val albumId: Long?,
 )
@@ -21,19 +24,19 @@ internal fun TrackBundle.toLibraryTrackItemUi(
     return LibraryTrackItemUi(
         id = track.remoteId,
         name = track.name,
-        subtitle = listOfNotNull(
-            artistName?.takeIf { it.isNotBlank() },
-            albumName?.takeIf { it.isNotBlank() },
-        ).joinToString(" • ").ifBlank { "Single" },
+        subtitle = listOfNotNull(artistName, albumName)
+            .takeIf { parts -> parts.isNotEmpty() }
+            ?.let(UiText::Joined)
+            ?: UiText.StringResource(R.string.common_placeholder_single),
         artistId = track.artistId,
         albumId = primaryAlbum?.remoteId,
     )
 }
 
-internal fun artistDisplayName(artist: Artist): String {
-    return artist.name.ifBlank { "Artist #${artist.remoteId}" }
-}
+internal fun artistDisplayName(artist: Artist): UiText =
+    artist.name.takeIf { it.isNotBlank() }?.asUiText()
+        ?: UiText.StringResource(R.string.common_placeholder_artist_id, listOf(artist.remoteId))
 
-internal fun albumDisplayName(album: Album): String {
-    return album.name.ifBlank { "Album #${album.remoteId}" }
-}
+internal fun albumDisplayName(album: Album): UiText =
+    album.name.takeIf { it.isNotBlank() }?.asUiText()
+        ?: UiText.StringResource(R.string.common_placeholder_album_id, listOf(album.remoteId))

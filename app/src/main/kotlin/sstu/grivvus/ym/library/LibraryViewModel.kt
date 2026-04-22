@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.data.BackupCreationOptions
 import sstu.grivvus.ym.data.BackupRestoreRepository
 import sstu.grivvus.ym.data.DownloadedBackupArchive
@@ -29,13 +30,15 @@ import sstu.grivvus.ym.data.network.core.ApiException
 import sstu.grivvus.ym.data.network.core.ClientApiException
 import sstu.grivvus.ym.data.network.core.UnauthorizedApiException
 import sstu.grivvus.ym.logHandledException
+import sstu.grivvus.ym.ui.UiText
+import sstu.grivvus.ym.ui.asUiTextOrNull
 
 data class RestoreStatusUi(
     val restoreId: String,
-    val title: String,
+    val title: UiText,
     val isFinished: Boolean,
     val isFailed: Boolean,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 )
 
 data class LibraryUiState(
@@ -52,8 +55,8 @@ data class LibraryUiState(
     val isSavingBackup: Boolean = false,
     val isStartingRestore: Boolean = false,
     val restoreStatus: RestoreStatusUi? = null,
-    val errorMessage: String? = null,
-    val infoMessage: String? = null,
+    val errorMessage: UiText? = null,
+    val infoMessage: UiText? = null,
 ) {
     val isSelectionMode: Boolean
         get() = selectedTrackIds.isNotEmpty()
@@ -151,7 +154,13 @@ class LibraryViewModel @Inject constructor(
         val track = _uiState.value.tracks.firstOrNull { item -> item.id == trackId } ?: return
         val albumId = track.albumId
         if (albumId == null) {
-            _uiState.update { it.copy(errorMessage = "Album is unavailable for this track") }
+            _uiState.update {
+                it.copy(
+                    errorMessage = UiText.StringResource(
+                        R.string.library_error_album_unavailable_for_track,
+                    ),
+                )
+            }
             return
         }
         viewModelScope.launch {
@@ -195,11 +204,10 @@ class LibraryViewModel @Inject constructor(
                 applyLibraryData(updatedLibrary)
                 _uiState.update { state ->
                     state.copy(
-                        infoMessage = if (pendingDeleteTrackIds.size == 1) {
-                            "Track deleted"
-                        } else {
-                            "${pendingDeleteTrackIds.size} tracks deleted"
-                        },
+                        infoMessage = UiText.PluralResource(
+                            R.plurals.library_deleted_tracks_info,
+                            pendingDeleteTrackIds.size,
+                        ),
                         pendingDeleteTrackIds = emptySet(),
                         selectedTrackIds = emptySet(),
                     )
@@ -228,7 +236,13 @@ class LibraryViewModel @Inject constructor(
         val track = _uiState.value.tracks.firstOrNull { item -> item.id == trackId } ?: return
         val albumId = track.albumId
         if (albumId == null) {
-            _uiState.update { it.copy(errorMessage = "Album is unavailable for this track") }
+            _uiState.update {
+                it.copy(
+                    errorMessage = UiText.StringResource(
+                        R.string.library_error_album_unavailable_for_track,
+                    ),
+                )
+            }
             return
         }
         viewModelScope.launch {
@@ -289,7 +303,13 @@ class LibraryViewModel @Inject constructor(
             _uiState.update { it.copy(isSavingBackup = true, errorMessage = null, infoMessage = null) }
             try {
                 backupRestoreRepository.saveBackupArchive(archive, destinationUri)
-                _uiState.update { it.copy(infoMessage = "Backup saved successfully") }
+                _uiState.update {
+                    it.copy(
+                        infoMessage = UiText.StringResource(
+                            R.string.library_info_backup_saved_successfully,
+                        ),
+                    )
+                }
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (error: Exception) {
@@ -375,7 +395,8 @@ class LibraryViewModel @Inject constructor(
                         state.copy(
                             restoreStatus = status.toUi(),
                             errorMessage = if (status.state == RestoreOperationState.ERROR) {
-                                status.errorMessage ?: "Restore failed"
+                                status.errorMessage.asUiTextOrNull()
+                                    ?: UiText.StringResource(R.string.library_error_restore_failed)
                             } else {
                                 state.errorMessage
                             },
@@ -406,14 +427,23 @@ class LibraryViewModel @Inject constructor(
             backupRestoreRepository.refreshLocalStateAfterRestore()
             applyLibraryData(musicRepository.loadLibrary(refreshFromNetwork = false))
             _uiState.update { state ->
-                state.copy(infoMessage = "Restore finished. Local data refreshed.")
+                state.copy(
+                    infoMessage = UiText.StringResource(
+                        R.string.library_info_restore_finished_local_data_refreshed,
+                    ),
+                )
             }
         } catch (_: SessionExpiredException) {
             throw SessionExpiredException()
         } catch (error: Exception) {
             error.logHandledException("LibraryViewModel.refreshLocalStateAfterRestore")
             _uiState.update { state ->
-                state.copy(errorMessage = "Restore finished, but local sync failed: ${error.toReadableMessage()}")
+                state.copy(
+                    errorMessage = UiText.StringResource(
+                        R.string.library_error_restore_finished_local_sync_failed,
+                        listOf(error.toReadableMessage()),
+                    ),
+                )
             }
         }
     }
@@ -455,47 +485,55 @@ class LibraryViewModel @Inject constructor(
         return when (state) {
             RestoreOperationState.PENDING -> RestoreStatusUi(
                 restoreId = restoreId,
-                title = "Restore queued",
+                title = UiText.StringResource(R.string.library_restore_status_queued),
                 isFinished = false,
                 isFailed = false,
             )
 
             RestoreOperationState.STARTED -> RestoreStatusUi(
                 restoreId = restoreId,
-                title = "Restore in progress",
+                title = UiText.StringResource(R.string.library_restore_status_in_progress),
                 isFinished = false,
                 isFailed = false,
             )
 
             RestoreOperationState.FINISHED -> RestoreStatusUi(
                 restoreId = restoreId,
-                title = "Restore finished",
+                title = UiText.StringResource(R.string.library_restore_status_finished),
                 isFinished = true,
                 isFailed = false,
             )
 
             RestoreOperationState.ERROR -> RestoreStatusUi(
                 restoreId = restoreId,
-                title = "Restore failed",
+                title = UiText.StringResource(R.string.library_restore_status_failed),
                 isFinished = false,
                 isFailed = true,
-                errorMessage = errorMessage,
+                errorMessage = errorMessage.asUiTextOrNull(),
             )
         }
     }
 
-    private fun Throwable.toReadableMessage(): String {
+    private fun Throwable.toReadableMessage(): UiText {
         return when (this) {
-            is UnauthorizedApiException -> "Authentication required"
+            is UnauthorizedApiException ->
+                UiText.StringResource(R.string.common_error_authentication_required)
+
             is ClientApiException -> when (statusCode) {
-                403 -> "Superuser access required"
-                409 -> "Restore operation is already running"
-                else -> message.takeIf { it.isNotBlank() } ?: "Request failed"
+                403 -> UiText.StringResource(R.string.common_error_superuser_access_required)
+                409 -> UiText.StringResource(R.string.library_error_restore_operation_already_running)
+                else -> message.asUiTextOrNull()
+                    ?: UiText.StringResource(R.string.common_error_request_failed)
             }
 
-            is ApiException -> message.takeIf { it.isNotBlank() } ?: "Server request failed"
-            is IOException -> message?.takeIf { it.isNotBlank() } ?: "Network request failed"
-            else -> message?.takeIf { it.isNotBlank() } ?: "Unexpected error"
+            is ApiException -> message.asUiTextOrNull()
+                ?: UiText.StringResource(R.string.common_error_server_request_failed)
+
+            is IOException -> message.asUiTextOrNull()
+                ?: UiText.StringResource(R.string.common_error_network_request_failed)
+
+            else -> message.asUiTextOrNull()
+                ?: UiText.StringResource(R.string.common_error_unexpected)
         }
     }
 

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.RouteArguments
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
@@ -21,13 +22,15 @@ import sstu.grivvus.ym.library.toLibraryTrackItemUi
 import sstu.grivvus.ym.logHandledException
 import sstu.grivvus.ym.playback.model.PlaybackQueue
 import sstu.grivvus.ym.playback.queue.PlaybackQueueFactory
+import sstu.grivvus.ym.ui.UiText
+import sstu.grivvus.ym.ui.asUiTextOrNull
 import java.io.IOException
 import javax.inject.Inject
 
 data class AlbumDetailUi(
     val id: Long,
-    val name: String,
-    val artistName: String,
+    val name: UiText,
+    val artistName: UiText,
     val coverUri: Uri? = null,
     val tracks: List<LibraryTrackItemUi> = emptyList(),
 )
@@ -36,7 +39,7 @@ data class AlbumUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val album: AlbumDetailUi? = null,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 )
 
 @HiltViewModel
@@ -115,7 +118,10 @@ class AlbumViewModel @Inject constructor(
                     id = currentAlbum.remoteId,
                     name = albumDisplayName(currentAlbum),
                     artistName = artistsById[currentAlbum.artistId]?.let(::artistDisplayName)
-                        ?: "Artist #${currentAlbum.artistId}",
+                        ?: UiText.StringResource(
+                            R.string.common_placeholder_artist_id,
+                            listOf(currentAlbum.artistId),
+                        ),
                     coverUri = currentAlbum.coverUri,
                     tracks = currentAlbumTracks.map { track ->
                         track.toLibraryTrackItemUi(artistsById)
@@ -123,18 +129,17 @@ class AlbumViewModel @Inject constructor(
                 )
             },
             errorMessage = if (album == null) {
-                "Album was not found"
+                UiText.StringResource(R.string.album_error_not_found)
             } else {
                 null
             },
         )
     }
 
-    private fun Throwable.toReadableMessage(): String {
-        val messageText = message?.takeIf { it.isNotBlank() }
-        return messageText ?: when (this) {
-            is IOException -> "Network request failed"
-            else -> "Unexpected error"
+    private fun Throwable.toReadableMessage(): UiText {
+        return message.asUiTextOrNull() ?: when (this) {
+            is IOException -> UiText.StringResource(R.string.common_error_network_request_failed)
+            else -> UiText.StringResource(R.string.common_error_unexpected)
         }
     }
 }

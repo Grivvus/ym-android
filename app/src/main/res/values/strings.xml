@@ -66,20 +66,49 @@
     <string name="common_cd_pause_playback">pause playback</string>
     <string name="common_cd_resume_playback">resume playback</string>
     <string name="common_cd_open_full_player">open full player</string>
+    <string name="common_error_network_request_failed">Network request failed</string>
+    <string name="common_error_unexpected">Unexpected error</string>
+    <string name="common_error_server_try_again_later">Server error. Please try again later</string>
+    <string name="common_error_request_failed">Request failed</string>
+    <string name="common_error_server_request_failed">Server request failed</string>
+    <string name="common_error_authentication_required">Authentication required</string>
+    <string name="common_error_superuser_access_required">Superuser access required</string>
+    <string name="common_validation_username_required">Username shouldn\'t be empty</string>
+    <string name="common_validation_password_min_length">Password must be at least 6 characters long</string>
+    <string name="common_validation_passwords_must_match">Passwords should match</string>
+    <string name="common_validation_artist_name_required">Artist name is required</string>
+    <string name="common_validation_album_name_required">Album name is required</string>
+    <string name="common_validation_complete_required_fields">Complete all required fields</string>
+    <string name="common_placeholder_single">Single</string>
+    <string name="common_placeholder_artist_id">Artist #%1$d</string>
+    <string name="common_placeholder_album_id">Album #%1$d</string>
 
     <string name="login_title_sign_in_account">Sign in your account</string>
     <string name="login_label_login">Login</string>
+    <string name="login_error_wrong_credentials">Wrong login or password</string>
+    <string name="login_error_server">Can\'t proceed login due to server error</string>
+    <string name="login_error_unknown_server">Can\'t proceed login due to unknown server error</string>
 
     <string name="register_title_create_account">Create Account</string>
     <string name="register_cd_username_icon">Username icon</string>
     <string name="register_cd_password_icon">Password icon</string>
     <string name="register_cd_confirm_password_icon">Confirm password icon</string>
+    <string name="register_error_username_taken">This username is already used</string>
+    <string name="register_error_server">Can\'t proceed registration due to server error</string>
 
     <string name="server_setup_title">Server Setup</string>
     <string name="server_setup_label_host_or_url">Server host or URL</string>
     <string name="server_setup_description_all_requests">The app will use this server for all requests.</string>
     <string name="server_setup_cd_server_host_icon">Server host icon</string>
     <string name="server_setup_cd_server_port_icon">Server port icon</string>
+    <string name="server_setup_error_host_required">Host value must not be empty</string>
+    <string name="server_setup_error_port_out_of_range">Port value must be in range 1..65535</string>
+    <string name="server_setup_error_invalid_host_or_port_format">Host or port format is invalid</string>
+    <string name="server_setup_error_connection_failed">Unable to connect to server. Check host, port and /ping endpoint</string>
+    <string name="server_setup_error_server">Can\'t proceed setup due to server error</string>
+    <string name="server_setup_error_host_spaces">Host should not contain spaces</string>
+    <string name="server_setup_error_invalid_url">Invalid URL format</string>
+    <string name="server_setup_error_url_without_path_or_query">Use only host URL without path or query</string>
 
     <string name="music_title_playlists">Playlists</string>
     <string name="music_heading_your_playlists">Your playlists</string>
@@ -102,6 +131,7 @@
     <string name="playlist_rename_title">Rename playlist</string>
     <string name="playlist_add_tracks_title">Add tracks</string>
     <string name="playlist_all_library_tracks_added">All library tracks are already in this playlist.</string>
+    <string name="playlist_error_not_found">Playlist was not found</string>
 
     <string name="album_default_title">Album</string>
     <string name="album_unavailable_title">Album unavailable</string>
@@ -109,6 +139,7 @@
     <string name="album_status_refreshing">Refreshing album...</string>
     <string name="album_empty_title">Album is empty</string>
     <string name="album_empty_description">No tracks linked to this album are available in the local library.</string>
+    <string name="album_error_not_found">Album was not found</string>
 
     <string name="artist_default_title">Artist</string>
     <string name="artist_unavailable_title">Artist unavailable</string>
@@ -116,6 +147,7 @@
     <string name="artist_status_refreshing">Refreshing artist...</string>
     <string name="artist_empty_title">No albums</string>
     <string name="artist_empty_description">No albums for this artist are available in the local library.</string>
+    <string name="artist_error_not_found">Artist was not found</string>
 
     <string name="library_default_title">Library</string>
     <string name="library_empty_title">No tracks yet</string>
@@ -134,6 +166,16 @@
     <string name="library_restore_id">Restore ID: %1$s</string>
     <string name="library_restore_polling_status">The app is polling the server for the latest status.</string>
     <string name="library_cd_track_actions">Track actions</string>
+    <string name="library_error_album_unavailable_for_track">Album is unavailable for this track</string>
+    <string name="library_info_backup_saved_successfully">Backup saved successfully</string>
+    <string name="library_error_restore_failed">Restore failed</string>
+    <string name="library_info_restore_finished_local_data_refreshed">Restore finished. Local data refreshed.</string>
+    <string name="library_error_restore_finished_local_sync_failed">Restore finished, but local sync failed: %1$s</string>
+    <string name="library_restore_status_queued">Restore queued</string>
+    <string name="library_restore_status_in_progress">Restore in progress</string>
+    <string name="library_restore_status_finished">Restore finished</string>
+    <string name="library_restore_status_failed">Restore failed</string>
+    <string name="library_error_restore_operation_already_running">Restore operation is already running</string>
 
     <string name="player_nothing_playing_title">Nothing is playing</string>
     <string name="player_nothing_playing_description">Open a track from a playlist to start playback.</string>
@@ -151,6 +193,12 @@
     <string name="profile_settings_language_system_default">System default</string>
     <string name="profile_settings_language_english">English</string>
     <string name="profile_settings_language_russian">Russian</string>
+    <string name="profile_error_server_unreachable_local_data">Can\'t connect to the server, local data will be used</string>
+    <string name="profile_error_avatar_upload_failed">Failed to set avatar image</string>
+    <string name="profile_error_nothing_to_save">Nothing that can be saved</string>
+    <string name="profile_info_updated_successfully">Profile updated successfully</string>
+    <string name="profile_error_username_or_email_not_unique">New username or email are not unique</string>
+    <string name="profile_error_update_unexpected">Can\'t update profile due to unexpected error</string>
     <string name="track_quality_fast">Fast</string>
     <string name="track_quality_standard">Standard</string>
     <string name="track_quality_high">High</string>
@@ -158,6 +206,10 @@
 
     <string name="password_change_title">Password change</string>
     <string name="password_change_success">Password has change</string>
+    <string name="password_change_error_current_password_required">Current password shouldn\'t be empty</string>
+    <string name="password_change_error_new_password_confirm_mismatch">New password and confirmation don\'t match</string>
+    <string name="password_change_error_failed">Failed to change password</string>
+    <string name="password_change_error_unexpected">Can\'t change password due to unexpected error</string>
 
     <string name="upload_track_title">Upload track</string>
     <string name="upload_loading_catalog">Loading local artists and albums...</string>
@@ -182,4 +234,5 @@
     <string name="upload_select_or_add_album">Select an album from the suggestions or add a new one.</string>
     <string name="upload_album_not_found">Album not found for this artist. You can add a new one.</string>
     <string name="upload_uploading">Uploading...</string>
+    <string name="upload_error_select_artist_first">Select an artist first</string>
 </resources>

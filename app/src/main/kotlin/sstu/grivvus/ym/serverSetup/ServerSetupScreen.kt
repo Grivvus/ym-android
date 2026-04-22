@@ -22,6 +22,7 @@ import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.CenteredFormScreen
 import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.components.FormActionRow
+import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIconsMirrored
 
 @Composable
@@ -36,7 +37,7 @@ fun ServerSetup(
         modifier = modifier,
         overlay = {
             ErrorTooltip(
-                uiState.errorMessage ?: "",
+                uiState.errorMessage?.resolve().orEmpty(),
                 uiState.showError,
                 onTimeout = { viewModel.dismissErrorMessage() },
             )

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.data.AppLanguage
 import sstu.grivvus.ym.data.AppLanguageRepository
 import sstu.grivvus.ym.data.PlaybackPreferencesRepository
@@ -21,6 +22,7 @@ import sstu.grivvus.ym.data.network.ChangeServerDto
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.data.network.core.ApiException
 import sstu.grivvus.ym.logHandledException
+import sstu.grivvus.ym.ui.UiText
 import javax.inject.Inject
 
 data class ProfileUiState(
@@ -30,7 +32,7 @@ data class ProfileUiState(
     val isRefreshing: Boolean = false,
     val serverHost: String = "",
     val serverPort: String = "8000",
-    val errorMsg: String? = null,
+    val errorMsg: UiText? = null,
     val avatarUri: Uri? = null,
     val preferredTrackQuality: TrackQuality = TrackQuality.STANDARD,
     val selectedAppLanguage: AppLanguage = AppLanguage.SYSTEM_DEFAULT,
@@ -50,7 +52,7 @@ class ProfileViewModel
     private val _isRefreshing: MutableStateFlow<Boolean> = MutableStateFlow(false)
     private val _serverHost: MutableStateFlow<String> = MutableStateFlow("")
     private val _serverPort: MutableStateFlow<String> = MutableStateFlow("8000")
-    private val _errorMsg: MutableStateFlow<String?> = MutableStateFlow(null)
+    private val _errorMsg: MutableStateFlow<UiText?> = MutableStateFlow(null)
     private val _avatarUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
     private val _preferredTrackQuality: MutableStateFlow<TrackQuality> = MutableStateFlow(
         playbackPreferencesRepository.currentPreferredTrackQuality(),
@@ -130,7 +132,8 @@ class ProfileViewModel
                 return@launch
             } catch (e: Exception) {
                 e.logHandledException("ProfileViewModel.refreshUser")
-                _errorMsg.value = "can't connect to the server, local data will be used"
+                _errorMsg.value =
+                    UiText.StringResource(R.string.profile_error_server_unreachable_local_data)
             } finally {
                 _isRefreshing.value = false
             }
@@ -181,7 +184,7 @@ class ProfileViewModel
             return@launch
         } catch (e: Exception) {
             e.logHandledException("ProfileViewModel.uploadAvatar")
-            _errorMsg.value = "Failed to set avatar image"
+            _errorMsg.value = UiText.StringResource(R.string.profile_error_avatar_upload_failed)
         } finally {
             _isLoading.value = false
         }
@@ -206,7 +209,7 @@ class ProfileViewModel
                 changeServer.port == null &&
                 newTrackQuality == null
             ) {
-                _errorMsg.value = "Nothing that can be saved"
+                _errorMsg.value = UiText.StringResource(R.string.profile_error_nothing_to_save)
                 return@launch
             }
             _isLoading.value = true
@@ -223,20 +226,20 @@ class ProfileViewModel
                 userRepository.applyChanges(newUsername, newEmail)
                 applyCurrentUser()
             }
-            _errorMsg.value = "Profile updated successfully"
+            _errorMsg.value = UiText.StringResource(R.string.profile_info_updated_successfully)
         } catch (_: SessionExpiredException) {
             return@launch
         } catch (e: ApiException) {
             e.logHandledException("ProfileViewModel.tryToApplyChanges")
             _errorMsg.value =
-                if (e.statusCode != null && e.statusCode!! >= 400 && e.statusCode!! < 500) {
-                    "New username or email are not unique"
+                if (e.statusCode in 400..499) {
+                    UiText.StringResource(R.string.profile_error_username_or_email_not_unique)
                 } else {
-                    "Server error. Please try again later"
+                    UiText.StringResource(R.string.common_error_server_try_again_later)
                 }
         } catch (e: Exception) {
             e.logHandledException("ProfileViewModel.tryToApplyChanges")
-            _errorMsg.value = "Can't update profile due to unexpected error"
+            _errorMsg.value = UiText.StringResource(R.string.profile_error_update_unexpected)
         } finally {
             _isLoading.value = false
         }

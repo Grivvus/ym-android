@@ -43,6 +43,7 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.collectLatest
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.data.MusicRepository
+import sstu.grivvus.ym.ui.resolve
 
 private const val MAX_ARTIST_SUGGESTIONS = 5
 private const val MAX_ALBUM_SUGGESTIONS = 5
@@ -512,7 +513,7 @@ private fun UploadTrackModalContent(
                 }
                 uiState.errorMessage?.let { message ->
                     Text(
-                        text = message,
+                        text = message.resolve(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.RouteArguments
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
@@ -16,19 +17,21 @@ import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.library.albumDisplayName
 import sstu.grivvus.ym.library.artistDisplayName
 import sstu.grivvus.ym.logHandledException
+import sstu.grivvus.ym.ui.UiText
+import sstu.grivvus.ym.ui.asUiTextOrNull
 import java.io.IOException
 import javax.inject.Inject
 
 data class ArtistAlbumItemUi(
     val id: Long,
-    val name: String,
+    val name: UiText,
     val coverUri: Uri? = null,
     val trackCount: Int,
 )
 
 data class ArtistDetailUi(
     val id: Long,
-    val name: String,
+    val name: UiText,
     val imageUri: Uri? = null,
     val albums: List<ArtistAlbumItemUi> = emptyList(),
 )
@@ -37,7 +40,7 @@ data class ArtistUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val artist: ArtistDetailUi? = null,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 )
 
 @HiltViewModel
@@ -107,18 +110,17 @@ class ArtistViewModel @Inject constructor(
                 )
             },
             errorMessage = if (artist == null) {
-                "Artist was not found"
+                UiText.StringResource(R.string.artist_error_not_found)
             } else {
                 null
             },
         )
     }
 
-    private fun Throwable.toReadableMessage(): String {
-        val messageText = message?.takeIf { it.isNotBlank() }
-        return messageText ?: when (this) {
-            is IOException -> "Network request failed"
-            else -> "Unexpected error"
+    private fun Throwable.toReadableMessage(): UiText {
+        return message.asUiTextOrNull() ?: when (this) {
+            is IOException -> UiText.StringResource(R.string.common_error_network_request_failed)
+            else -> UiText.StringResource(R.string.common_error_unexpected)
         }
     }
 }

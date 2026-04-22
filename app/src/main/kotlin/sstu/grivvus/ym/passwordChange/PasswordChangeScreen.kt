@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.PasswordOutlinedField
+import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
 
 @Composable
@@ -105,7 +106,7 @@ fun PasswordChangeDialog(
 
                 uiState.errorMessage?.let {
                     Text(
-                        text = it,
+                        text = it.resolve(),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 8.dp)

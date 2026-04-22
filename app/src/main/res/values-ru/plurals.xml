@@ -33,4 +33,11 @@
         <item quantity="many">Выбранные %d треков будут удалены с сервера и из локального хранилища.</item>
         <item quantity="other">Выбранные %d трека будут удалены с сервера и из локального хранилища.</item>
     </plurals>
+
+    <plurals name="library_deleted_tracks_info">
+        <item quantity="one">Трек удалён</item>
+        <item quantity="few">Удалено %d трека</item>
+        <item quantity="many">Удалено %d треков</item>
+        <item quantity="other">Удалено %d трека</item>
+    </plurals>
 </resources>

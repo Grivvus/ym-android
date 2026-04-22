@@ -8,9 +8,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.WhileUiSubscribed
 import sstu.grivvus.ym.data.UserRepository
 import sstu.grivvus.ym.data.network.core.ApiException
+import sstu.grivvus.ym.ui.UiText
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -19,7 +21,7 @@ data class RegisterUiState(
     val password: String = "",
     val passwordCheck: String = "",
     val showError: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 )
 
 @HiltViewModel
@@ -31,7 +33,7 @@ class RegisterViewModel
     private val _password: MutableStateFlow<String> = MutableStateFlow("")
     private val _passwordCheck: MutableStateFlow<String> = MutableStateFlow("")
     private val _showError: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    private val _errorMessage: MutableStateFlow<String?> = MutableStateFlow(null)
+    private val _errorMessage: MutableStateFlow<UiText?> = MutableStateFlow(null)
 
     val uiState: StateFlow<RegisterUiState> =
         combine(
@@ -54,12 +56,15 @@ class RegisterViewModel
                 _password.value != _passwordCheck.value
             ) {
                 _showError.value = true
-                if (_username.value == "") {
-                    _errorMessage.value = "username shouldn't be empty"
+                if (_username.value.isBlank()) {
+                    _errorMessage.value =
+                        UiText.StringResource(R.string.common_validation_username_required)
                 } else if (_password.value.length < 6) {
-                    _errorMessage.value = "password's length should be 6 symbols or more"
+                    _errorMessage.value =
+                        UiText.StringResource(R.string.common_validation_password_min_length)
                 } else if (_password.value != _passwordCheck.value) {
-                    _errorMessage.value = "passwords should be equal"
+                    _errorMessage.value =
+                        UiText.StringResource(R.string.common_validation_passwords_must_match)
                 }
             } else {
                 try {
@@ -71,15 +76,15 @@ class RegisterViewModel
                 } catch (e: ApiException) {
                     _showError.value = true
                     _errorMessage.value =
-                        if (e.statusCode != null && e.statusCode!! >= 400 && e.statusCode!! < 500) {
-                            "This username is already used"
+                        if (e.statusCode in 400..499) {
+                            UiText.StringResource(R.string.register_error_username_taken)
                         } else {
-                            "Server error. Please try again later"
+                            UiText.StringResource(R.string.common_error_server_try_again_later)
                         }
                 } catch (e: Exception) {
                     Timber.tag("NetworkError").e(e)
                     _showError.value = true
-                    _errorMessage.value = "Can't proceed registration due to server error"
+                    _errorMessage.value = UiText.StringResource(R.string.register_error_server)
                 }
             }
         }
@@ -106,5 +111,6 @@ class RegisterViewModel
         _password.value = ""
         _passwordCheck.value = ""
         _showError.value = false
+        _errorMessage.value = null
     }
 }

@@ -8,11 +8,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import sstu.grivvus.ym.R
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.PlaylistCreationConflict
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.logHandledException
+import sstu.grivvus.ym.ui.UiText
+import sstu.grivvus.ym.ui.asUiTextOrNull
 import java.io.IOException
 import javax.inject.Inject
 
@@ -28,7 +31,7 @@ data class MusicUiState(
     val isRefreshing: Boolean = false,
     val isMutating: Boolean = false,
     val playlists: List<PlaylistListItemUi> = emptyList(),
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 )
 
 @HiltViewModel
@@ -109,11 +112,10 @@ class MusicViewModel @Inject constructor(
         )
     }
 
-    private fun Throwable.toReadableMessage(): String {
-        val messageText = message?.takeIf { it.isNotBlank() }
-        return messageText ?: when (this) {
-            is IOException -> "Network request failed"
-            else -> "Unexpected error"
+    private fun Throwable.toReadableMessage(): UiText {
+        return message.asUiTextOrNull() ?: when (this) {
+            is IOException -> UiText.StringResource(R.string.common_error_network_request_failed)
+            else -> UiText.StringResource(R.string.common_error_unexpected)
         }
     }
 }

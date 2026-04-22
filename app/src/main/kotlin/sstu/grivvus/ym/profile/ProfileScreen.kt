@@ -64,6 +64,7 @@ import sstu.grivvus.ym.data.AppLanguage
 import sstu.grivvus.ym.data.network.model.TrackQuality
 import sstu.grivvus.ym.data.network.model.toDisplayNameRes
 import sstu.grivvus.ym.passwordChange.PasswordChangeDialog
+import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
 import sstu.grivvus.ym.ui.theme.appIconsMirrored
 
@@ -109,7 +110,7 @@ fun ProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 ErrorTooltip(
-                    uiState.errorMsg ?: "",
+                    uiState.errorMsg?.resolve().orEmpty(),
                     uiState.errorMsg != null,
                     onTimeout = { viewModel.dismissErrorMessage() },
                 )
