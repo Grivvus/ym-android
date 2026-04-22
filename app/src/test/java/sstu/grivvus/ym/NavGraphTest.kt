@@ -47,6 +47,8 @@ class NavGraphTest {
     fun appProtectedRoutes_containsAllProtectedDestinations() {
         assertThat(appProtectedRoutes()).containsExactly(
             AppDestinations.MUSIC_ROUTE,
+            AppDestinations.ARTIST_ROUTE,
+            AppDestinations.ALBUM_ROUTE,
             AppDestinations.PLAYLIST_ROUTE,
             AppDestinations.PROFILE_ROUTE,
             AppDestinations.LIBRARY_ROUTE,

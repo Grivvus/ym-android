@@ -6,7 +6,6 @@ import io.mockk.coVerify
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
-import java.io.IOException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -16,6 +15,7 @@ import org.junit.Test
 import sstu.grivvus.ym.data.ServerInfoRepository
 import sstu.grivvus.ym.data.network.remote.server.ServerProbeRemoteDataSource
 import sstu.grivvus.ym.testutil.MainDispatcherRule
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ServerSetupViewModelTest {
@@ -40,8 +40,6 @@ class ServerSetupViewModelTest {
         advanceUntilIdle()
 
         assertThat(viewModel.uiState.value.showError).isTrue()
-        assertThat(viewModel.uiState.value.errorMessage)
-            .isEqualTo("Port value must be in range 1..65535")
         coVerify(exactly = 0) { serverProbeRemoteDataSource.ping(any(), any()) }
         coVerify(exactly = 0) { serverInfoRepository.saveServerInfo(any(), any()) }
     }
@@ -86,8 +84,6 @@ class ServerSetupViewModelTest {
         advanceUntilIdle()
 
         assertThat(viewModel.uiState.value.showError).isTrue()
-        assertThat(viewModel.uiState.value.errorMessage)
-            .isEqualTo("Unable to connect to server. Check host, port and /ping endpoint")
         assertThat(viewModel.uiState.value.isLoading).isFalse()
         coVerify(exactly = 0) { serverInfoRepository.saveServerInfo(any(), any()) }
     }

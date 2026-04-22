@@ -1,9 +1,6 @@
 package sstu.grivvus.ym.data.network.remote.track
 
 import com.google.common.truth.Truth.assertThat
-import io.mockk.anyConstructed
-import io.mockk.capture
-import io.mockk.captureNullable
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -72,8 +69,8 @@ class OpenApiTrackRemoteDataSourceTest {
             apiExecutor = object : ApiExecutor {
                 override suspend fun <T : Any> execute(block: suspend () -> ApiResponse<T?>): T {
                     val response = block()
-                    check(response is Success<T>) { "Expected Success response" }
-                    return response.data
+                    check(response is Success<*>) { "Expected Success response" }
+                    return response.data as T
                 }
 
                 override suspend fun executeUnit(block: suspend () -> ApiResponse<Unit?>) {
