@@ -17,14 +17,18 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import sstu.grivvus.ym.data.local.AppDatabase
+import sstu.grivvus.ym.data.local.Artist
 import sstu.grivvus.ym.data.local.LocalUser
 import sstu.grivvus.ym.data.local.Playlist
+import sstu.grivvus.ym.data.network.model.NetworkAlbum
+import sstu.grivvus.ym.data.network.model.NetworkArtist
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
 import sstu.grivvus.ym.data.network.remote.album.AlbumRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.artist.ArtistRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.playlist.PlaylistRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.track.TrackRemoteDataSource
 import sstu.grivvus.ym.testutil.MainDispatcherRule
+import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -109,6 +113,77 @@ class MusicRepositoryTest {
             ),
         )
         coVerify(exactly = 1) { playlistRemoteDataSource.createPlaylist("Favorites", true, null) }
+    }
+
+    @Test
+    fun createAlbum_savesReleaseMetadataReturnedByRemoteSource() = runTest {
+        database.artistDao().upsert(
+            Artist(
+                remoteId = 7L,
+                name = "Artist",
+            ),
+        )
+        val releaseDate = LocalDate.of(2025, 3, 14)
+        coEvery {
+            albumRemoteDataSource.createAlbum(
+                artistId = 7L,
+                name = "Future Album",
+                cover = null,
+                releaseYear = 2025,
+                releaseFullDate = releaseDate,
+            )
+        } returns 70L
+        coEvery { albumRemoteDataSource.getAlbum(70L) } returns NetworkAlbum(
+            id = 70L,
+            name = "Future Album",
+            coverUrl = "https://example.com/albums/70/cover",
+            releaseYear = 2025,
+            releaseFullDate = releaseDate,
+        )
+
+        val repository = createRepository()
+
+        val album = repository.createAlbum(
+            artistId = 7L,
+            name = "Future Album",
+            releaseYear = 2025,
+            releaseDate = releaseDate,
+        )
+
+        assertThat(album.releaseYear).isEqualTo(2025)
+        assertThat(album.releaseDate).isEqualTo(releaseDate)
+        assertThat(database.albumDao().getById(70L)).isEqualTo(album)
+    }
+
+    @Test
+    fun loadAlbumsForArtist_mapsReleaseMetadataIntoLocalAlbums() = runTest {
+        database.artistDao().upsert(
+            Artist(
+                remoteId = 9L,
+                name = "Artist",
+            ),
+        )
+        val releaseDate = LocalDate.of(2024, 9, 1)
+        coEvery { artistRemoteDataSource.getArtist(9L) } returns NetworkArtist(
+            id = 9L,
+            name = "Artist",
+            albumIds = listOf(90L),
+        )
+        coEvery { albumRemoteDataSource.getAlbum(90L) } returns NetworkAlbum(
+            id = 90L,
+            name = "Loaded Album",
+            coverUrl = null,
+            releaseYear = 2024,
+            releaseFullDate = releaseDate,
+        )
+
+        val repository = createRepository()
+
+        val albums = repository.loadAlbumsForArtist(9L, refreshFromNetwork = true)
+
+        assertThat(albums).hasSize(1)
+        assertThat(albums.single().releaseYear).isEqualTo(2024)
+        assertThat(albums.single().releaseDate).isEqualTo(releaseDate)
     }
 
     private fun createRepository(): MusicRepository {

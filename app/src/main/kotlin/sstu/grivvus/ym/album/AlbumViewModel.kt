@@ -16,6 +16,7 @@ import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.TrackBundle
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.library.LibraryTrackItemUi
+import sstu.grivvus.ym.library.albumDisplayReleaseYear
 import sstu.grivvus.ym.library.albumDisplayName
 import sstu.grivvus.ym.library.artistDisplayName
 import sstu.grivvus.ym.library.toLibraryTrackItemUi
@@ -32,6 +33,7 @@ data class AlbumDetailUi(
     val name: UiText,
     val artistName: UiText,
     val coverUri: Uri? = null,
+    val releaseYear: Int? = null,
     val tracks: List<LibraryTrackItemUi> = emptyList(),
 )
 
@@ -123,6 +125,7 @@ class AlbumViewModel @Inject constructor(
                             listOf(currentAlbum.artistId),
                         ),
                     coverUri = currentAlbum.coverUri,
+                    releaseYear = albumDisplayReleaseYear(currentAlbum),
                     tracks = currentAlbumTracks.map { track ->
                         track.toLibraryTrackItemUi(artistsById)
                     },

@@ -50,9 +50,11 @@
     <string name="common_label_server_host">Server host</string>
     <string name="common_label_server_port">Server port</string>
     <string name="common_label_playlist_name">Playlist name</string>
+    <string name="common_label_album_name">Album name</string>
     <string name="common_label_track_title">Track title</string>
     <string name="common_label_artist">Artist</string>
     <string name="common_label_album">Album</string>
+    <string name="common_label_release_year">Release year</string>
     <string name="common_label_current_password">Current password</string>
     <string name="common_label_new_password">new password</string>
 
@@ -148,6 +150,9 @@
     <string name="artist_empty_title">No albums</string>
     <string name="artist_empty_description">No albums for this artist are available in the local library.</string>
     <string name="artist_error_not_found">Artist was not found</string>
+    <string name="artist_action_add_album">Add album</string>
+    <string name="artist_create_album_title">Create album</string>
+    <string name="artist_error_invalid_release_year">Release year must be a number from 1 to 9999</string>
 
     <string name="library_default_title">Library</string>
     <string name="library_empty_title">No tracks yet</string>

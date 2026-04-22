@@ -40,3 +40,5 @@ internal fun artistDisplayName(artist: Artist): UiText =
 internal fun albumDisplayName(album: Album): UiText =
     album.name.takeIf { it.isNotBlank() }?.asUiText()
         ?: UiText.StringResource(R.string.common_placeholder_album_id, listOf(album.remoteId))
+
+internal fun albumDisplayReleaseYear(album: Album): Int? = album.releaseYear ?: album.releaseDate?.year

@@ -49,9 +49,11 @@
     <string name="common_label_server_host">Хост сервера</string>
     <string name="common_label_server_port">Порт сервера</string>
     <string name="common_label_playlist_name">Название плейлиста</string>
+    <string name="common_label_album_name">Название альбома</string>
     <string name="common_label_track_title">Название трека</string>
     <string name="common_label_artist">Исполнитель</string>
     <string name="common_label_album">Альбом</string>
+    <string name="common_label_release_year">Год выпуска</string>
     <string name="common_label_current_password">Текущий пароль</string>
     <string name="common_label_new_password">Новый пароль</string>
 
@@ -147,6 +149,9 @@
     <string name="artist_empty_title">Нет альбомов</string>
     <string name="artist_empty_description">В локальной библиотеке нет альбомов этого исполнителя.</string>
     <string name="artist_error_not_found">Исполнитель не найден</string>
+    <string name="artist_action_add_album">Добавить альбом</string>
+    <string name="artist_create_album_title">Создать альбом</string>
+    <string name="artist_error_invalid_release_year">Год выпуска должен быть числом от 1 до 9999</string>
 
     <string name="library_default_title">Библиотека</string>
     <string name="library_empty_title">Треков пока нет</string>

@@ -29,6 +29,7 @@ import sstu.grivvus.ym.data.network.remote.track.TrackRemoteDataSource
 import sstu.grivvus.ym.di.DefaultDispatcher
 import java.io.File
 import java.io.IOException
+import java.time.LocalDate
 import javax.inject.Inject
 
 data class TrackBundle(
@@ -143,6 +144,8 @@ class MusicRepository @Inject constructor(
                             artistId = artistId,
                             name = album.name,
                             coverUri = album.coverUrl?.toUri(),
+                            releaseYear = album.releaseYear,
+                            releaseDate = album.releaseFullDate,
                         )
                     },
                 )
@@ -157,6 +160,9 @@ class MusicRepository @Inject constructor(
     suspend fun createAlbum(
         artistId: Long,
         name: String,
+        coverUri: Uri? = null,
+        releaseYear: Int? = null,
+        releaseDate: LocalDate? = null,
     ): Album = withContext(dispatcher) {
         val normalizedName = name.trim()
         if (normalizedName.isBlank()) {
@@ -169,20 +175,29 @@ class MusicRepository @Inject constructor(
             return@withContext existingAlbum
         }
 
-        val albumId = albumRemoteDataSource.createAlbum(
-            artistId = artistId,
-            name = normalizedName,
-            cover = null,
-        )
-        val remoteAlbumMetadata = loadRemoteAlbumMetadata(albumId)
-        val album = Album(
-            remoteId = albumId,
-            artistId = artistId,
-            name = remoteAlbumMetadata?.name?.takeIf { it.isNotBlank() } ?: normalizedName,
-            coverUri = remoteAlbumMetadata?.coverUri,
-        )
-        albumDao.upsert(album)
-        album
+        val preparedCover = coverUri?.let(::prepareUploadFile)
+        try {
+            val albumId = albumRemoteDataSource.createAlbum(
+                artistId = artistId,
+                name = normalizedName,
+                cover = preparedCover?.toUploadPart(),
+                releaseYear = releaseYear,
+                releaseFullDate = releaseDate,
+            )
+            val remoteAlbumMetadata = loadRemoteAlbumMetadata(albumId)
+            val album = Album(
+                remoteId = albumId,
+                artistId = artistId,
+                name = remoteAlbumMetadata?.name?.takeIf { it.isNotBlank() } ?: normalizedName,
+                coverUri = remoteAlbumMetadata?.coverUri,
+                releaseYear = remoteAlbumMetadata?.releaseYear ?: releaseYear,
+                releaseDate = remoteAlbumMetadata?.releaseDate ?: releaseDate,
+            )
+            albumDao.upsert(album)
+            album
+        } finally {
+            preparedCover?.file?.delete()
+        }
     }
 
     suspend fun createPlaylist(name: String, coverUri: Uri?, isPublic: Boolean): MusicLibraryData =
@@ -377,10 +392,8 @@ class MusicRepository @Inject constructor(
         val artistIdsByAlbumId = remoteTracks.associate { track -> track.albumId to track.artistId }
 
         val existingAlbumsById = albumDao.getAll().associateBy { it.remoteId }
-        val missingAlbumIds = remoteTracks.map { it.albumId }
-            .distinct()
-            .filterNot { albumId -> albumId in existingAlbumsById }
-        val fetchedAlbums = missingAlbumIds.mapNotNull { albumId ->
+        val albumIds = remoteTracks.map { it.albumId }.distinct()
+        val fetchedAlbums = albumIds.mapNotNull { albumId ->
             runCatching { albumRemoteDataSource.getAlbum(albumId) }.getOrNull()?.let { album ->
                 val artistId = artistIdsByAlbumId[album.id] ?: return@let null
                 Album(
@@ -388,13 +401,15 @@ class MusicRepository @Inject constructor(
                     artistId = artistId,
                     name = album.name,
                     coverUri = album.coverUrl?.toUri(),
+                    releaseYear = album.releaseYear,
+                    releaseDate = album.releaseFullDate,
                 )
             }
         }
         if (fetchedAlbums.isNotEmpty()) {
             albumDao.upsertAll(fetchedAlbums)
         }
-        val availableAlbumIds = existingAlbumsById.keys + fetchedAlbums.map { it.remoteId }
+        val availableAlbumIds = (existingAlbumsById.keys + fetchedAlbums.map { it.remoteId }).toSet()
 
         val staleTrackIds = existingTracks.keys - remoteTrackIds
         if (staleTrackIds.isNotEmpty()) {
@@ -562,6 +577,8 @@ class MusicRepository @Inject constructor(
                         name = remoteAlbumMetadata?.name?.takeIf { it.isNotBlank() }
                             ?: existingAlbum?.name.orEmpty(),
                         coverUri = remoteAlbumMetadata?.coverUri ?: existingAlbum?.coverUri,
+                        releaseYear = remoteAlbumMetadata?.releaseYear ?: existingAlbum?.releaseYear,
+                        releaseDate = remoteAlbumMetadata?.releaseDate ?: existingAlbum?.releaseDate,
                     ),
                 )
                 trackAlbumDao.upsert(TrackAlbumCrossRef(trackId = trackId, albumId = albumId))
@@ -624,6 +641,8 @@ class MusicRepository @Inject constructor(
             RemoteAlbumMetadata(
                 name = album.name,
                 coverUri = album.coverUrl?.toUri(),
+                releaseYear = album.releaseYear,
+                releaseDate = album.releaseFullDate,
             )
         }
     }
@@ -636,5 +655,7 @@ class MusicRepository @Inject constructor(
     private data class RemoteAlbumMetadata(
         val name: String,
         val coverUri: Uri?,
+        val releaseYear: Int?,
+        val releaseDate: LocalDate?,
     )
 }

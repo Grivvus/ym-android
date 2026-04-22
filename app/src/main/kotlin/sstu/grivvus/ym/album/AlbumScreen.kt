@@ -159,12 +159,16 @@ private fun AlbumDetails(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = pluralStringResource(
+                    val albumMetadataText = listOfNotNull(
+                        album.releaseYear?.toString(),
+                        pluralStringResource(
                             R.plurals.track_count,
                             album.tracks.size,
                             album.tracks.size,
                         ),
+                    ).joinToString(" • ")
+                    Text(
+                        text = albumMetadataText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
