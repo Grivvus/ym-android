@@ -1,5 +1,4 @@
 <resources>
-    <string name="app_name">ym</string>
 
     <string name="nav_music">Музыка</string>
     <string name="nav_library">Библиотека</string>
@@ -17,7 +16,7 @@
     <string name="common_action_restore">Восстановить</string>
     <string name="common_action_dismiss">Закрыть</string>
     <string name="common_action_clear">Очистить</string>
-    <string name="common_action_sign_in">Войти</string>
+    <string name="common_action_sign_in">Вход</string>
     <string name="common_action_sign_up">Регистрация</string>
     <string name="common_action_login">Войти</string>
     <string name="common_action_register">Зарегистрироваться</string>
@@ -105,16 +104,16 @@
 
     <string name="album_default_title">Альбом</string>
     <string name="album_unavailable_title">Альбом недоступен</string>
-    <string name="album_unavailable_description">Не удалось загрузить этот альбом из текущего состояния библиотеки.</string>
+    <string name="album_unavailable_description">Не удалось загрузить информацию об альбоме</string>
     <string name="album_status_refreshing">Обновление альбома...</string>
     <string name="album_empty_title">Альбом пуст</string>
     <string name="album_empty_description">В локальной библиотеке нет треков, связанных с этим альбомом.</string>
 
     <string name="artist_default_title">Исполнитель</string>
     <string name="artist_unavailable_title">Исполнитель недоступен</string>
-    <string name="artist_unavailable_description">Не удалось загрузить этого исполнителя из текущего состояния библиотеки.</string>
+    <string name="artist_unavailable_description">Не удалось загрузить информацию об исполнителе</string>
     <string name="artist_status_refreshing">Обновление исполнителя...</string>
-    <string name="artist_empty_title">Альбомов нет</string>
+    <string name="artist_empty_title">Нет альбомов</string>
     <string name="artist_empty_description">В локальной библиотеке нет альбомов этого исполнителя.</string>
 
     <string name="library_default_title">Библиотека</string>
@@ -154,7 +153,6 @@
     <string name="track_quality_fast">Быстрое</string>
     <string name="track_quality_standard">Стандартное</string>
     <string name="track_quality_high">Высокое</string>
-    <string name="track_quality_lossless">Без потерь</string>
 
     <string name="password_change_title">Смена пароля</string>
     <string name="password_change_success">Пароль изменён</string>

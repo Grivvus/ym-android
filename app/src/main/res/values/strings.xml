@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ym</string>
+    <string name="app_name" translatable="false">ym</string>
 
     <string name="nav_music">Music</string>
     <string name="nav_library">Library</string>
@@ -154,7 +154,7 @@
     <string name="track_quality_fast">Fast</string>
     <string name="track_quality_standard">Standard</string>
     <string name="track_quality_high">High</string>
-    <string name="track_quality_lossless">Lossless</string>
+    <string name="track_quality_lossless" translatable="false">Lossless</string>
 
     <string name="password_change_title">Password change</string>
     <string name="password_change_success">Password has change</string>
