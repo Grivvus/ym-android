@@ -132,6 +132,9 @@ interface AlbumDao {
 
     @Query("SELECT * FROM album WHERE remote_id = :albumId LIMIT 1")
     suspend fun getById(albumId: Long): Album?
+
+    @Query("DELETE FROM album WHERE remote_id = :albumId")
+    suspend fun deleteById(albumId: Long)
 }
 
 @Dao

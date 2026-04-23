@@ -5,8 +5,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import sstu.grivvus.ym.R
@@ -31,6 +34,7 @@ import javax.inject.Inject
 data class AlbumDetailUi(
     val id: Long,
     val name: UiText,
+    val artistId: Long,
     val artistName: UiText,
     val coverUri: Uri? = null,
     val releaseYear: Int? = null,
@@ -40,9 +44,14 @@ data class AlbumDetailUi(
 data class AlbumUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val isMutating: Boolean = false,
     val album: AlbumDetailUi? = null,
     val errorMessage: UiText? = null,
 )
+
+sealed interface AlbumScreenEvent {
+    data object NavigateBack : AlbumScreenEvent
+}
 
 @HiltViewModel
 class AlbumViewModel @Inject constructor(
@@ -52,9 +61,11 @@ class AlbumViewModel @Inject constructor(
 ) : ViewModel() {
     private val albumId: Long = checkNotNull(savedStateHandle.get<Long>(RouteArguments.ALBUM_ID))
     private val _uiState = MutableStateFlow(AlbumUiState())
+    private val _events = MutableSharedFlow<AlbumScreenEvent>()
     private var currentAlbumTracks: List<TrackBundle> = emptyList()
 
     val uiState: StateFlow<AlbumUiState> = _uiState.asStateFlow()
+    val events: SharedFlow<AlbumScreenEvent> = _events.asSharedFlow()
 
     init {
         refresh(initialLoad = true)
@@ -90,6 +101,44 @@ class AlbumViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 
+    fun uploadAlbumCover(coverUri: Uri) {
+        mutate { repository.uploadAlbumCover(albumId, coverUri) }
+    }
+
+    fun deleteAlbumCover() {
+        mutate { repository.deleteAlbumCover(albumId) }
+    }
+
+    fun deleteAlbum() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isMutating = true, errorMessage = null)
+            try {
+                repository.deleteAlbum(albumId)
+                _events.emit(AlbumScreenEvent.NavigateBack)
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                error.logHandledException("AlbumViewModel.deleteAlbum")
+                _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
+            } finally {
+                _uiState.value = _uiState.value.copy(isMutating = false)
+            }
+        }
+    }
+
+    fun reloadFromLocal() {
+        viewModelScope.launch {
+            try {
+                applyLibraryData(repository.loadLibrary(refreshFromNetwork = false))
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                error.logHandledException("AlbumViewModel.reloadFromLocal")
+                _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
+            }
+        }
+    }
+
     fun playbackQueueFor(trackId: Long): PlaybackQueue? {
         if (currentAlbumTracks.none { bundle -> bundle.track.remoteId == trackId }) {
             return null
@@ -119,6 +168,7 @@ class AlbumViewModel @Inject constructor(
                 AlbumDetailUi(
                     id = currentAlbum.remoteId,
                     name = albumDisplayName(currentAlbum),
+                    artistId = currentAlbum.artistId,
                     artistName = artistsById[currentAlbum.artistId]?.let(::artistDisplayName)
                         ?: UiText.StringResource(
                             R.string.common_placeholder_artist_id,
@@ -137,6 +187,22 @@ class AlbumViewModel @Inject constructor(
                 null
             },
         )
+    }
+
+    private fun mutate(block: suspend () -> MusicLibraryData) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isMutating = true, errorMessage = null)
+            try {
+                applyLibraryData(block())
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (e: Exception) {
+                e.logHandledException("AlbumViewModel.mutate")
+                _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
+            } finally {
+                _uiState.value = _uiState.value.copy(isMutating = false)
+            }
+        }
     }
 
     private fun Throwable.toReadableMessage(): UiText {

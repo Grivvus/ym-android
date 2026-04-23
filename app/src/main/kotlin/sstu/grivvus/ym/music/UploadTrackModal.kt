@@ -54,6 +54,11 @@ fun UploadTrackModal(
     playlistId: Long?,
     uri: Uri,
     initialTitle: String,
+    initialArtistId: Long? = null,
+    initialArtistName: String = "",
+    initialAlbumId: Long? = null,
+    initialAlbumName: String = "",
+    isAlbumContextLocked: Boolean = false,
     onDismiss: () -> Unit,
     onUploadSuccess: () -> Unit,
 ) {
@@ -82,6 +87,11 @@ fun UploadTrackModal(
                 playlistId = playlistId,
                 uri = uri,
                 initialTitle = initialTitle,
+                initialArtistId = initialArtistId,
+                initialArtistName = initialArtistName,
+                initialAlbumId = initialAlbumId,
+                initialAlbumName = initialAlbumName,
+                isAlbumContextLocked = isAlbumContextLocked,
             ),
         ),
     )
@@ -187,6 +197,7 @@ private fun UploadTrackModalContent(
             uiState.isCreatingArtist ||
             uiState.isCreatingAlbum ||
             uiState.isSubmitting
+    val isAlbumContextLocked = uiState.isAlbumContextLocked
     val isValid = uiState.title.isNotBlank() &&
             selectedArtist != null &&
             (uiState.isSingle || selectedAlbum != null)
@@ -238,138 +249,149 @@ private fun UploadTrackModalContent(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
-                    Box(modifier = Modifier.fillMaxWidth()) {
+                    if (isAlbumContextLocked) {
                         OutlinedTextField(
                             value = uiState.artistQuery,
-                            onValueChange = { value ->
-                                onDismissError()
-                                onArtistQueryChange(value)
-                            },
+                            onValueChange = {},
+                            readOnly = true,
                             label = { Text(stringResource(R.string.common_label_artist)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                    }
-                    if (shouldShowArtistSuggestions || shouldShowCreateArtist) {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            tonalElevation = 2.dp,
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(max = 240.dp),
+                    } else {
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = uiState.artistQuery,
+                                onValueChange = { value ->
+                                    onDismissError()
+                                    onArtistQueryChange(value)
+                                },
+                                label = { Text(stringResource(R.string.common_label_artist)) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        if (shouldShowArtistSuggestions || shouldShowCreateArtist) {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                tonalElevation = 2.dp,
                             ) {
-                                artistSuggestions.forEachIndexed { index, artist ->
-                                    TextButton(
-                                        onClick = {
-                                            onDismissError()
-                                            onArtistSelected(artist)
-                                        },
-                                        modifier = Modifier.fillMaxWidth(),
-                                    ) {
-                                        Text(
-                                            text = artist.displayName,
-                                            modifier = Modifier.fillMaxWidth(),
-                                        )
-                                    }
-                                    if (index != artistSuggestions.lastIndex || shouldShowCreateArtist) {
-                                        HorizontalDivider()
-                                    }
-                                }
-                                if (shouldShowCreateArtist) {
-                                    TextButton(
-                                        onClick = {
-                                            onDismissError()
-                                            onCreateArtist()
-                                        },
-                                        enabled = !uiState.isCreatingArtist,
-                                        modifier = Modifier.fillMaxWidth(),
-                                    ) {
-                                        Text(
-                                            text = if (uiState.isCreatingArtist) {
-                                                stringResource(R.string.upload_add_artist_loading)
-                                            } else {
-                                                stringResource(
-                                                    R.string.upload_add_artist,
-                                                    normalizedArtistQuery,
-                                                )
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 240.dp),
+                                ) {
+                                    artistSuggestions.forEachIndexed { index, artist ->
+                                        TextButton(
+                                            onClick = {
+                                                onDismissError()
+                                                onArtistSelected(artist)
                                             },
                                             modifier = Modifier.fillMaxWidth(),
-                                        )
+                                        ) {
+                                            Text(
+                                                text = artist.displayName,
+                                                modifier = Modifier.fillMaxWidth(),
+                                            )
+                                        }
+                                        if (index != artistSuggestions.lastIndex || shouldShowCreateArtist) {
+                                            HorizontalDivider()
+                                        }
+                                    }
+                                    if (shouldShowCreateArtist) {
+                                        TextButton(
+                                            onClick = {
+                                                onDismissError()
+                                                onCreateArtist()
+                                            },
+                                            enabled = !uiState.isCreatingArtist,
+                                            modifier = Modifier.fillMaxWidth(),
+                                        ) {
+                                            Text(
+                                                text = if (uiState.isCreatingArtist) {
+                                                    stringResource(R.string.upload_add_artist_loading)
+                                                } else {
+                                                    stringResource(
+                                                        R.string.upload_add_artist,
+                                                        normalizedArtistQuery,
+                                                    )
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                    when {
-                        uiState.artists.isEmpty() -> {
-                            Text(
-                                text = stringResource(R.string.upload_no_local_artists),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        when {
+                            uiState.artists.isEmpty() -> {
+                                Text(
+                                    text = stringResource(R.string.upload_no_local_artists),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
 
-                        uiState.artistQuery.isBlank() -> {
-                            Text(
-                                text = stringResource(R.string.upload_search_artists_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                            uiState.artistQuery.isBlank() -> {
+                                Text(
+                                    text = stringResource(R.string.upload_search_artists_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
 
-                        selectedArtist != null -> {
-                            Text(
-                                text = stringResource(
-                                    R.string.upload_selected_artist,
-                                    selectedArtist.displayName,
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                            selectedArtist != null -> {
+                                Text(
+                                    text = stringResource(
+                                        R.string.upload_selected_artist,
+                                        selectedArtist.displayName,
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
 
-                        shouldShowCreateArtist && hasArtistSuggestions -> {
-                            Text(
-                                text = stringResource(R.string.upload_select_or_add_artist),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                            shouldShowCreateArtist && hasArtistSuggestions -> {
+                                Text(
+                                    text = stringResource(R.string.upload_select_or_add_artist),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
 
-                        shouldShowCreateArtist -> {
-                            Text(
-                                text = stringResource(R.string.upload_artist_not_found),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                            shouldShowCreateArtist -> {
+                                Text(
+                                    text = stringResource(R.string.upload_artist_not_found),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
 
-                        else -> {
+                            else -> {
+                                Text(
+                                    text = stringResource(R.string.upload_select_artist_suggestion),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(
+                                checked = uiState.isSingle,
+                                onCheckedChange = {
+                                    onDismissError()
+                                    onSingleChange(it)
+                                },
+                            )
                             Text(
-                                text = stringResource(R.string.upload_select_artist_suggestion),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
+                                text = stringResource(R.string.upload_single),
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                         }
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(
-                            checked = uiState.isSingle,
-                            onCheckedChange = {
-                                onDismissError()
-                                onSingleChange(it)
-                            },
-                        )
-                        Text(
-                            text = stringResource(R.string.upload_single),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
                     }
                     if (!uiState.isSingle) {
                         Box(modifier = Modifier.fillMaxWidth()) {
@@ -381,7 +403,8 @@ private fun UploadTrackModalContent(
                                 },
                                 label = { Text(stringResource(R.string.common_label_album)) },
                                 singleLine = true,
-                                enabled = selectedArtist != null,
+                                readOnly = isAlbumContextLocked,
+                                enabled = isAlbumContextLocked || selectedArtist != null,
                                 placeholder = {
                                     Text(
                                         if (selectedArtist == null) {
@@ -395,7 +418,7 @@ private fun UploadTrackModalContent(
                                     .fillMaxWidth(),
                             )
                         }
-                        if (shouldShowAlbumSuggestions || shouldShowCreateAlbum) {
+                        if (!isAlbumContextLocked && (shouldShowAlbumSuggestions || shouldShowCreateAlbum)) {
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp),
@@ -449,6 +472,17 @@ private fun UploadTrackModalContent(
                             }
                         }
                         when {
+                            isAlbumContextLocked && selectedAlbum != null -> {
+                                Text(
+                                    text = stringResource(
+                                        R.string.upload_selected_album,
+                                        selectedAlbum.displayName,
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+
                             selectedArtist == null -> {
                                 Text(
                                     text = stringResource(R.string.upload_select_artist_for_albums),

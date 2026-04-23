@@ -28,6 +28,11 @@ data class UploadTrackModalArgs(
     val playlistId: Long?,
     val uri: Uri,
     val initialTitle: String,
+    val initialArtistId: Long? = null,
+    val initialArtistName: String = "",
+    val initialAlbumId: Long? = null,
+    val initialAlbumName: String = "",
+    val isAlbumContextLocked: Boolean = false,
 )
 
 data class UploadTrackArtistOptionUi(
@@ -50,6 +55,7 @@ data class UploadTrackModalUiState(
     val selectedArtistId: Long? = null,
     val selectedAlbumId: Long? = null,
     val isSingle: Boolean = false,
+    val isAlbumContextLocked: Boolean = false,
     val isGloballyAvailable: Boolean = false,
     val artists: List<UploadTrackArtistOptionUi> = emptyList(),
     val albums: List<UploadTrackAlbumOptionUi> = emptyList(),
@@ -74,6 +80,11 @@ class UploadTrackModalViewModel(
             playlistId = args.playlistId,
             uri = args.uri,
             title = args.initialTitle,
+            artistQuery = args.initialArtistName,
+            albumQuery = args.initialAlbumName,
+            selectedArtistId = args.initialArtistId,
+            selectedAlbumId = args.initialAlbumId,
+            isAlbumContextLocked = args.isAlbumContextLocked,
         ),
     )
     private val _events = MutableSharedFlow<UploadTrackModalEvent>()
@@ -171,6 +182,9 @@ class UploadTrackModalViewModel(
 
     fun onArtistSelected(artist: UploadTrackArtistOptionUi) {
         val currentState = _uiState.value
+        if (currentState.isAlbumContextLocked) {
+            return
+        }
         _uiState.value = currentState.copy(
             artistQuery = artist.displayName,
             selectedArtistId = artist.id,
@@ -183,6 +197,9 @@ class UploadTrackModalViewModel(
 
     fun onAlbumQueryChanged(value: String) {
         val currentState = _uiState.value
+        if (currentState.isAlbumContextLocked) {
+            return
+        }
         val artistId = currentState.selectedArtistId
         val exactAlbum = currentState.albums.firstOrNull { album ->
             album.artistId == artistId && album.displayName.equals(value.trim(), ignoreCase = true)
@@ -195,6 +212,9 @@ class UploadTrackModalViewModel(
     }
 
     fun onAlbumSelected(albumId: Long) {
+        if (_uiState.value.isAlbumContextLocked) {
+            return
+        }
         val selectedAlbum = _uiState.value.albums.firstOrNull { it.id == albumId }
         _uiState.value = _uiState.value.copy(
             albumQuery = selectedAlbum?.displayName.orEmpty(),
@@ -265,6 +285,9 @@ class UploadTrackModalViewModel(
 
     fun onSingleChanged(isSingle: Boolean) {
         val currentState = _uiState.value
+        if (currentState.isAlbumContextLocked) {
+            return
+        }
         _uiState.value = currentState.copy(
             isSingle = isSingle,
             albumQuery = if (isSingle) "" else currentState.albumQuery,

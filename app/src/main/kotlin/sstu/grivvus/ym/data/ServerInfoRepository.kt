@@ -76,8 +76,21 @@ class ServerInfoRepository @Inject constructor(
         return "${currentBaseUrl()}/playlists/$playlistId/cover"
     }
 
+    fun albumCoverUrl(albumId: Long): String {
+        return "${currentBaseUrl()}/albums/$albumId/cover"
+    }
+
     fun playlistCoverUri(playlistId: Long, cacheBust: Boolean = false): Uri {
         val baseUrl = playlistCoverUrl(playlistId)
+        return if (cacheBust) {
+            Uri.parse("$baseUrl?ts=${System.currentTimeMillis()}")
+        } else {
+            Uri.parse(baseUrl)
+        }
+    }
+
+    fun albumCoverUri(albumId: Long, cacheBust: Boolean = false): Uri {
+        val baseUrl = albumCoverUrl(albumId)
         return if (cacheBust) {
             Uri.parse("$baseUrl?ts=${System.currentTimeMillis()}")
         } else {

@@ -38,6 +38,7 @@
     <string name="common_action_create_backup">Создать резервную копию</string>
     <string name="common_action_rename">Переименовать</string>
     <string name="common_action_cover">Обложка</string>
+    <string name="common_action_clear_cover">Убрать обложку</string>
     <string name="common_action_go_to_artist">Перейти к исполнителю</string>
     <string name="common_action_go_to_album">Перейти к альбому</string>
     <string name="common_action_add_track">Добавить трек</string>
@@ -138,9 +139,12 @@
     <string name="album_unavailable_title">Альбом недоступен</string>
     <string name="album_unavailable_description">Не удалось загрузить информацию об альбоме</string>
     <string name="album_status_refreshing">Обновление альбома...</string>
+    <string name="album_status_applying_changes">Применение изменений...</string>
     <string name="album_empty_title">Альбом пуст</string>
     <string name="album_empty_description">В локальной библиотеке нет треков, связанных с этим альбомом.</string>
     <string name="album_error_not_found">Альбом не найден</string>
+    <string name="album_delete_title">Удалить альбом</string>
+    <string name="album_delete_message">Обложка и метаданные альбома будут удалены с сервера и из локального хранилища. Треки останутся в библиотеке.</string>
 
     <string name="artist_default_title">Исполнитель</string>
     <string name="artist_unavailable_title">Исполнитель недоступен</string>

@@ -39,6 +39,7 @@
     <string name="common_action_create_backup">Create backup</string>
     <string name="common_action_rename">Rename</string>
     <string name="common_action_cover">Cover</string>
+    <string name="common_action_clear_cover">Clear cover</string>
     <string name="common_action_go_to_artist">Go to artist</string>
     <string name="common_action_go_to_album">Go to album</string>
     <string name="common_action_add_track">Add track</string>
@@ -139,9 +140,12 @@
     <string name="album_unavailable_title">Album unavailable</string>
     <string name="album_unavailable_description">This album could not be loaded from the current library state.</string>
     <string name="album_status_refreshing">Refreshing album...</string>
+    <string name="album_status_applying_changes">Applying changes...</string>
     <string name="album_empty_title">Album is empty</string>
     <string name="album_empty_description">No tracks linked to this album are available in the local library.</string>
     <string name="album_error_not_found">Album was not found</string>
+    <string name="album_delete_title">Delete album</string>
+    <string name="album_delete_message">Album cover and metadata will be removed from the server and local storage. Tracks will remain in the library.</string>
 
     <string name="artist_default_title">Artist</string>
     <string name="artist_unavailable_title">Artist unavailable</string>

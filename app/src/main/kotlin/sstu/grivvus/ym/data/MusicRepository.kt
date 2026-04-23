@@ -234,6 +234,42 @@ class MusicRepository @Inject constructor(
             }
         }
 
+    suspend fun deleteAlbum(albumId: Long): MusicLibraryData = withContext(dispatcher) {
+        albumRemoteDataSource.deleteAlbum(albumId)
+        albumDao.deleteById(albumId)
+        buildLocalState()
+    }
+
+    suspend fun uploadAlbumCover(albumId: Long, coverUri: Uri): MusicLibraryData =
+        withContext(dispatcher) {
+            val preparedCover = prepareUploadFile(coverUri)
+            try {
+                albumRemoteDataSource.uploadCover(
+                    albumId = albumId,
+                    cover = preparedCover.toUploadPart(),
+                )
+            } finally {
+                preparedCover.file.delete()
+            }
+
+            val album = albumDao.getById(albumId)
+                ?: throw IOException("Album was not found")
+            albumDao.upsert(
+                album.copy(
+                    coverUri = serverInfoRepository.albumCoverUri(albumId, cacheBust = true),
+                ),
+            )
+            buildLocalState()
+        }
+
+    suspend fun deleteAlbumCover(albumId: Long): MusicLibraryData = withContext(dispatcher) {
+        albumRemoteDataSource.deleteCover(albumId)
+        val album = albumDao.getById(albumId)
+            ?: throw IOException("Album was not found")
+        albumDao.upsert(album.copy(coverUri = null))
+        buildLocalState()
+    }
+
     suspend fun deletePlaylist(playlistId: Long): MusicLibraryData = withContext(dispatcher) {
         playlistRemoteDataSource.deletePlaylist(playlistId)
         playlistDao.deleteById(playlistId)
