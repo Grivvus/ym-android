@@ -3,6 +3,9 @@ package sstu.grivvus.ym.data
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
+import coil3.SingletonImageLoader
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -131,23 +134,30 @@ class MusicRepository @Inject constructor(
                 ),
             )
 
+            val existingAlbumsById = albumDao.getAll().associateBy { it.remoteId }
             val remoteAlbums = remoteArtist.albumIds
                 .distinct()
                 .mapNotNull { albumId ->
                     runCatching { albumRemoteDataSource.getAlbum(albumId) }.getOrNull()
                 }
             if (remoteAlbums.isNotEmpty()) {
+                val albumsToStore = mutableListOf<Album>()
+                remoteAlbums.forEach { album ->
+                    val existingAlbum = existingAlbumsById[album.id]
+                    albumsToStore += Album(
+                        remoteId = album.id,
+                        artistId = artistId,
+                        name = album.name,
+                        coverUri = resolveAlbumCoverUri(
+                            albumId = album.id,
+                            existingCoverUri = existingAlbum?.coverUri,
+                        ),
+                        releaseYear = album.releaseYear,
+                        releaseDate = album.releaseFullDate,
+                    )
+                }
                 albumDao.upsertAll(
-                    remoteAlbums.map { album ->
-                        Album(
-                            remoteId = album.id,
-                            artistId = artistId,
-                            name = album.name,
-                            coverUri = album.coverUrl?.toUri(),
-                            releaseYear = album.releaseYear,
-                            releaseDate = album.releaseFullDate,
-                        )
-                    },
+                    albumsToStore,
                 )
             }
         }
@@ -184,12 +194,22 @@ class MusicRepository @Inject constructor(
                 releaseYear = releaseYear,
                 releaseFullDate = releaseDate,
             )
-            val remoteAlbumMetadata = loadRemoteAlbumMetadata(albumId)
+            val remoteAlbumMetadata = loadRemoteAlbumMetadata(
+                albumId = albumId,
+                useCoverRouteFallback = false,
+            )
+            val resolvedCoverUri = if (preparedCover != null) {
+                serverInfoRepository.albumCoverUri(albumId, cacheBust = true).also { uri ->
+                    warmImageCache(uri)
+                }
+            } else {
+                remoteAlbumMetadata?.coverUri
+            }
             val album = Album(
                 remoteId = albumId,
                 artistId = artistId,
                 name = remoteAlbumMetadata?.name?.takeIf { it.isNotBlank() } ?: normalizedName,
-                coverUri = remoteAlbumMetadata?.coverUri,
+                coverUri = resolvedCoverUri,
                 releaseYear = remoteAlbumMetadata?.releaseYear ?: releaseYear,
                 releaseDate = remoteAlbumMetadata?.releaseDate ?: releaseDate,
             )
@@ -214,13 +234,15 @@ class MusicRepository @Inject constructor(
                     isPublic = isPublic,
                     cover = preparedCover?.toUploadPart(),
                 )
+                val resolvedCoverUri = preparedCover?.let {
+                    serverInfoRepository.playlistCoverUri(playlistId, cacheBust = true)
+                        .also { uri -> warmImageCache(uri) }
+                }
                 playlistDao.upsert(
                     Playlist(
                         remoteId = playlistId,
                         name = name,
-                        coverUri = preparedCover?.let {
-                            serverInfoRepository.playlistCoverUri(playlistId, cacheBust = true)
-                        },
+                        coverUri = resolvedCoverUri,
                         ownerRemoteId = authSessionManager.requireCurrentUser().remoteId,
                         nameIsLocalOverride = false,
                         tracksSeeded = true,
@@ -254,9 +276,13 @@ class MusicRepository @Inject constructor(
 
             val album = albumDao.getById(albumId)
                 ?: throw IOException("Album was not found")
+            val resolvedCoverUri = serverInfoRepository.albumCoverUri(
+                albumId = albumId,
+                cacheBust = true,
+            ).also { uri -> warmImageCache(uri) }
             albumDao.upsert(
                 album.copy(
-                    coverUri = serverInfoRepository.albumCoverUri(albumId, cacheBust = true),
+                    coverUri = resolvedCoverUri,
                 ),
             )
             buildLocalState()
@@ -293,7 +319,7 @@ class MusicRepository @Inject constructor(
             playlistDao.upsert(
                 currentPlaylist.copy(
                     name = updatedPlaylist.name,
-                    coverUri = updatedPlaylist.coverUrl?.toUri() ?: currentPlaylist.coverUri,
+                    coverUri = currentPlaylist.coverUri,
                     nameIsLocalOverride = false,
                     tracksSeeded = true,
                 ),
@@ -315,9 +341,13 @@ class MusicRepository @Inject constructor(
 
             val playlist = playlistDao.getById(playlistId)
                 ?: throw IOException("Playlist was not found")
+            val resolvedCoverUri = serverInfoRepository.playlistCoverUri(
+                playlistId = playlistId,
+                cacheBust = true,
+            ).also { uri -> warmImageCache(uri) }
             playlistDao.upsert(
                 playlist.copy(
-                    coverUri = serverInfoRepository.playlistCoverUri(playlistId, cacheBust = true),
+                    coverUri = resolvedCoverUri,
                 ),
             )
             buildLocalState()
@@ -429,18 +459,22 @@ class MusicRepository @Inject constructor(
 
         val existingAlbumsById = albumDao.getAll().associateBy { it.remoteId }
         val albumIds = remoteTracks.map { it.albumId }.distinct()
-        val fetchedAlbums = albumIds.mapNotNull { albumId ->
-            runCatching { albumRemoteDataSource.getAlbum(albumId) }.getOrNull()?.let { album ->
-                val artistId = artistIdsByAlbumId[album.id] ?: return@let null
-                Album(
-                    remoteId = album.id,
-                    artistId = artistId,
-                    name = album.name,
-                    coverUri = album.coverUrl?.toUri(),
-                    releaseYear = album.releaseYear,
-                    releaseDate = album.releaseFullDate,
-                )
-            }
+        val fetchedAlbums = mutableListOf<Album>()
+        albumIds.forEach { albumId ->
+            val album = runCatching { albumRemoteDataSource.getAlbum(albumId) }.getOrNull() ?: return@forEach
+            val artistId = artistIdsByAlbumId[album.id] ?: return@forEach
+            val existingAlbum = existingAlbumsById[album.id]
+            fetchedAlbums += Album(
+                remoteId = album.id,
+                artistId = artistId,
+                name = album.name,
+                coverUri = resolveAlbumCoverUri(
+                    albumId = album.id,
+                    existingCoverUri = existingAlbum?.coverUri,
+                ),
+                releaseYear = album.releaseYear,
+                releaseDate = album.releaseFullDate,
+            )
         }
         if (fetchedAlbums.isNotEmpty()) {
             albumDao.upsertAll(fetchedAlbums)
@@ -528,7 +562,10 @@ class MusicRepository @Inject constructor(
             )
             playlistDao.upsert(
                 localPlaylist.copy(
-                    coverUri = remotePlaylist.coverUrl?.toUri() ?: localPlaylist.coverUri,
+                    coverUri = resolvePlaylistCoverUri(
+                        playlistId = playlistId,
+                        existingCoverUri = localPlaylist.coverUri,
+                    ),
                     tracksSeeded = true,
                 ),
             )
@@ -605,7 +642,10 @@ class MusicRepository @Inject constructor(
             )
             if (!isSingle && albumId != null) {
                 val existingAlbum = albumDao.getById(albumId)
-                val remoteAlbumMetadata = loadRemoteAlbumMetadata(albumId)
+                val remoteAlbumMetadata = loadRemoteAlbumMetadata(
+                    albumId = albumId,
+                    existingCoverUri = existingAlbum?.coverUri,
+                )
                 albumDao.upsert(
                     Album(
                         remoteId = albumId,
@@ -670,15 +710,67 @@ class MusicRepository @Inject constructor(
         }
     }
 
-    private suspend fun loadRemoteAlbumMetadata(albumId: Long): RemoteAlbumMetadata? {
+    private suspend fun loadRemoteAlbumMetadata(
+        albumId: Long,
+        existingCoverUri: Uri? = null,
+        useCoverRouteFallback: Boolean = true,
+    ): RemoteAlbumMetadata? {
         return runCatching {
             albumRemoteDataSource.getAlbum(albumId)
         }.getOrNull()?.let { album ->
             RemoteAlbumMetadata(
                 name = album.name,
-                coverUri = album.coverUrl?.toUri(),
+                coverUri = resolveAlbumCoverUri(
+                    albumId = albumId,
+                    existingCoverUri = existingCoverUri,
+                    useCoverRouteFallback = useCoverRouteFallback,
+                ),
                 releaseYear = album.releaseYear,
                 releaseDate = album.releaseFullDate,
+            )
+        }
+    }
+
+    private suspend fun resolveAlbumCoverUri(
+        albumId: Long,
+        existingCoverUri: Uri?,
+        useCoverRouteFallback: Boolean = true,
+    ): Uri? {
+        val resolvedCoverUri = existingCoverUri ?: if (useCoverRouteFallback) {
+            serverInfoRepository.albumCoverUri(albumId)
+        } else {
+            null
+        }
+        warmImageCache(resolvedCoverUri)
+        return resolvedCoverUri
+    }
+
+    private suspend fun resolvePlaylistCoverUri(
+        playlistId: Long,
+        existingCoverUri: Uri?,
+        useCoverRouteFallback: Boolean = true,
+    ): Uri? {
+        val resolvedCoverUri = existingCoverUri ?: if (useCoverRouteFallback) {
+            serverInfoRepository.playlistCoverUri(playlistId)
+        } else {
+            null
+        }
+        warmImageCache(resolvedCoverUri)
+        return resolvedCoverUri
+    }
+
+    private suspend fun warmImageCache(uri: Uri?) {
+        if (uri == null) {
+            return
+        }
+        runCatching {
+            SingletonImageLoader.get(context).execute(
+                ImageRequest.Builder(context)
+                    .data(uri)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(CachePolicy.ENABLED)
+                    .networkCachePolicy(CachePolicy.ENABLED)
+                    .build(),
             )
         }
     }

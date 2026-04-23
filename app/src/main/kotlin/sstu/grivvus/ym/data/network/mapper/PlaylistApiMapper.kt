@@ -11,7 +11,7 @@ class PlaylistApiMapper @Inject constructor() {
     fun mapPlaylist(response: PlaylistWithTracksResponse): NetworkPlaylist {
         return NetworkPlaylist(
             id = response.playlistId.toLong(), name = response.playlistName,
-            trackIds = response.tracks.map { it.toLong() }, coverUrl = response.coverUrl,
+            trackIds = response.tracks.map { it.toLong() },
         )
     }
 

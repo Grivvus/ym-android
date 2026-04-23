@@ -11,7 +11,6 @@ class AlbumApiMapper @Inject constructor() {
         return NetworkAlbum(
             id = response.albumId.toLong(),
             name = response.albumName,
-            coverUrl = response.coverUrl,
             releaseYear = response.releaseYear,
             releaseFullDate = response.releaseFullDate,
             trackIds = response.tracks.map { it.toLong() },

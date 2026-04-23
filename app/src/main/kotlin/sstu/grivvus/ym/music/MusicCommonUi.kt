@@ -16,6 +16,10 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,13 +32,15 @@ fun Artwork(
     uri: Uri?,
     modifier: Modifier = Modifier,
 ) {
+    var failedToLoad by remember(uri) { mutableStateOf(false) }
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(24.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
-        if (uri == null) {
+        if (uri == null || failedToLoad) {
             Text(
                 text = "♪",
                 style = MaterialTheme.typography.headlineMedium,
@@ -46,6 +52,8 @@ fun Artwork(
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
+                onError = { failedToLoad = true },
+                onSuccess = { failedToLoad = false },
             )
         }
     }
