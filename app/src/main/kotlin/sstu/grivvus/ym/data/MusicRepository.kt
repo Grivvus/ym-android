@@ -307,15 +307,6 @@ class MusicRepository @Inject constructor(
             val currentPlaylist = playlistDao.getById(playlistId)
                 ?: throw IOException("Playlist was not found")
             val updatedPlaylist = playlistRemoteDataSource.updatePlaylist(playlistId, newName)
-            playlistTrackDao.deleteForPlaylist(playlistId)
-            playlistTrackDao.insertAll(
-                updatedPlaylist.trackIds.map { trackId ->
-                    PlaylistTrackCrossRef(
-                        playlistId = playlistId,
-                        trackId = trackId,
-                    )
-                },
-            )
             playlistDao.upsert(
                 currentPlaylist.copy(
                     name = updatedPlaylist.name,
@@ -431,17 +422,18 @@ class MusicRepository @Inject constructor(
         deleteTracks(trackIds = listOf(trackId))
     }
 
-    suspend fun deleteTracks(trackIds: Collection<Long>): MusicLibraryData = withContext(dispatcher) {
-        val distinctTrackIds = trackIds.distinct()
-        if (distinctTrackIds.isEmpty()) {
-            return@withContext buildLocalState()
+    suspend fun deleteTracks(trackIds: Collection<Long>): MusicLibraryData =
+        withContext(dispatcher) {
+            val distinctTrackIds = trackIds.distinct()
+            if (distinctTrackIds.isEmpty()) {
+                return@withContext buildLocalState()
+            }
+            distinctTrackIds.forEach { trackId ->
+                trackRemoteDataSource.deleteTrack(trackId)
+            }
+            audioTrackDao.deleteByIds(distinctTrackIds)
+            buildLocalState()
         }
-        distinctTrackIds.forEach { trackId ->
-            trackRemoteDataSource.deleteTrack(trackId)
-        }
-        audioTrackDao.deleteByIds(distinctTrackIds)
-        buildLocalState()
-    }
 
     private suspend fun syncRemoteState() {
         val existingArtists = artistRemoteDataSource.getAllArtists()
@@ -461,7 +453,8 @@ class MusicRepository @Inject constructor(
         val albumIds = remoteTracks.map { it.albumId }.distinct()
         val fetchedAlbums = mutableListOf<Album>()
         albumIds.forEach { albumId ->
-            val album = runCatching { albumRemoteDataSource.getAlbum(albumId) }.getOrNull() ?: return@forEach
+            val album = runCatching { albumRemoteDataSource.getAlbum(albumId) }.getOrNull()
+                ?: return@forEach
             val artistId = artistIdsByAlbumId[album.id] ?: return@forEach
             val existingAlbum = existingAlbumsById[album.id]
             fetchedAlbums += Album(
@@ -479,7 +472,8 @@ class MusicRepository @Inject constructor(
         if (fetchedAlbums.isNotEmpty()) {
             albumDao.upsertAll(fetchedAlbums)
         }
-        val availableAlbumIds = (existingAlbumsById.keys + fetchedAlbums.map { it.remoteId }).toSet()
+        val availableAlbumIds =
+            (existingAlbumsById.keys + fetchedAlbums.map { it.remoteId }).toSet()
 
         val staleTrackIds = existingTracks.keys - remoteTrackIds
         if (staleTrackIds.isNotEmpty()) {
@@ -653,8 +647,10 @@ class MusicRepository @Inject constructor(
                         name = remoteAlbumMetadata?.name?.takeIf { it.isNotBlank() }
                             ?: existingAlbum?.name.orEmpty(),
                         coverUri = remoteAlbumMetadata?.coverUri ?: existingAlbum?.coverUri,
-                        releaseYear = remoteAlbumMetadata?.releaseYear ?: existingAlbum?.releaseYear,
-                        releaseDate = remoteAlbumMetadata?.releaseDate ?: existingAlbum?.releaseDate,
+                        releaseYear = remoteAlbumMetadata?.releaseYear
+                            ?: existingAlbum?.releaseYear,
+                        releaseDate = remoteAlbumMetadata?.releaseDate
+                            ?: existingAlbum?.releaseDate,
                     ),
                 )
                 trackAlbumDao.upsert(TrackAlbumCrossRef(trackId = trackId, albumId = albumId))

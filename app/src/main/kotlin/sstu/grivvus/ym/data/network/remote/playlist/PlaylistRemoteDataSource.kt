@@ -5,9 +5,10 @@ import sstu.grivvus.ym.data.network.core.ApiExecutor
 import sstu.grivvus.ym.data.network.core.GeneratedApiProvider
 import sstu.grivvus.ym.data.network.mapper.PlaylistApiMapper
 import sstu.grivvus.ym.data.network.model.NetworkPlaylist
+import sstu.grivvus.ym.data.network.model.NetworkPlaylistEmpty
 import sstu.grivvus.ym.data.network.model.UploadPart
 import sstu.grivvus.ym.openapi.models.AddTrackToPlaylistRequest
-import sstu.grivvus.ym.openapi.models.PlaylistResponse
+import sstu.grivvus.ym.openapi.models.PlaylistUpdateRequest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,7 +19,7 @@ interface PlaylistRemoteDataSource {
 
     suspend fun createPlaylist(name: String, isPublic: Boolean, cover: UploadPart?): Long
 
-    suspend fun updatePlaylist(playlistId: Long, name: String): NetworkPlaylist
+    suspend fun updatePlaylist(playlistId: Long, name: String): NetworkPlaylistEmpty
 
     suspend fun deletePlaylist(playlistId: Long)
 
@@ -70,14 +71,13 @@ class OpenApiPlaylistRemoteDataSource @Inject constructor(
         }
     }
 
-    override suspend fun updatePlaylist(playlistId: Long, name: String): NetworkPlaylist {
+    override suspend fun updatePlaylist(playlistId: Long, name: String): NetworkPlaylistEmpty {
         return generatedApiProvider.withAuthorizedApi { api ->
-            playlistApiMapper.mapPlaylist(
+            playlistApiMapper.mapEmptyPlaylist(
                 apiExecutor.execute {
                     api.updatePlaylistWithHttpInfo(
                         playlistId = playlistId.toInt(),
-                        playlistResponse = PlaylistResponse(
-                            playlistId = playlistId.toInt(),
+                        playlistUpdateRequest = PlaylistUpdateRequest(
                             playlistName = name,
                         ),
                     )

@@ -5,3 +5,8 @@ data class NetworkPlaylist(
     val name: String,
     val trackIds: List<Long> = emptyList(),
 )
+
+data class NetworkPlaylistEmpty(
+    val id: Long,
+    val name: String,
+)
