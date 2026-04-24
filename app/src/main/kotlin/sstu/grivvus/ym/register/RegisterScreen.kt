@@ -91,18 +91,18 @@ fun RegistrationScreen(
             )
 
             TextButton(
-            onClick = onSignInClick,
-            modifier = Modifier.align(Alignment.End),
-        ) {
-            Text(stringResource(R.string.common_action_sign_in))
-        }
+                onClick = onSignInClick,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(stringResource(R.string.common_action_sign_in))
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             FormActionRow(
                 secondaryButtonLabel = stringResource(R.string.common_action_clear),
                 onSecondaryButtonClick = { viewModel.clearForm() },
-                primaryButtonLabel = stringResource(R.string.common_action_register),
+                primaryButtonLabel = stringResource(R.string.common_action_proceed),
                 onPrimaryButtonClick = { viewModel.proceedRegistration(onSuccess) },
                 primaryButtonEnabled = uiState.username.isNotBlank() &&
                         uiState.password.isNotBlank() &&

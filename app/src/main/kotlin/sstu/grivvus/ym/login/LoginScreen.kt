@@ -92,7 +92,7 @@ fun LoginScreen(
         FormActionRow(
             secondaryButtonLabel = stringResource(R.string.common_action_clear),
             onSecondaryButtonClick = { viewModel.clearForm() },
-            primaryButtonLabel = stringResource(R.string.common_action_login),
+            primaryButtonLabel = stringResource(R.string.common_action_proceed),
             onPrimaryButtonClick = { viewModel.proceedLogin(onSuccess) },
             primaryButtonEnabled = uiState.username.isNotBlank() && uiState.password.isNotBlank(),
         )

@@ -18,9 +18,6 @@
     <string name="common_action_clear">Очистить</string>
     <string name="common_action_sign_in">Вход</string>
     <string name="common_action_sign_up">Регистрация</string>
-    <string name="common_action_login">Войти</string>
-    <string name="common_action_register">Зарегистрироваться</string>
-    <string name="common_action_test_and_save">Проверить и сохранить</string>
     <string name="common_action_change">Изменить</string>
     <string name="common_action_minimize">Свернуть</string>
     <string name="common_action_previous">Назад</string>
@@ -242,4 +239,5 @@
     <string name="upload_album_not_found">Альбом этого исполнителя не найден. Вы можете добавить новый.</string>
     <string name="upload_uploading">Загрузка...</string>
     <string name="upload_error_select_artist_first">Сначала выберите исполнителя</string>
+    <string name="common_action_proceed">Продолжить</string>
 </resources>

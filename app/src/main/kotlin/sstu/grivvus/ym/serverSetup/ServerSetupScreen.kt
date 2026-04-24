@@ -86,7 +86,7 @@ fun ServerSetup(
         FormActionRow(
             secondaryButtonLabel = stringResource(R.string.common_action_clear),
             onSecondaryButtonClick = { viewModel.clearForm() },
-            primaryButtonLabel = stringResource(R.string.common_action_test_and_save),
+            primaryButtonLabel = stringResource(R.string.common_action_proceed),
             onPrimaryButtonClick = { viewModel.proceed(onProceed) },
             secondaryButtonEnabled = !uiState.isLoading &&
                     (uiState.host.isNotBlank() || uiState.port.isNotBlank()),

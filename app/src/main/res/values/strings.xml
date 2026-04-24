@@ -19,9 +19,6 @@
     <string name="common_action_clear">Clear</string>
     <string name="common_action_sign_in">Sign In</string>
     <string name="common_action_sign_up">Sign Up</string>
-    <string name="common_action_login">Login</string>
-    <string name="common_action_register">Register</string>
-    <string name="common_action_test_and_save">Test &amp; Save</string>
     <string name="common_action_change">Change</string>
     <string name="common_action_minimize">Minimize</string>
     <string name="common_action_previous">Previous</string>
@@ -244,4 +241,5 @@
     <string name="upload_album_not_found">Album not found for this artist. You can add a new one.</string>
     <string name="upload_uploading">Uploading...</string>
     <string name="upload_error_select_artist_first">Select an artist first</string>
+    <string name="common_action_proceed">Proceed</string>
 </resources>
