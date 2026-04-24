@@ -35,7 +35,7 @@ class OpenApiUserRemoteDataSource @Inject constructor(
         return generatedApiProvider.withAuthorizedApi { api ->
             userApiMapper.mapUser(
                 apiExecutor.execute {
-                    api.getUserByIdWithHttpInfo(currentUser.remoteId.toInt())
+                    api.getUserWithHttpInfo(currentUser.remoteId.toInt())
                 },
             )
         }
