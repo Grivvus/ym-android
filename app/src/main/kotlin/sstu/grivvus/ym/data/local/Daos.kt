@@ -117,6 +117,9 @@ interface ArtistDao {
 
     @Query("SELECT * FROM artist WHERE remote_id = :artistId LIMIT 1")
     suspend fun getById(artistId: Long): Artist?
+
+    @Query("DELETE FROM artist")
+    fun clearAll()
 }
 
 @Dao
@@ -135,6 +138,9 @@ interface AlbumDao {
 
     @Query("DELETE FROM album WHERE remote_id = :albumId")
     suspend fun deleteById(albumId: Long)
+
+    @Query("DELETE FROM album")
+    fun clearAll()
 }
 
 @Dao
@@ -156,6 +162,9 @@ interface PlaylistDao {
 
     @Query("DELETE FROM playlist WHERE remote_id = :playlistId")
     suspend fun deleteById(playlistId: Long)
+
+    @Query("DELETE FROM playlist")
+    fun clearAll()
 }
 
 @Dao
@@ -172,4 +181,7 @@ interface PlaylistTrackDao {
 
     @Query("DELETE FROM playlist_track_cross_ref WHERE playlist_id = :playlistId")
     suspend fun deleteForPlaylist(playlistId: Long)
+
+    @Query("DELETE FROM playlist_track_cross_ref")
+    fun clearAll()
 }

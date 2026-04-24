@@ -9,7 +9,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import sstu.grivvus.ym.data.local.AlbumDao
+import sstu.grivvus.ym.data.local.ArtistDao
+import sstu.grivvus.ym.data.local.AudioTrackDao
 import sstu.grivvus.ym.data.local.LocalUser
+import sstu.grivvus.ym.data.local.PlaylistDao
+import sstu.grivvus.ym.data.local.PlaylistTrackDao
+import sstu.grivvus.ym.data.local.TrackAlbumDao
 import sstu.grivvus.ym.data.local.UserDao
 import sstu.grivvus.ym.data.network.core.ApiException
 import sstu.grivvus.ym.data.network.model.NetworkSession
@@ -21,6 +27,12 @@ import javax.inject.Singleton
 @Singleton
 class DefaultAuthSessionManager @Inject constructor(
     private val userDao: UserDao,
+    private val audioTrackDao: AudioTrackDao,
+    private val albumDao: AlbumDao,
+    private val artistDao: ArtistDao,
+    private val playlistDao: PlaylistDao,
+    private val trackAlbumDao: TrackAlbumDao,
+    private val playlistTrackDao: PlaylistTrackDao,
     private val tokenRefresher: TokenRefresher,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     @ApplicationScope applicationScope: CoroutineScope,
@@ -122,6 +134,12 @@ class DefaultAuthSessionManager @Inject constructor(
     override suspend fun clearSession(reason: SessionEndReason) {
         withContext(ioDispatcher) {
             userDao.clearTable()
+            playlistTrackDao.clearAll()
+            trackAlbumDao.clearAll()
+            audioTrackDao.clearAll()
+            albumDao.clearAll()
+            artistDao.clearAll()
+            playlistDao.clearAll()
         }
         internalState.value = SessionState.Unauthenticated(reason)
     }
