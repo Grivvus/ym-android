@@ -8,13 +8,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.sharp.Email
 import androidx.compose.material.icons.sharp.LockReset
 import androidx.compose.material.icons.sharp.Password
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,7 +24,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.delay
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.CenteredFormScreen
 import sstu.grivvus.ym.components.ErrorTooltip
@@ -33,8 +32,6 @@ import sstu.grivvus.ym.components.PasswordOutlinedField
 import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
 
-private const val RETURN_TO_LOGIN_DELAY_MILLIS = 1200L
-
 @Composable
 fun PasswordResetScreen(
     onBackToSignIn: () -> Unit,
@@ -42,14 +39,6 @@ fun PasswordResetScreen(
     viewModel: PasswordResetViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(uiState.resetCompleted) {
-        if (uiState.resetCompleted) {
-            delay(RETURN_TO_LOGIN_DELAY_MILLIS)
-            viewModel.clearForm()
-            onBackToSignIn()
-        }
-    }
 
     CenteredFormScreen(
         modifier = modifier,
@@ -84,24 +73,47 @@ fun PasswordResetScreen(
             )
         }
 
-        when (uiState.step) {
-            PasswordResetStep.RequestCode -> PasswordResetRequestCodeContent(
-                uiState = uiState,
-                onEmailChange = viewModel::updateEmail,
-                onClear = viewModel::clearForm,
-                onRequestCode = viewModel::requestResetCode,
-                onBackToSignIn = onBackToSignIn,
+        if (uiState.resetCompleted) {
+            PasswordResetSuccessContent(
+                onBackToSignIn = {
+                    viewModel.clearForm()
+                    onBackToSignIn()
+                },
             )
+        } else {
+            when (uiState.step) {
+                PasswordResetStep.RequestCode -> PasswordResetRequestCodeContent(
+                    uiState = uiState,
+                    onEmailChange = viewModel::updateEmail,
+                    onClear = viewModel::clearForm,
+                    onRequestCode = viewModel::requestResetCode,
+                    onBackToSignIn = onBackToSignIn,
+                )
 
-            PasswordResetStep.ConfirmReset -> PasswordResetConfirmContent(
-                uiState = uiState,
-                onCodeChange = viewModel::updateCode,
-                onNewPasswordChange = viewModel::updateNewPassword,
-                onConfirmPasswordChange = viewModel::updateConfirmPassword,
-                onUseAnotherEmail = viewModel::returnToRequestStep,
-                onConfirm = viewModel::confirmPasswordReset,
-            )
+                PasswordResetStep.ConfirmReset -> PasswordResetConfirmContent(
+                    uiState = uiState,
+                    onCodeChange = viewModel::updateCode,
+                    onNewPasswordChange = viewModel::updateNewPassword,
+                    onConfirmPasswordChange = viewModel::updateConfirmPassword,
+                    onUseAnotherEmail = viewModel::returnToRequestStep,
+                    onConfirm = viewModel::confirmPasswordReset,
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun PasswordResetSuccessContent(
+    onBackToSignIn: () -> Unit,
+) {
+    Spacer(modifier = Modifier.height(4.dp))
+
+    Button(
+        onClick = onBackToSignIn,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(stringResource(R.string.common_action_sign_in))
     }
 }
 
