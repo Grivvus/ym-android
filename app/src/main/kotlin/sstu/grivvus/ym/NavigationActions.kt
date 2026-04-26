@@ -7,6 +7,7 @@ import sstu.grivvus.ym.AppScreens.ARTIST_SCREEN
 import sstu.grivvus.ym.AppScreens.LIBRARY_SCREEN
 import sstu.grivvus.ym.AppScreens.LOGIN_SCREEN
 import sstu.grivvus.ym.AppScreens.MUSIC_SCREEN
+import sstu.grivvus.ym.AppScreens.PASSWORD_RESET_SCREEN
 import sstu.grivvus.ym.AppScreens.PLAYLIST_SCREEN
 import sstu.grivvus.ym.AppScreens.PLAYER_SCREEN
 import sstu.grivvus.ym.AppScreens.PROFILE_SCREEN
@@ -24,6 +25,7 @@ object AppScreens {
     const val SERVER_SETUP_SCREEN = "server_setup"
     const val LOGIN_SCREEN = "login"
     const val REGISTRATION_SCREEN = "registration"
+    const val PASSWORD_RESET_SCREEN = "password_reset"
     const val PROFILE_SCREEN = "profile"
     const val MUSIC_SCREEN = "music"
     const val ARTIST_SCREEN = "artist"
@@ -48,6 +50,7 @@ object AppDestinations {
     const val PROFILE_ROUTE = PROFILE_SCREEN
     const val LOGIN_ROUTE = LOGIN_SCREEN
     const val REGISTRATION_ROUTE = REGISTRATION_SCREEN
+    const val PASSWORD_RESET_ROUTE = PASSWORD_RESET_SCREEN
     const val MUSIC_ROUTE = MUSIC_SCREEN
     const val ARTIST_ROUTE = "$ARTIST_SCREEN/{$ARTIST_ID}"
     const val ALBUM_ROUTE = "$ALBUM_SCREEN/{$ALBUM_ID}"
@@ -83,6 +86,10 @@ class NavigationActions(private val navController: NavController) {
 
     fun navigateToRegistration() {
         navController.navigateSingleTopTo(AppDestinations.REGISTRATION_ROUTE)
+    }
+
+    fun navigateToPasswordReset() {
+        navController.navigateSingleTopTo(AppDestinations.PASSWORD_RESET_ROUTE)
     }
 
     fun navigateToServerSetup() {

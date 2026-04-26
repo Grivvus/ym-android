@@ -69,6 +69,21 @@ class UserRepository @Inject constructor(
         )
     }
 
+    suspend fun requestPasswordReset(email: String): String {
+        return authRemoteDataSource.requestPasswordReset(email = email)
+    }
+
+    suspend fun confirmPasswordReset(email: String, code: String, newPassword: String): String {
+        if (newPassword.length < 6) {
+            throw IOException("password's length should be 6 symbols or more")
+        }
+        return authRemoteDataSource.confirmPasswordReset(
+            email = email,
+            code = code,
+            newPassword = newPassword,
+        )
+    }
+
     suspend fun updateLocalUserFromNetwork() {
         val localUser = authSessionManager.requireCurrentUser()
         val remoteUser = userRemoteDataSource.getCurrentUser()

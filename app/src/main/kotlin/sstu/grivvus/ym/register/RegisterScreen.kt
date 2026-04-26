@@ -1,5 +1,7 @@
 package sstu.grivvus.ym.register
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -34,6 +35,7 @@ import sstu.grivvus.ym.ui.theme.appIconsMirrored
 @Composable
 fun RegistrationScreen(
     onSignInClick: () -> Unit,
+    onPasswordResetClick: () -> Unit,
     onSuccess: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: RegisterViewModel = hiltViewModel(),
@@ -90,11 +92,16 @@ fun RegistrationScreen(
                 imeAction = ImeAction.Done,
             )
 
-            TextButton(
-                onClick = onSignInClick,
-                modifier = Modifier.align(Alignment.End),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(stringResource(R.string.common_action_sign_in))
+                TextButton(onClick = onPasswordResetClick) {
+                    Text(stringResource(R.string.password_reset_action_forgot_password))
+                }
+                TextButton(onClick = onSignInClick) {
+                    Text(stringResource(R.string.common_action_sign_in))
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

@@ -1,6 +1,7 @@
 package sstu.grivvus.ym.data
 
 import android.content.Context
+import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
@@ -136,7 +137,6 @@ class MusicRepositoryTest {
         coEvery { albumRemoteDataSource.getAlbum(70L) } returns NetworkAlbum(
             id = 70L,
             name = "Future Album",
-            coverUrl = "https://example.com/albums/70/cover",
             releaseYear = 2025,
             releaseFullDate = releaseDate,
         )
@@ -172,10 +172,11 @@ class MusicRepositoryTest {
         coEvery { albumRemoteDataSource.getAlbum(90L) } returns NetworkAlbum(
             id = 90L,
             name = "Loaded Album",
-            coverUrl = null,
             releaseYear = 2024,
             releaseFullDate = releaseDate,
         )
+        coEvery { serverInfoRepository.albumCoverUri(90L) } returns
+                Uri.parse("https://example.com/albums/90/cover")
 
         val repository = createRepository()
 

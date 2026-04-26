@@ -23,6 +23,7 @@ import sstu.grivvus.ym.library.LibraryScreen
 import sstu.grivvus.ym.login.LoginScreen
 import sstu.grivvus.ym.music.MusicScreen
 import sstu.grivvus.ym.music.UploadScreen
+import sstu.grivvus.ym.passwordReset.PasswordResetScreen
 import sstu.grivvus.ym.playback.MiniPlayerOverlay
 import sstu.grivvus.ym.playback.PlaybackViewModel
 import sstu.grivvus.ym.playback.PlayerScreen
@@ -111,14 +112,21 @@ fun YMNavGraph(
             }
             composable(AppDestinations.LOGIN_ROUTE) {
                 LoginScreen(
-                    { navActions.navigateToRegistration() },
-                    { navActions.navigateToMusicFromAuth() }
+                    onSignUpClick = { navActions.navigateToRegistration() },
+                    onPasswordResetClick = { navActions.navigateToPasswordReset() },
+                    onSuccess = { navActions.navigateToMusicFromAuth() },
                 )
             }
             composable(AppDestinations.REGISTRATION_ROUTE) {
                 RegistrationScreen(
-                    { navActions.navigateToLogin() },
-                    { navActions.navigateToMusicFromAuth() },
+                    onSignInClick = { navActions.navigateToLogin() },
+                    onPasswordResetClick = { navActions.navigateToPasswordReset() },
+                    onSuccess = { navActions.navigateToMusicFromAuth() },
+                )
+            }
+            composable(AppDestinations.PASSWORD_RESET_ROUTE) {
+                PasswordResetScreen(
+                    onBackToSignIn = { navActions.navigateToLogin() },
                 )
             }
             composable(AppDestinations.PROFILE_ROUTE) {

@@ -54,6 +54,27 @@ class AuthenticatedMediaInterceptorTest {
     }
 
     @Test
+    fun intercept_passwordResetRoute_doesNotAttachAuthorization() {
+        val resetPaths = listOf(
+            "/auth/password-reset/request",
+            "/auth/password-reset/confirm",
+        )
+
+        resetPaths.forEach { path ->
+            val chain = RecordingChain(
+                request = Request.Builder()
+                    .url("http://music.local:8000$path")
+                    .build(),
+            )
+
+            interceptor.intercept(chain)
+
+            assertThat(chain.proceededRequests).hasSize(1)
+            assertThat(chain.proceededRequests.single().header("Authorization")).isNull()
+        }
+    }
+
+    @Test
     fun intercept_foreignHost_doesNotAttachAuthorization() {
         val chain = RecordingChain(
             request = Request.Builder()

@@ -73,6 +73,8 @@
     <string name="common_error_authentication_required">Требуется авторизация</string>
     <string name="common_error_superuser_access_required">Требуются права суперпользователя</string>
     <string name="common_validation_username_required">Имя пользователя не должно быть пустым</string>
+    <string name="common_validation_email_required">Email не должен быть пустым</string>
+    <string name="common_validation_email_invalid">Введите корректный email</string>
     <string name="common_validation_password_min_length">Пароль должен содержать не менее 6 символов</string>
     <string name="common_validation_passwords_must_match">Пароли должны совпадать</string>
     <string name="common_validation_artist_name_required">Необходимо указать имя исполнителя</string>
@@ -94,6 +96,20 @@
     <string name="register_cd_confirm_password_icon">Иконка подтверждения пароля</string>
     <string name="register_error_username_taken">Это имя пользователя уже занято</string>
     <string name="register_error_server">Не удалось зарегистрироваться из-за ошибки сервера</string>
+
+    <string name="password_reset_title">Восстановление пароля</string>
+    <string name="password_reset_label_code">Код восстановления</string>
+    <string name="password_reset_action_forgot_password">Забыли пароль?</string>
+    <string name="password_reset_action_request_code">Запросить код</string>
+    <string name="password_reset_action_reset_password">Сбросить пароль</string>
+    <string name="password_reset_action_use_another_email">Другой email</string>
+    <string name="password_reset_warning_email_required_in_profile">Восстановление пароля сработает только если вы заранее указали email в профиле.</string>
+    <string name="password_reset_info_code_sent">Если для этого email есть аккаунт, код восстановления отправлен.</string>
+    <string name="password_reset_success">Пароль сброшен. Войдите с новым паролем.</string>
+    <string name="password_reset_error_code_required">Код восстановления не должен быть пустым</string>
+    <string name="password_reset_error_invalid_or_expired_code">Код восстановления недействителен или истёк</string>
+    <string name="password_reset_error_unavailable">Восстановление пароля недоступно на этом сервере</string>
+    <string name="password_reset_error_request_failed">Не удалось сбросить пароль из-за ошибки запроса</string>
 
     <string name="server_setup_title">Настройка сервера</string>
     <string name="server_setup_label_host_or_url">Хост или URL сервера</string>

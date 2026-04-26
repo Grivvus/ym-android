@@ -81,6 +81,8 @@ class AuthenticatedMediaInterceptor @Inject constructor(
             Regex("^/auth/login$"),
             Regex("^/auth/register$"),
             Regex("^/auth/refresh$"),
+            Regex("^/auth/password-reset/request$"),
+            Regex("^/auth/password-reset/confirm$"),
         )
     }
 }

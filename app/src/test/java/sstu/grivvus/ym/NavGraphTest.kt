@@ -28,6 +28,16 @@ class NavGraphTest {
     }
 
     @Test
+    fun shouldRedirectToLogin_returnsFalseForUnauthenticatedPasswordResetRoute() {
+        assertThat(
+            shouldRedirectToLogin(
+                sessionState = SessionState.Unauthenticated(),
+                currentRoute = AppDestinations.PASSWORD_RESET_ROUTE,
+            )
+        ).isFalse()
+    }
+
+    @Test
     fun shouldRedirectToLogin_returnsFalseForAuthenticatedProtectedRoute() {
         assertThat(
             shouldRedirectToLogin(

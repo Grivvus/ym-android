@@ -235,6 +235,12 @@ class DefaultAuthSessionManagerTest {
     ): DefaultAuthSessionManager {
         return DefaultAuthSessionManager(
             userDao = database.userDao(),
+            audioTrackDao = database.audioTrackDao(),
+            albumDao = database.albumDao(),
+            artistDao = database.artistDao(),
+            playlistDao = database.playlistDao(),
+            trackAlbumDao = database.trackAlbumDao(),
+            playlistTrackDao = database.playlistTrackDao(),
             tokenRefresher = tokenRefresher,
             ioDispatcher = mainDispatcherRule.dispatcher,
             applicationScope = applicationScope,

@@ -74,6 +74,8 @@
     <string name="common_error_authentication_required">Authentication required</string>
     <string name="common_error_superuser_access_required">Superuser access required</string>
     <string name="common_validation_username_required">Username shouldn\'t be empty</string>
+    <string name="common_validation_email_required">Email shouldn\'t be empty</string>
+    <string name="common_validation_email_invalid">Enter a valid email</string>
     <string name="common_validation_password_min_length">Password must be at least 6 characters long</string>
     <string name="common_validation_passwords_must_match">Passwords should match</string>
     <string name="common_validation_artist_name_required">Artist name is required</string>
@@ -95,6 +97,20 @@
     <string name="register_cd_confirm_password_icon">Confirm password icon</string>
     <string name="register_error_username_taken">This username is already used</string>
     <string name="register_error_server">Can\'t proceed registration due to server error</string>
+
+    <string name="password_reset_title">Reset password</string>
+    <string name="password_reset_label_code">Reset code</string>
+    <string name="password_reset_action_forgot_password">Forgot password?</string>
+    <string name="password_reset_action_request_code">Request code</string>
+    <string name="password_reset_action_reset_password">Reset password</string>
+    <string name="password_reset_action_use_another_email">Use another email</string>
+    <string name="password_reset_warning_email_required_in_profile">Password reset works only if you previously added an email in your profile.</string>
+    <string name="password_reset_info_code_sent">If an account exists for this email, a reset code has been sent.</string>
+    <string name="password_reset_success">Password has been reset. Sign in with the new password.</string>
+    <string name="password_reset_error_code_required">Reset code shouldn\'t be empty</string>
+    <string name="password_reset_error_invalid_or_expired_code">Reset code is invalid or expired</string>
+    <string name="password_reset_error_unavailable">Password reset is unavailable on this server</string>
+    <string name="password_reset_error_request_failed">Can\'t reset password due to request error</string>
 
     <string name="server_setup_title">Server Setup</string>
     <string name="server_setup_label_host_or_url">Server host or URL</string>
