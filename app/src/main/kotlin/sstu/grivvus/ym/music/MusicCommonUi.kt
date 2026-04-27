@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 
@@ -31,12 +32,13 @@ import coil3.compose.AsyncImage
 fun Artwork(
     uri: Uri?,
     modifier: Modifier = Modifier,
+    cornerRadius: Dp = 24.dp,
 ) {
     var failedToLoad by remember(uri) { mutableStateOf(false) }
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(cornerRadius))
             .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {

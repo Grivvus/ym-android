@@ -18,6 +18,8 @@ interface PlaybackController {
 
     suspend fun togglePlayback()
 
+    suspend fun stop()
+
     suspend fun seekTo(positionMs: Long)
 
     suspend fun skipToNext()

@@ -2,6 +2,7 @@ package sstu.grivvus.ym.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -20,6 +21,7 @@ fun BottomNavScaffold(
     modifier: Modifier = Modifier,
     topBar: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
+    miniPlayer: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
@@ -27,11 +29,14 @@ fun BottomNavScaffold(
         topBar = topBar,
         floatingActionButton = floatingActionButton,
         bottomBar = {
-            BottomBar(
-                onMusicClick = navigateToMusic,
-                onLibraryClick = navigateToLibrary,
-                onProfileClick = navigateToProfile,
-            )
+            Column {
+                miniPlayer()
+                BottomBar(
+                    onMusicClick = navigateToMusic,
+                    onLibraryClick = navigateToLibrary,
+                    onProfileClick = navigateToProfile,
+                )
+            }
         },
         content = content,
     )

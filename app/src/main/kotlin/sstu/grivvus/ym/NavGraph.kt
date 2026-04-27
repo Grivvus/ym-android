@@ -1,7 +1,8 @@
 package sstu.grivvus.ym
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,7 +25,7 @@ import sstu.grivvus.ym.login.LoginScreen
 import sstu.grivvus.ym.music.MusicScreen
 import sstu.grivvus.ym.music.UploadScreen
 import sstu.grivvus.ym.passwordReset.PasswordResetScreen
-import sstu.grivvus.ym.playback.MiniPlayerOverlay
+import sstu.grivvus.ym.playback.MiniPlayer
 import sstu.grivvus.ym.playback.PlaybackViewModel
 import sstu.grivvus.ym.playback.PlayerScreen
 import sstu.grivvus.ym.playlist.PlaylistScreen
@@ -71,6 +72,26 @@ fun YMNavGraph(
     val showMiniPlayer = playbackState.currentTrack != null &&
             currentRoute != AppDestinations.PLAYER_ROUTE &&
             currentRoute in protectedRoutes
+    val miniPlayerContent: @Composable (Modifier) -> Unit = { playerModifier ->
+        if (showMiniPlayer) {
+            MiniPlayer(
+                onOpenPlayer = { trackId -> navActions.navigateToPlayer(trackId) },
+                onDismiss = playbackViewModel::stop,
+                viewModel = playbackViewModel,
+                modifier = playerModifier,
+            )
+        }
+    }
+    val miniPlayer: @Composable () -> Unit = {
+        miniPlayerContent(Modifier)
+    }
+    val standaloneMiniPlayer: @Composable () -> Unit = {
+        if (showMiniPlayer) {
+            Column(modifier = Modifier.navigationBarsPadding()) {
+                miniPlayerContent(Modifier)
+            }
+        }
+    }
 
     LaunchedEffect(sessionState, currentRoute, navController) {
         if (shouldRedirectToLogin(sessionState, currentRoute, protectedRoutes)) {
@@ -78,168 +99,165 @@ fun YMNavGraph(
         }
     }
 
-    Box(
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
         modifier = modifier.fillMaxSize(),
     ) {
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            composable(AppDestinations.STARTUP_ROUTE) {
-                StartupScreen(
-                    onRouteResolved = { route ->
-                        navController.navigate(route) {
-                            popUpTo(AppDestinations.STARTUP_ROUTE) {
-                                inclusive = true
-                            }
-                            launchSingleTop = true
+        composable(AppDestinations.STARTUP_ROUTE) {
+            StartupScreen(
+                onRouteResolved = { route ->
+                    navController.navigate(route) {
+                        popUpTo(AppDestinations.STARTUP_ROUTE) {
+                            inclusive = true
                         }
-                    },
-                )
-            }
-            composable(AppDestinations.SERVER_SETUP_ROUTE) {
-                ServerSetup(
-                    onProceed = {
-                        navController.navigate(AppDestinations.REGISTRATION_ROUTE) {
-                            popUpTo(AppDestinations.SERVER_SETUP_ROUTE) {
-                                inclusive = true
-                            }
-                            launchSingleTop = true
-                        }
-                    },
-                )
-            }
-            composable(AppDestinations.LOGIN_ROUTE) {
-                LoginScreen(
-                    onSignUpClick = { navActions.navigateToRegistration() },
-                    onPasswordResetClick = { navActions.navigateToPasswordReset() },
-                    onSuccess = { navActions.navigateToMusicFromAuth() },
-                )
-            }
-            composable(AppDestinations.REGISTRATION_ROUTE) {
-                RegistrationScreen(
-                    onSignInClick = { navActions.navigateToLogin() },
-                    onPasswordResetClick = { navActions.navigateToPasswordReset() },
-                    onSuccess = { navActions.navigateToMusicFromAuth() },
-                )
-            }
-            composable(AppDestinations.PASSWORD_RESET_ROUTE) {
-                PasswordResetScreen(
-                    onBackToSignIn = { navActions.navigateToLogin() },
-                )
-            }
-            composable(AppDestinations.PROFILE_ROUTE) {
-                ProfileScreen(
-                    { navActions.navigateToMusic() },
-                    { navActions.navigateToLibrary() },
-                    { navActions.navigateToProfile() },
-                )
-            }
-
-            composable(AppDestinations.LIBRARY_ROUTE) {
-                LibraryScreen(
-                    navigateToMusic = { navActions.navigateToMusic() },
-                    navigateToLibrary = { navActions.navigateToLibrary() },
-                    navigateToProfile = { navActions.navigateToProfile() },
-                    navigateToArtist = { artistId -> navActions.navigateToArtist(artistId) },
-                    navigateToAlbum = { albumId -> navActions.navigateToAlbum(albumId) },
-                )
-            }
-
-            composable(AppDestinations.MUSIC_ROUTE) { backStackEntry ->
-                val refreshToken by backStackEntry.savedStateHandle
-                    .getStateFlow(RouteArguments.PLAYLIST_LIST_REFRESH_TOKEN, 0L)
-                    .collectAsStateWithLifecycle()
-                MusicScreen(
-                    { navActions.navigateToMusic() },
-                    { navActions.navigateToLibrary() },
-                    { navActions.navigateToProfile() },
-                    { playlistId -> navActions.navigateToPlaylist(playlistId) },
-                    refreshToken = refreshToken,
-                )
-            }
-
-            composable(
-                route = AppDestinations.ARTIST_ROUTE,
-                arguments = listOf(
-                    navArgument(RouteArguments.ARTIST_ID) {
-                        type = NavType.LongType
-                    },
-                ),
-            ) {
-                ArtistScreen(
-                    navigateToMusic = { navActions.navigateToMusic() },
-                    navigateToLibrary = { navActions.navigateToLibrary() },
-                    navigateToProfile = { navActions.navigateToProfile() },
-                    navigateToAlbum = { albumId -> navActions.navigateToAlbum(albumId) },
-                    onBack = navActions::popBackStack,
-                )
-            }
-
-            composable(
-                route = AppDestinations.ALBUM_ROUTE,
-                arguments = listOf(
-                    navArgument(RouteArguments.ALBUM_ID) {
-                        type = NavType.LongType
-                    },
-                ),
-            ) {
-                AlbumScreen(
-                    navigateToMusic = { navActions.navigateToMusic() },
-                    navigateToLibrary = { navActions.navigateToLibrary() },
-                    navigateToProfile = { navActions.navigateToProfile() },
-                    onOpenPlayer = { trackId -> navActions.navigateToPlayer(trackId) },
-                    onBack = navActions::popBackStack,
-                )
-            }
-
-            composable(
-                route = AppDestinations.PLAYLIST_ROUTE,
-                arguments = listOf(
-                    navArgument(RouteArguments.PLAYLIST_ID) {
-                        type = NavType.LongType
-                    },
-                ),
-            ) {
-                PlaylistScreen(
-                    navigateToMusic = { navActions.navigateToMusic() },
-                    navigateToLibrary = { navActions.navigateToLibrary() },
-                    navigateToProfile = { navActions.navigateToProfile() },
-                    onOpenPlayer = { trackId -> navActions.navigateToPlayer(trackId) },
-                    onBack = {
-                        navController.previousBackStackEntry
-                            ?.savedStateHandle
-                            ?.set(RouteArguments.PLAYLIST_LIST_REFRESH_TOKEN, System.nanoTime())
-                        navActions.popBackStack()
-                    },
-                )
-            }
-
-            composable(AppDestinations.UPLOAD_ROUTE) {
-                UploadScreen(onBack = navActions::popBackStack)
-            }
-
-            composable(
-                route = AppDestinations.PLAYER_ROUTE,
-                arguments = listOf(
-                    navArgument(RouteArguments.PLAYER_TRACK_ID) {
-                        type = NavType.LongType
+                        launchSingleTop = true
                     }
-                ),
-            ) { backStackEntry ->
-                PlayerScreen(
-                    requestedTrackId = backStackEntry.arguments?.getLong(RouteArguments.PLAYER_TRACK_ID),
-                    onBack = navActions::popBackStack,
-                )
-            }
+                },
+            )
+        }
+        composable(AppDestinations.SERVER_SETUP_ROUTE) {
+            ServerSetup(
+                onProceed = {
+                    navController.navigate(AppDestinations.REGISTRATION_ROUTE) {
+                        popUpTo(AppDestinations.SERVER_SETUP_ROUTE) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+        composable(AppDestinations.LOGIN_ROUTE) {
+            LoginScreen(
+                onSignUpClick = { navActions.navigateToRegistration() },
+                onPasswordResetClick = { navActions.navigateToPasswordReset() },
+                onSuccess = { navActions.navigateToMusicFromAuth() },
+            )
+        }
+        composable(AppDestinations.REGISTRATION_ROUTE) {
+            RegistrationScreen(
+                onSignInClick = { navActions.navigateToLogin() },
+                onPasswordResetClick = { navActions.navigateToPasswordReset() },
+                onSuccess = { navActions.navigateToMusicFromAuth() },
+            )
+        }
+        composable(AppDestinations.PASSWORD_RESET_ROUTE) {
+            PasswordResetScreen(
+                onBackToSignIn = { navActions.navigateToLogin() },
+            )
+        }
+        composable(AppDestinations.PROFILE_ROUTE) {
+            ProfileScreen(
+                { navActions.navigateToMusic() },
+                { navActions.navigateToLibrary() },
+                { navActions.navigateToProfile() },
+                miniPlayer = miniPlayer,
+            )
         }
 
-        if (showMiniPlayer) {
-            MiniPlayerOverlay(
+        composable(AppDestinations.LIBRARY_ROUTE) {
+            LibraryScreen(
+                navigateToMusic = { navActions.navigateToMusic() },
+                navigateToLibrary = { navActions.navigateToLibrary() },
+                navigateToProfile = { navActions.navigateToProfile() },
+                navigateToArtist = { artistId -> navActions.navigateToArtist(artistId) },
+                navigateToAlbum = { albumId -> navActions.navigateToAlbum(albumId) },
+                miniPlayer = miniPlayer,
+            )
+        }
+
+        composable(AppDestinations.MUSIC_ROUTE) { backStackEntry ->
+            val refreshToken by backStackEntry.savedStateHandle
+                .getStateFlow(RouteArguments.PLAYLIST_LIST_REFRESH_TOKEN, 0L)
+                .collectAsStateWithLifecycle()
+            MusicScreen(
+                { navActions.navigateToMusic() },
+                { navActions.navigateToLibrary() },
+                { navActions.navigateToProfile() },
+                { playlistId -> navActions.navigateToPlaylist(playlistId) },
+                refreshToken = refreshToken,
+                miniPlayer = miniPlayer,
+            )
+        }
+
+        composable(
+            route = AppDestinations.ARTIST_ROUTE,
+            arguments = listOf(
+                navArgument(RouteArguments.ARTIST_ID) {
+                    type = NavType.LongType
+                },
+            ),
+        ) {
+            ArtistScreen(
+                navigateToMusic = { navActions.navigateToMusic() },
+                navigateToLibrary = { navActions.navigateToLibrary() },
+                navigateToProfile = { navActions.navigateToProfile() },
+                navigateToAlbum = { albumId -> navActions.navigateToAlbum(albumId) },
+                onBack = navActions::popBackStack,
+                miniPlayer = miniPlayer,
+            )
+        }
+
+        composable(
+            route = AppDestinations.ALBUM_ROUTE,
+            arguments = listOf(
+                navArgument(RouteArguments.ALBUM_ID) {
+                    type = NavType.LongType
+                },
+            ),
+        ) {
+            AlbumScreen(
+                navigateToMusic = { navActions.navigateToMusic() },
+                navigateToLibrary = { navActions.navigateToLibrary() },
+                navigateToProfile = { navActions.navigateToProfile() },
                 onOpenPlayer = { trackId -> navActions.navigateToPlayer(trackId) },
-                viewModel = playbackViewModel,
-                modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter),
+                onBack = navActions::popBackStack,
+                miniPlayer = miniPlayer,
+            )
+        }
+
+        composable(
+            route = AppDestinations.PLAYLIST_ROUTE,
+            arguments = listOf(
+                navArgument(RouteArguments.PLAYLIST_ID) {
+                    type = NavType.LongType
+                },
+            ),
+        ) {
+            PlaylistScreen(
+                navigateToMusic = { navActions.navigateToMusic() },
+                navigateToLibrary = { navActions.navigateToLibrary() },
+                navigateToProfile = { navActions.navigateToProfile() },
+                onOpenPlayer = { trackId -> navActions.navigateToPlayer(trackId) },
+                onBack = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set(RouteArguments.PLAYLIST_LIST_REFRESH_TOKEN, System.nanoTime())
+                    navActions.popBackStack()
+                },
+                miniPlayer = miniPlayer,
+            )
+        }
+
+        composable(AppDestinations.UPLOAD_ROUTE) {
+            UploadScreen(
+                onBack = navActions::popBackStack,
+                miniPlayer = standaloneMiniPlayer,
+            )
+        }
+
+        composable(
+            route = AppDestinations.PLAYER_ROUTE,
+            arguments = listOf(
+                navArgument(RouteArguments.PLAYER_TRACK_ID) {
+                    type = NavType.LongType
+                }
+            ),
+        ) { backStackEntry ->
+            PlayerScreen(
+                requestedTrackId = backStackEntry.arguments?.getLong(RouteArguments.PLAYER_TRACK_ID),
+                onBack = navActions::popBackStack,
             )
         }
     }

@@ -7,15 +7,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -99,52 +99,76 @@ fun PlaybackSeekBar(
 @Composable
 fun MiniPlayer(
     onOpenPlayer: (Long) -> Unit,
+    onDismiss: () -> Unit,
     viewModel: PlaybackViewModel,
     modifier: Modifier = Modifier,
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val currentTrack = playbackState.currentTrack ?: return
 
-    ElevatedCard(
-        modifier = modifier,
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        tonalElevation = 3.dp,
+        shadowElevation = 2.dp,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onOpenPlayer(currentTrack.id) }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
+            HorizontalDivider()
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, top = 8.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Artwork(
-                    uri = currentTrack.artworkUri,
+                Row(
                     modifier = Modifier
-                        .padding(end = 12.dp)
-                        .height(52.dp),
-                )
-                Column(
-                    modifier = Modifier.weight(1f),
+                        .weight(1f)
+                        .clickable { onOpenPlayer(currentTrack.id) }
+                        .padding(end = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = currentTrack.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                    Artwork(
+                        uri = currentTrack.artworkUri,
+                        cornerRadius = 10.dp,
+                        modifier = Modifier.size(48.dp),
                     )
-                    currentTrack.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
-                        Spacer(modifier = Modifier.height(2.dp))
+                    Column(
+                        modifier = Modifier.weight(1f),
+                    ) {
                         Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = currentTrack.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
+                        currentTrack.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.common_cd_close_mini_player),
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 4.dp, end = 12.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 IconButton(
                     onClick = viewModel::skipToPrevious,
                     enabled = playbackState.currentIndex > 0,
@@ -177,42 +201,16 @@ fun MiniPlayer(
                         contentDescription = stringResource(R.string.common_cd_next_track),
                     )
                 }
-                IconButton(onClick = { onOpenPlayer(currentTrack.id) }) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.OpenInNew,
-                        contentDescription = stringResource(R.string.common_cd_open_full_player),
-                    )
-                }
+                PlaybackSeekBar(
+                    positionMs = playbackState.positionMs,
+                    durationMs = playbackState.durationMs,
+                    isSeekEnabled = playbackState.isSeekable && playbackState.durationMs > 0L,
+                    onSeekTo = viewModel::seekTo,
+                    showTime = false,
+                    modifier = Modifier.weight(1f),
+                )
             }
-            PlaybackSeekBar(
-                positionMs = playbackState.positionMs,
-                durationMs = playbackState.durationMs,
-                isSeekEnabled = playbackState.isSeekable && playbackState.durationMs > 0L,
-                onSeekTo = viewModel::seekTo,
-                showTime = false,
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
-    }
-}
-
-@Composable
-fun MiniPlayerOverlay(
-    onOpenPlayer: (Long) -> Unit,
-    viewModel: PlaybackViewModel,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier
-            .navigationBarsPadding()
-            .padding(horizontal = 12.dp)
-            .padding(bottom = 72.dp),
-        color = androidx.compose.ui.graphics.Color.Transparent,
-    ) {
-        MiniPlayer(
-            onOpenPlayer = onOpenPlayer,
-            viewModel = viewModel,
-        )
     }
 }
 

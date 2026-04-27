@@ -112,6 +112,16 @@ class MediaSessionPlaybackController @Inject constructor(
         }
     }
 
+    override suspend fun stop() {
+        onControllerThread {
+            val controller = mediaController ?: return@onControllerThread
+            controller.pause()
+            controller.stop()
+            controller.clearMediaItems()
+            updateState(controller)
+        }
+    }
+
     override suspend fun seekTo(positionMs: Long) {
         onControllerThread {
             val controller = getController()

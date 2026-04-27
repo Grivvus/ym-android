@@ -78,6 +78,7 @@ fun PlaylistScreen(
     navigateToProfile: () -> Unit,
     onOpenPlayer: (Long) -> Unit,
     onBack: () -> Unit,
+    miniPlayer: @Composable () -> Unit = {},
     viewModel: PlaylistViewModel = hiltViewModel(),
     playbackViewModel: PlaybackViewModel = hiltViewModel(),
 ) {
@@ -159,6 +160,7 @@ fun PlaylistScreen(
                 },
             )
         },
+        miniPlayer = miniPlayer,
     ) { innerPadding ->
         ScreenStateHost(
             isLoading = uiState.isLoading && playlist == null,

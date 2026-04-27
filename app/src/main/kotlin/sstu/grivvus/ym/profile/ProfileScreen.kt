@@ -36,7 +36,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextButton
@@ -58,7 +57,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import sstu.grivvus.ym.R
-import sstu.grivvus.ym.components.BottomBar
+import sstu.grivvus.ym.components.BottomNavScaffold
 import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.data.AppLanguage
 import sstu.grivvus.ym.data.network.model.TrackQuality
@@ -74,6 +73,7 @@ fun ProfileScreen(
     navigateToMusic: () -> Unit,
     navigateToLibrary: () -> Unit,
     navigateToProfile: () -> Unit,
+    miniPlayer: @Composable () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     var showPasswordDialog by remember { mutableStateOf(false) }
@@ -93,8 +93,11 @@ fun ProfileScreen(
         }
     )
 
-    Scaffold(
-        bottomBar = { BottomBar(navigateToMusic, navigateToLibrary, navigateToProfile) }
+    BottomNavScaffold(
+        navigateToMusic = navigateToMusic,
+        navigateToLibrary = navigateToLibrary,
+        navigateToProfile = navigateToProfile,
+        miniPlayer = miniPlayer,
     ) { innerPadding ->
         Box(
             modifier = Modifier

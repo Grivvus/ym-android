@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -62,6 +63,7 @@ fun MusicScreen(
     navigateToProfile: () -> Unit,
     navigateToPlaylist: (Long) -> Unit,
     refreshToken: Long,
+    miniPlayer: @Composable () -> Unit = {},
     viewModel: MusicViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -104,6 +106,7 @@ fun MusicScreen(
                 Text("+")
             }
         },
+        miniPlayer = miniPlayer,
     ) { innerPadding ->
         ScreenStateHost(
             isLoading = uiState.isLoading && uiState.playlists.isEmpty(),
@@ -299,21 +302,29 @@ private fun CreatePlaylistDialog(
 }
 
 @Composable
-fun UploadScreen(onBack: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            stringResource(R.string.music_upload_route_unused),
-            style = MaterialTheme.typography.titleSmall,
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        androidx.compose.material3.Button(onClick = onBack) {
-            Text(stringResource(R.string.common_action_back))
+fun UploadScreen(
+    onBack: () -> Unit,
+    miniPlayer: @Composable () -> Unit = {},
+) {
+    Scaffold(
+        bottomBar = miniPlayer,
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                stringResource(R.string.music_upload_route_unused),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            androidx.compose.material3.Button(onClick = onBack) {
+                Text(stringResource(R.string.common_action_back))
+            }
         }
     }
 }

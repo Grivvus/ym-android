@@ -87,6 +87,7 @@ fun LibraryScreen(
     navigateToProfile: () -> Unit,
     navigateToArtist: (Long) -> Unit,
     navigateToAlbum: (Long) -> Unit,
+    miniPlayer: @Composable () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -203,6 +204,7 @@ fun LibraryScreen(
                 )
             }
         },
+        miniPlayer = miniPlayer,
     ) { innerPadding ->
         ScreenStateHost(
             isLoading = uiState.isLoading,

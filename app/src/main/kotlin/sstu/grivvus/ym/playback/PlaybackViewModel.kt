@@ -35,6 +35,12 @@ class PlaybackViewModel @Inject constructor(
         }
     }
 
+    fun stop() {
+        viewModelScope.launch {
+            playbackController.stop()
+        }
+    }
+
     fun seekTo(positionMs: Long) {
         viewModelScope.launch {
             playbackController.seekTo(positionMs)

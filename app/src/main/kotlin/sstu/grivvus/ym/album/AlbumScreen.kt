@@ -74,6 +74,7 @@ fun AlbumScreen(
     navigateToProfile: () -> Unit,
     onOpenPlayer: (Long) -> Unit,
     onBack: () -> Unit,
+    miniPlayer: @Composable () -> Unit = {},
     viewModel: AlbumViewModel = hiltViewModel(),
     playbackViewModel: PlaybackViewModel = hiltViewModel(),
 ) {
@@ -154,6 +155,7 @@ fun AlbumScreen(
                 },
             )
         },
+        miniPlayer = miniPlayer,
     ) { innerPadding ->
         ScreenStateHost(
             isLoading = uiState.isLoading && album == null,

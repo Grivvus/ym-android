@@ -66,6 +66,7 @@
     <string name="common_cd_pause_playback">pause playback</string>
     <string name="common_cd_resume_playback">resume playback</string>
     <string name="common_cd_open_full_player">open full player</string>
+    <string name="common_cd_close_mini_player">close mini player</string>
     <string name="common_error_network_request_failed">Network request failed</string>
     <string name="common_error_unexpected">Unexpected error</string>
     <string name="common_error_server_try_again_later">Server error. Please try again later</string>
