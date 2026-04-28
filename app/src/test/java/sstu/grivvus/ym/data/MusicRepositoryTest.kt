@@ -21,6 +21,7 @@ import sstu.grivvus.ym.data.local.AppDatabase
 import sstu.grivvus.ym.data.local.Artist
 import sstu.grivvus.ym.data.local.LocalUser
 import sstu.grivvus.ym.data.local.Playlist
+import sstu.grivvus.ym.data.download.LocalTrackFileStore
 import sstu.grivvus.ym.data.network.model.NetworkAlbum
 import sstu.grivvus.ym.data.network.model.NetworkArtist
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
@@ -201,6 +202,7 @@ class MusicRepositoryTest {
             albumRemoteDataSource = albumRemoteDataSource,
             serverInfoRepository = serverInfoRepository,
             authSessionManager = authSessionManager,
+            localTrackFileStore = LocalTrackFileStore(applicationContext, mainDispatcherRule.dispatcher),
             context = applicationContext,
             dispatcher = mainDispatcherRule.dispatcher,
         )

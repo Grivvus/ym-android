@@ -21,6 +21,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
@@ -36,6 +39,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -49,6 +56,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -101,6 +109,7 @@ fun LibraryScreen(
     var showBackupDialog by rememberSaveable { mutableStateOf(false) }
     var uploadTrackRequest by remember { mutableStateOf<UploadTrackModalRequest?>(null) }
     var pendingRestoreRequest by remember { mutableStateOf<RestoreArchiveRequest?>(null) }
+    val downloadResultSnackbarHostState = remember { SnackbarHostState() }
 
     val backupSaveLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/zip"),
@@ -138,6 +147,14 @@ fun LibraryScreen(
 
                 is LibraryScreenEvent.NavigateToAlbum -> navigateToAlbum(event.albumId)
                 is LibraryScreenEvent.NavigateToArtist -> navigateToArtist(event.artistId)
+                is LibraryScreenEvent.ShowDownloadResult -> {
+                    downloadResultSnackbarHostState.showSnackbar(
+                        DownloadResultSnackbarVisuals(
+                            message = event.message.resolve(context),
+                            kind = event.kind,
+                        ),
+                    )
+                }
             }
         }
     }
@@ -205,6 +222,9 @@ fun LibraryScreen(
             }
         },
         miniPlayer = miniPlayer,
+        snackbarHost = {
+            DownloadResultSnackbarHost(hostState = downloadResultSnackbarHostState)
+        },
     ) { innerPadding ->
         ScreenStateHost(
             isLoading = uiState.isLoading,
@@ -272,9 +292,12 @@ fun LibraryScreen(
                             isSelected = track.id in uiState.selectedTrackIds,
                             isSelectionMode = uiState.isSelectionMode,
                             isBusy = uiState.isTrackMutating,
+                            isDownloading = track.id in uiState.downloadingTrackIds,
                             onClick = { viewModel.onTrackClick(track.id) },
                             onLongClick = { viewModel.onTrackLongPress(track.id) },
                             onDelete = { viewModel.requestDeleteTrack(track.id) },
+                            onDownload = { viewModel.downloadTrack(track.id) },
+                            onDeleteLocalCopy = { viewModel.deleteLocalTrackCopy(track.id) },
                             onGoToArtist = { viewModel.openArtist(track.id) },
                             onGoToAlbum = { viewModel.openAlbum(track.id) },
                         )
@@ -379,9 +402,12 @@ private fun LibraryTrackRow(
     isSelected: Boolean,
     isSelectionMode: Boolean,
     isBusy: Boolean,
+    isDownloading: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onDelete: () -> Unit,
+    onDownload: () -> Unit,
+    onDeleteLocalCopy: () -> Unit,
     onGoToArtist: () -> Unit,
     onGoToAlbum: () -> Unit,
 ) {
@@ -415,12 +441,27 @@ private fun LibraryTrackRow(
                     .weight(1f)
                     .padding(start = if (isSelectionMode) 8.dp else 0.dp),
             ) {
-                Text(
-                    text = track.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = track.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (track.isDownloaded) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = stringResource(
+                                R.string.library_cd_track_available_offline,
+                            ),
+                            tint = OfflineAvailableColor,
+                            modifier = Modifier
+                                .padding(start = 6.dp)
+                                .size(16.dp),
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = track.subtitle.resolve(),
@@ -444,6 +485,52 @@ private fun LibraryTrackRow(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
                 ) {
+                    when {
+                        isDownloading -> {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.library_action_downloading_track)) },
+                                enabled = false,
+                                onClick = {},
+                                leadingIcon = {
+                                    CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                                },
+                            )
+                        }
+
+                        track.isDownloaded -> {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(stringResource(R.string.library_action_delete_local_track_copy))
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    onDeleteLocalCopy()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
+                        }
+
+                        else -> {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.library_action_download_track)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onDownload()
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Download,
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
+                        }
+                    }
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.common_action_delete)) },
                         onClick = {
@@ -470,6 +557,66 @@ private fun LibraryTrackRow(
             }
         }
     }
+}
+
+private val OfflineAvailableColor = Color(0xFF2E7D32)
+private val DownloadResultSnackbarFabClearance = 88.dp
+
+@Composable
+private fun DownloadResultSnackbarHost(
+    hostState: SnackbarHostState,
+) {
+    SnackbarHost(
+        hostState = hostState,
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .padding(bottom = DownloadResultSnackbarFabClearance),
+    ) { snackbarData ->
+        val visuals = snackbarData.visuals as? DownloadResultSnackbarVisuals
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+            shadowElevation = 6.dp,
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(
+                    imageVector = when (visuals?.kind) {
+                        LibraryDownloadResultKind.LOCAL_COPY_DELETED -> Icons.Default.Delete
+                        else -> Icons.Default.CheckCircle
+                    },
+                    contentDescription = null,
+                    tint = when (visuals?.kind) {
+                        LibraryDownloadResultKind.LOCAL_COPY_DELETED -> MaterialTheme.colorScheme.error
+                        else -> OfflineAvailableColor
+                    },
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = snackbarData.visuals.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+private data class DownloadResultSnackbarVisuals(
+    override val message: String,
+    val kind: LibraryDownloadResultKind,
+) : SnackbarVisuals {
+    override val actionLabel: String? = null
+    override val duration: SnackbarDuration = SnackbarDuration.Short
+    override val withDismissAction: Boolean = false
 }
 
 @Composable

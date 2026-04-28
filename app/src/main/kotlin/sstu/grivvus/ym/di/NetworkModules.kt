@@ -33,6 +33,8 @@ import sstu.grivvus.ym.data.network.remote.playlist.PlaylistRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.server.OpenApiServerProbeRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.server.ServerProbeRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.track.OpenApiTrackRemoteDataSource
+import sstu.grivvus.ym.data.network.remote.track.OkHttpTrackDownloadRemoteDataSource
+import sstu.grivvus.ym.data.network.remote.track.TrackDownloadRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.track.TrackRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.user.OpenApiUserRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.user.UserRemoteDataSource
@@ -139,6 +141,12 @@ abstract class NetworkModules {
     abstract fun bindTrackRemoteDataSource(
         implementation: OpenApiTrackRemoteDataSource,
     ): TrackRemoteDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindTrackDownloadRemoteDataSource(
+        implementation: OkHttpTrackDownloadRemoteDataSource,
+    ): TrackDownloadRemoteDataSource
 
     @Binds
     @Singleton

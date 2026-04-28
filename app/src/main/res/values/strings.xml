@@ -189,8 +189,16 @@
     <string name="library_restore_id">Restore ID: %1$s</string>
     <string name="library_restore_polling_status">The app is polling the server for the latest status.</string>
     <string name="library_cd_track_actions">Track actions</string>
+    <string name="library_cd_track_available_offline">Track is available offline</string>
+    <string name="library_action_download_track">Download</string>
+    <string name="library_action_downloading_track">Downloading...</string>
+    <string name="library_action_delete_local_track_copy">Delete local copy</string>
     <string name="library_error_album_unavailable_for_track">Album is unavailable for this track</string>
     <string name="library_info_backup_saved_successfully">Backup saved successfully</string>
+    <string name="library_info_track_downloaded">Track downloaded</string>
+    <string name="library_info_local_track_copy_deleted">Local track copy deleted</string>
+    <string name="library_error_track_download_failed">Failed to download track: %1$s</string>
+    <string name="library_error_local_track_copy_delete_failed">Failed to delete local track copy: %1$s</string>
     <string name="library_error_restore_failed">Restore failed</string>
     <string name="library_info_restore_finished_local_data_refreshed">Restore finished. Local data refreshed.</string>
     <string name="library_error_restore_finished_local_sync_failed">Restore finished, but local sync failed: %1$s</string>

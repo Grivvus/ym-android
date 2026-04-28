@@ -13,6 +13,7 @@ data class LibraryTrackItemUi(
     val subtitle: UiText,
     val artistId: Long,
     val albumId: Long?,
+    val isDownloaded: Boolean,
 )
 
 internal fun TrackBundle.toLibraryTrackItemUi(
@@ -30,6 +31,7 @@ internal fun TrackBundle.toLibraryTrackItemUi(
             ?: UiText.StringResource(R.string.common_placeholder_single),
         artistId = track.artistId,
         albumId = primaryAlbum?.remoteId,
+        isDownloaded = track.isDownloaded,
     )
 }
 

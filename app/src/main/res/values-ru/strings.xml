@@ -188,8 +188,16 @@
     <string name="library_restore_id">ID восстановления: %1$s</string>
     <string name="library_restore_polling_status">Приложение запрашивает у сервера актуальный статус.</string>
     <string name="library_cd_track_actions">Действия с треком</string>
+    <string name="library_cd_track_available_offline">Трек доступен офлайн</string>
+    <string name="library_action_download_track">Скачать</string>
+    <string name="library_action_downloading_track">Скачивается...</string>
+    <string name="library_action_delete_local_track_copy">Удалить локальную копию</string>
     <string name="library_error_album_unavailable_for_track">Для этого трека недоступен альбом</string>
     <string name="library_info_backup_saved_successfully">Резервная копия успешно сохранена</string>
+    <string name="library_info_track_downloaded">Трек скачан</string>
+    <string name="library_info_local_track_copy_deleted">Локальная копия трека удалена</string>
+    <string name="library_error_track_download_failed">Не удалось скачать трек: %1$s</string>
+    <string name="library_error_local_track_copy_delete_failed">Не удалось удалить локальную копию трека: %1$s</string>
     <string name="library_error_restore_failed">Восстановление завершилось ошибкой</string>
     <string name="library_info_restore_finished_local_data_refreshed">Восстановление завершено. Локальные данные обновлены.</string>
     <string name="library_error_restore_finished_local_sync_failed">Восстановление завершено, но локальная синхронизация не удалась: %1$s</string>

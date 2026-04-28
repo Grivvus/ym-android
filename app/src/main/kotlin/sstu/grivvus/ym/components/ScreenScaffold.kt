@@ -22,12 +22,14 @@ fun BottomNavScaffold(
     topBar: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     miniPlayer: @Composable () -> Unit = {},
+    snackbarHost: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
         modifier = modifier,
         topBar = topBar,
         floatingActionButton = floatingActionButton,
+        snackbarHost = snackbarHost,
         bottomBar = {
             Column {
                 miniPlayer()

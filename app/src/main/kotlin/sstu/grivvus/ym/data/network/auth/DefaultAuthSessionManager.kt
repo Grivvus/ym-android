@@ -17,6 +17,7 @@ import sstu.grivvus.ym.data.local.PlaylistDao
 import sstu.grivvus.ym.data.local.PlaylistTrackDao
 import sstu.grivvus.ym.data.local.TrackAlbumDao
 import sstu.grivvus.ym.data.local.UserDao
+import sstu.grivvus.ym.data.download.LocalTrackFileStore
 import sstu.grivvus.ym.data.network.core.ApiException
 import sstu.grivvus.ym.data.network.model.NetworkSession
 import sstu.grivvus.ym.di.ApplicationScope
@@ -33,8 +34,9 @@ class DefaultAuthSessionManager @Inject constructor(
     private val playlistDao: PlaylistDao,
     private val trackAlbumDao: TrackAlbumDao,
     private val playlistTrackDao: PlaylistTrackDao,
+    private val localTrackFileStore: LocalTrackFileStore,
     private val tokenRefresher: TokenRefresher,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     @ApplicationScope applicationScope: CoroutineScope,
 ) : AuthSessionManager {
     private val refreshMutex = Mutex()
@@ -140,6 +142,7 @@ class DefaultAuthSessionManager @Inject constructor(
             albumDao.clearAll()
             artistDao.clearAll()
             playlistDao.clearAll()
+            localTrackFileStore.clearAll()
         }
         internalState.value = SessionState.Unauthenticated(reason)
     }

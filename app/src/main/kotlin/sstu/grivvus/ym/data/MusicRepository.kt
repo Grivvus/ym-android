@@ -21,6 +21,7 @@ import sstu.grivvus.ym.data.local.PlaylistTrackCrossRef
 import sstu.grivvus.ym.data.local.PlaylistTrackDao
 import sstu.grivvus.ym.data.local.TrackAlbumCrossRef
 import sstu.grivvus.ym.data.local.TrackAlbumDao
+import sstu.grivvus.ym.data.download.LocalTrackFileStore
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
 import sstu.grivvus.ym.data.network.core.ConflictApiException
 import sstu.grivvus.ym.data.network.model.TrackQuality
@@ -74,8 +75,9 @@ class MusicRepository @Inject constructor(
     private val albumRemoteDataSource: AlbumRemoteDataSource,
     private val serverInfoRepository: ServerInfoRepository,
     private val authSessionManager: AuthSessionManager,
-    @ApplicationContext private val context: Context,
-    @DefaultDispatcher private val dispatcher: CoroutineDispatcher,
+    private val localTrackFileStore: LocalTrackFileStore,
+    @param:ApplicationContext private val context: Context,
+    @param:DefaultDispatcher private val dispatcher: CoroutineDispatcher,
 ) {
     suspend fun loadLibrary(refreshFromNetwork: Boolean): MusicLibraryData =
         withContext(dispatcher) {
@@ -431,6 +433,7 @@ class MusicRepository @Inject constructor(
             distinctTrackIds.forEach { trackId ->
                 trackRemoteDataSource.deleteTrack(trackId)
             }
+            localTrackFileStore.deleteTrackFiles(distinctTrackIds)
             audioTrackDao.deleteByIds(distinctTrackIds)
             buildLocalState()
         }
@@ -463,6 +466,7 @@ class MusicRepository @Inject constructor(
 
         val existingTracks = audioTrackDao.getAll().associateBy { it.remoteId }
         val remoteTrackIds = remoteTracks.map { it.id }.toSet()
+        val downloadedTrackFiles = localTrackFileStore.findDownloadedFiles(remoteTrackIds)
         val artistIdsByAlbumId = remoteTracks.associate { track -> track.albumId to track.artistId }
 
         val existingAlbumsById = albumDao.getAll().associateBy { it.remoteId }
@@ -499,6 +503,7 @@ class MusicRepository @Inject constructor(
         audioTrackDao.upsertAll(
             remoteTracks.map { track ->
                 val existingTrack = existingTracks[track.id]
+                val downloadedTrackFile = downloadedTrackFiles[track.id]
                 AudioTrack(
                     remoteId = track.id,
                     name = track.name,
@@ -512,8 +517,8 @@ class MusicRepository @Inject constructor(
                         ?: existingTrack?.uriHigh,
                     uriLossless = track.qualityPresets[TrackQuality.LOSSLESS]?.toUri()
                         ?: existingTrack?.uriLossless,
-                    localPath = existingTrack?.localPath,
-                    isDownloaded = existingTrack?.isDownloaded ?: false,
+                    localPath = downloadedTrackFile?.absolutePath,
+                    isDownloaded = downloadedTrackFile != null,
                 )
             },
         )
@@ -584,7 +589,7 @@ class MusicRepository @Inject constructor(
 
     private suspend fun buildLocalState(): MusicLibraryData {
         val artists = artistDao.getAll()
-        val tracks = audioTrackDao.getAll()
+        val tracks = resolveLocalDownloadState(audioTrackDao.getAll())
         val albums = albumDao.getAll()
         val albumsById = albums.associateBy { it.remoteId }
         val albumsByTrackId = trackAlbumDao.getAll()
@@ -613,6 +618,25 @@ class MusicRepository @Inject constructor(
             artists = artists,
             albums = albums,
         )
+    }
+
+    private suspend fun resolveLocalDownloadState(tracks: List<AudioTrack>): List<AudioTrack> {
+        val downloadedTrackFiles = localTrackFileStore.findDownloadedFiles(
+            tracks.map { track -> track.remoteId },
+        )
+        return tracks.map { track ->
+            val downloadedTrackFile = downloadedTrackFiles[track.remoteId]
+            val resolvedTrack = track.copy(
+                localPath = downloadedTrackFile?.absolutePath,
+                isDownloaded = downloadedTrackFile != null,
+            )
+            if (resolvedTrack.localPath != track.localPath ||
+                resolvedTrack.isDownloaded != track.isDownloaded
+            ) {
+                audioTrackDao.upsert(resolvedTrack)
+            }
+            resolvedTrack
+        }
     }
 
     private suspend fun uploadTrackInternal(

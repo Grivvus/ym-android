@@ -25,6 +25,9 @@ import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.RestoreOperationState
 import sstu.grivvus.ym.data.RestoreOperationStatus
 import sstu.grivvus.ym.data.UserRepository
+import sstu.grivvus.ym.data.download.TrackDownloadEvent
+import sstu.grivvus.ym.data.download.TrackDownloadManager
+import sstu.grivvus.ym.data.download.TrackDownloadOperation
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.data.network.core.ApiException
 import sstu.grivvus.ym.data.network.core.ClientApiException
@@ -48,6 +51,7 @@ data class LibraryUiState(
     val tracks: List<LibraryTrackItemUi> = emptyList(),
     val selectedTrackIds: Set<Long> = emptySet(),
     val pendingDeleteTrackIds: Set<Long> = emptySet(),
+    val downloadingTrackIds: Set<Long> = emptySet(),
     val isTrackMutating: Boolean = false,
     val includeImages: Boolean = true,
     val includeTranscodedTracks: Boolean = true,
@@ -66,6 +70,15 @@ sealed interface LibraryScreenEvent {
     data class RequestBackupSaveLocation(val suggestedFileName: String) : LibraryScreenEvent
     data class NavigateToAlbum(val albumId: Long) : LibraryScreenEvent
     data class NavigateToArtist(val artistId: Long) : LibraryScreenEvent
+    data class ShowDownloadResult(
+        val message: UiText,
+        val kind: LibraryDownloadResultKind,
+    ) : LibraryScreenEvent
+}
+
+enum class LibraryDownloadResultKind {
+    DOWNLOADED,
+    LOCAL_COPY_DELETED,
 }
 
 @HiltViewModel
@@ -73,6 +86,7 @@ class LibraryViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val backupRestoreRepository: BackupRestoreRepository,
     private val musicRepository: MusicRepository,
+    private val trackDownloadManager: TrackDownloadManager,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(LibraryUiState())
     private val _events = MutableSharedFlow<LibraryScreenEvent>()
@@ -83,6 +97,8 @@ class LibraryViewModel @Inject constructor(
     val events: SharedFlow<LibraryScreenEvent> = _events.asSharedFlow()
 
     init {
+        observeTrackDownloadState()
+        observeTrackDownloadEvents()
         observeCurrentUser()
         refreshCurrentUser()
         refresh(initialLoad = true)
@@ -188,6 +204,16 @@ class LibraryViewModel @Inject constructor(
         _uiState.update { it.copy(pendingDeleteTrackIds = setOf(trackId)) }
     }
 
+    fun downloadTrack(trackId: Long) {
+        _uiState.update { it.copy(errorMessage = null, infoMessage = null) }
+        trackDownloadManager.downloadTrack(trackId)
+    }
+
+    fun deleteLocalTrackCopy(trackId: Long) {
+        _uiState.update { it.copy(errorMessage = null, infoMessage = null) }
+        trackDownloadManager.deleteLocalCopy(trackId)
+    }
+
     fun dismissDeleteDialog() {
         _uiState.update { it.copy(pendingDeleteTrackIds = emptySet()) }
     }
@@ -200,6 +226,7 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isTrackMutating = true, errorMessage = null, infoMessage = null) }
             try {
+                trackDownloadManager.cancelDownloads(pendingDeleteTrackIds)
                 val updatedLibrary = musicRepository.deleteTracks(pendingDeleteTrackIds)
                 applyLibraryData(updatedLibrary)
                 _uiState.update { state ->
@@ -373,6 +400,49 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    private fun observeTrackDownloadState() {
+        viewModelScope.launch {
+            trackDownloadManager.downloadingTrackIds.collectLatest { downloadingTrackIds ->
+                _uiState.update { state ->
+                    state.copy(downloadingTrackIds = downloadingTrackIds)
+                }
+            }
+        }
+    }
+
+    private fun observeTrackDownloadEvents() {
+        viewModelScope.launch {
+            trackDownloadManager.events.collectLatest { event ->
+                when (event) {
+                    is TrackDownloadEvent.Downloaded -> {
+                        refreshLocalStateAfterTrackDownloadEvent(
+                            message = UiText.StringResource(R.string.library_info_track_downloaded),
+                            kind = LibraryDownloadResultKind.DOWNLOADED,
+                        )
+                    }
+
+                    is TrackDownloadEvent.LocalCopyDeleted -> {
+                        refreshLocalStateAfterTrackDownloadEvent(
+                            message = UiText.StringResource(
+                                R.string.library_info_local_track_copy_deleted,
+                            ),
+                            kind = LibraryDownloadResultKind.LOCAL_COPY_DELETED,
+                        )
+                    }
+
+                    is TrackDownloadEvent.Failed -> {
+                        event.error.logHandledException("LibraryViewModel.trackDownload")
+                        _uiState.update { state ->
+                            state.copy(
+                                errorMessage = event.toReadableMessage(),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun refreshCurrentUser() {
         viewModelScope.launch {
             try {
@@ -444,6 +514,23 @@ class LibraryViewModel @Inject constructor(
                         listOf(error.toReadableMessage()),
                     ),
                 )
+            }
+        }
+    }
+
+    private suspend fun refreshLocalStateAfterTrackDownloadEvent(
+        message: UiText,
+        kind: LibraryDownloadResultKind,
+    ) {
+        try {
+            applyLibraryData(musicRepository.loadLibrary(refreshFromNetwork = false))
+            _events.emit(LibraryScreenEvent.ShowDownloadResult(message, kind))
+        } catch (_: SessionExpiredException) {
+            return
+        } catch (error: Exception) {
+            error.logHandledException("LibraryViewModel.refreshLocalStateAfterTrackDownloadEvent")
+            _uiState.update { state ->
+                state.copy(errorMessage = error.toReadableMessage())
             }
         }
     }
@@ -534,6 +621,17 @@ class LibraryViewModel @Inject constructor(
 
             else -> message.asUiTextOrNull()
                 ?: UiText.StringResource(R.string.common_error_unexpected)
+        }
+    }
+
+    private fun TrackDownloadEvent.Failed.toReadableMessage(): UiText {
+        val cause = error.toReadableMessage()
+        return when (operation) {
+            TrackDownloadOperation.DOWNLOAD ->
+                UiText.StringResource(R.string.library_error_track_download_failed, listOf(cause))
+
+            TrackDownloadOperation.DELETE_LOCAL_COPY ->
+                UiText.StringResource(R.string.library_error_local_track_copy_delete_failed, listOf(cause))
         }
     }
 

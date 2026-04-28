@@ -18,6 +18,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import sstu.grivvus.ym.data.download.LocalTrackFileStore
 import sstu.grivvus.ym.data.local.AppDatabase
 import sstu.grivvus.ym.data.local.LocalUser
 import sstu.grivvus.ym.data.network.core.UnauthorizedApiException
@@ -241,6 +242,10 @@ class DefaultAuthSessionManagerTest {
             playlistDao = database.playlistDao(),
             trackAlbumDao = database.trackAlbumDao(),
             playlistTrackDao = database.playlistTrackDao(),
+            localTrackFileStore = LocalTrackFileStore(
+                ApplicationProvider.getApplicationContext(),
+                mainDispatcherRule.dispatcher,
+            ),
             tokenRefresher = tokenRefresher,
             ioDispatcher = mainDispatcherRule.dispatcher,
             applicationScope = applicationScope,
