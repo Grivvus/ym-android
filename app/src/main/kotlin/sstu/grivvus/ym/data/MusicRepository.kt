@@ -445,6 +445,22 @@ class MusicRepository @Inject constructor(
         )
 
         val remoteTracks = trackRemoteDataSource.getMyTracks()
+        val fetchedArtistIds = existingArtists.map { artist -> artist.id }.toSet()
+        val missingArtistIds = remoteTracks
+            .map { track -> track.artistId }
+            .distinct()
+            .filterNot { artistId -> artistId in fetchedArtistIds }
+        val missingArtists = missingArtistIds.mapNotNull { artistId ->
+            runCatching { artistRemoteDataSource.getArtist(artistId) }.getOrNull()
+        }
+        if (missingArtists.isNotEmpty()) {
+            artistDao.upsertAll(
+                missingArtists.map { artist ->
+                    Artist(artist.id, artist.name, artist.coverUrl?.toUri())
+                },
+            )
+        }
+
         val existingTracks = audioTrackDao.getAll().associateBy { it.remoteId }
         val remoteTrackIds = remoteTracks.map { it.id }.toSet()
         val artistIdsByAlbumId = remoteTracks.associate { track -> track.albumId to track.artistId }

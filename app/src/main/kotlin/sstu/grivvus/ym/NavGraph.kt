@@ -258,6 +258,8 @@ fun YMNavGraph(
             PlayerScreen(
                 requestedTrackId = backStackEntry.arguments?.getLong(RouteArguments.PLAYER_TRACK_ID),
                 onBack = navActions::popBackStack,
+                onAlbumClick = navActions::navigateToAlbum,
+                onArtistClick = navActions::navigateToArtist,
             )
         }
     }

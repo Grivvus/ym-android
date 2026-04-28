@@ -236,6 +236,10 @@ class MediaSessionPlaybackController @Inject constructor(
         val extras = Bundle().apply {
             putLong(EXTRA_TRACK_ID, track.id)
             putString(EXTRA_SUBTITLE, track.subtitle)
+            track.artistId?.let { artistId -> putLong(EXTRA_ARTIST_ID, artistId) }
+            putString(EXTRA_ARTIST_NAME, track.artistName)
+            track.albumId?.let { albumId -> putLong(EXTRA_ALBUM_ID, albumId) }
+            putString(EXTRA_ALBUM_NAME, track.albumName)
             putString(EXTRA_ARTWORK_URI, track.artworkUri?.toString())
             putString(EXTRA_SYSTEM_ARTWORK_URI, systemArtworkUri?.toString())
             putLong(EXTRA_DURATION_MS, track.durationMs ?: 0L)
@@ -246,7 +250,9 @@ class MediaSessionPlaybackController @Inject constructor(
         }
         val metadata = MediaMetadata.Builder()
             .setTitle(track.title)
-            .setArtist(track.subtitle)
+            .setArtist(track.artistName)
+            .setAlbumTitle(track.albumName)
+            .setSubtitle(track.albumName ?: track.subtitle)
             .setArtworkUri(systemArtworkUri)
             .setDurationMs(track.durationMs)
             .setExtras(extras)
@@ -297,11 +303,27 @@ class MediaSessionPlaybackController @Inject constructor(
             extras?.containsKey(EXTRA_TRACK_ID) == true -> extras.getLong(EXTRA_TRACK_ID)
             else -> mediaId.toLongOrNull() ?: -1L
         }
+        val artistId = extras
+            ?.takeIf { it.containsKey(EXTRA_ARTIST_ID) }
+            ?.getLong(EXTRA_ARTIST_ID)
+        val albumId = extras
+            ?.takeIf { it.containsKey(EXTRA_ALBUM_ID) }
+            ?.getLong(EXTRA_ALBUM_ID)
+        val artistName = extras?.getString(EXTRA_ARTIST_NAME)
+            ?.takeIf { it.isNotBlank() }
+        val albumName = extras?.getString(EXTRA_ALBUM_NAME)
+            ?.takeIf { it.isNotBlank() }
+            ?: metadata.albumTitle?.toString()
+                ?.takeIf { it.isNotBlank() }
         val artworkUri = extras?.getString(EXTRA_ARTWORK_URI)?.toUri() ?: metadata.artworkUri
         val durationMs = extras
             ?.takeIf { it.containsKey(EXTRA_DURATION_MS) }
             ?.getLong(EXTRA_DURATION_MS)
             ?.takeIf { it > 0L }
+        val subtitle = extras?.getString(EXTRA_SUBTITLE)
+            ?: listOfNotNull(artistName, albumName)
+                .takeIf { parts -> parts.isNotEmpty() }
+                ?.joinToString(separator = " - ")
         val qualityUris = buildMap {
             TrackQuality.entries.forEach { quality ->
                 extras?.getString(extraQualityUriKey(quality))
@@ -313,7 +335,11 @@ class MediaSessionPlaybackController @Inject constructor(
         return PlayableTrack(
             id = trackId,
             title = metadata.title?.toString().orEmpty(),
-            subtitle = extras?.getString(EXTRA_SUBTITLE) ?: metadata.artist?.toString(),
+            subtitle = subtitle,
+            artistId = artistId,
+            artistName = artistName,
+            albumId = albumId,
+            albumName = albumName,
             artworkUri = artworkUri,
             durationMs = durationMs,
             localPath = extras?.getString(EXTRA_LOCAL_PATH)?.takeIf { it.isNotBlank() },
@@ -389,6 +415,10 @@ class MediaSessionPlaybackController @Inject constructor(
         private const val POSITION_UPDATE_INTERVAL_MS = 500L
         private const val EXTRA_TRACK_ID = "playable_track_id"
         private const val EXTRA_SUBTITLE = "playable_track_subtitle"
+        private const val EXTRA_ARTIST_ID = "playable_track_artist_id"
+        private const val EXTRA_ARTIST_NAME = "playable_track_artist_name"
+        private const val EXTRA_ALBUM_ID = "playable_track_album_id"
+        private const val EXTRA_ALBUM_NAME = "playable_track_album_name"
         private const val EXTRA_ARTWORK_URI = "playable_track_artwork_uri"
         private const val EXTRA_SYSTEM_ARTWORK_URI = "playable_track_system_artwork_uri"
         private const val EXTRA_DURATION_MS = "playable_track_duration_ms"

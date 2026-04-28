@@ -1,5 +1,6 @@
 package sstu.grivvus.ym.playback
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,10 +9,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,11 +40,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
+import sstu.grivvus.ym.playback.model.PlayableTrack
 
 @Composable
 fun PlayerScreen(
     requestedTrackId: Long?,
     onBack: () -> Unit,
+    onAlbumClick: (Long) -> Unit,
+    onArtistClick: (Long) -> Unit,
     viewModel: PlaybackViewModel = hiltViewModel(),
 ) {
     val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
@@ -65,12 +79,24 @@ fun PlayerScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .statusBarsPadding()
+                .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
-                TextButton(onClick = onBack) {
-                    Text(stringResource(R.string.common_action_minimize))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.size(48.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = stringResource(R.string.common_action_minimize),
+                        )
+                    }
                 }
             }
 
@@ -99,13 +125,25 @@ fun PlayerScreen(
                         text = currentTrack.title,
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                    currentTrack.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
+                    currentTrack.artistDisplayText()?.let { artistText ->
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        PlayerMetadataLink(
+                            text = artistText,
+                            onClick = currentTrack.artistId?.let { artistId ->
+                                { onArtistClick(artistId) }
+                            },
+                        )
+                    }
+                    currentTrack.albumDisplayText()?.let { albumText ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        PlayerMetadataLink(
+                            text = albumText,
+                            onClick = currentTrack.albumId?.let { albumId ->
+                                { onAlbumClick(albumId) }
+                            },
                         )
                     }
                 }
@@ -114,32 +152,47 @@ fun PlayerScreen(
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Button(
+                    IconButton(
                         onClick = viewModel::skipToPrevious,
                         enabled = playbackState.currentIndex > 0,
+                        modifier = Modifier.size(56.dp),
                     ) {
-                        Text(stringResource(R.string.common_action_previous))
-                    }
-                    Button(onClick = viewModel::togglePlayback) {
-                        Text(
-                            stringResource(
-                                if (playbackState.isPlaying) {
-                                    R.string.common_action_pause
-                                } else {
-                                    R.string.common_action_play
-                                },
-                            ),
+                        Icon(
+                            imageVector = Icons.Default.SkipPrevious,
+                            contentDescription = stringResource(R.string.common_cd_previous_track),
                         )
                     }
-                    Button(
+                    FilledIconButton(
+                        onClick = viewModel::togglePlayback,
+                        modifier = Modifier.size(72.dp),
+                    ) {
+                        Icon(
+                            imageVector = if (playbackState.isPlaying) {
+                                Icons.Default.Pause
+                            } else {
+                                Icons.Default.PlayArrow
+                            },
+                            contentDescription = if (playbackState.isPlaying) {
+                                stringResource(R.string.common_cd_pause_playback)
+                            } else {
+                                stringResource(R.string.common_cd_resume_playback)
+                            },
+                            modifier = Modifier.size(34.dp),
+                        )
+                    }
+                    IconButton(
                         onClick = viewModel::skipToNext,
                         enabled = playbackState.currentIndex >= 0 &&
                                 playbackState.currentIndex < playbackState.queue.lastIndex,
+                        modifier = Modifier.size(56.dp),
                     ) {
-                        Text(stringResource(R.string.common_action_next))
+                        Icon(
+                            imageVector = Icons.Default.SkipNext,
+                            contentDescription = stringResource(R.string.common_cd_next_track),
+                        )
                     }
                 }
             }
@@ -189,4 +242,44 @@ fun PlayerScreen(
             }
         }
     }
+}
+
+@Composable
+private fun PlayerMetadataLink(
+    text: String,
+    onClick: (() -> Unit)?,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyLarge,
+        color = if (onClick == null) {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        } else {
+            MaterialTheme.colorScheme.primary
+        },
+        fontWeight = if (onClick == null) {
+            FontWeight.Normal
+        } else {
+            FontWeight.Medium
+        },
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = if (onClick == null) {
+            Modifier
+        } else {
+            Modifier.clickable(onClick = onClick)
+        },
+    )
+}
+
+@Composable
+private fun PlayableTrack.artistDisplayText(): String? {
+    return artistName?.takeIf { it.isNotBlank() }
+        ?: artistId?.let { id -> stringResource(R.string.common_placeholder_artist_id, id) }
+}
+
+@Composable
+private fun PlayableTrack.albumDisplayText(): String? {
+    return albumName?.takeIf { it.isNotBlank() }
+        ?: albumId?.let { id -> stringResource(R.string.common_placeholder_album_id, id) }
 }

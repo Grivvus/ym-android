@@ -67,6 +67,7 @@ class PlaylistViewModel @Inject constructor(
     private val playlistId: Long =
         checkNotNull(savedStateHandle.get<Long>(RouteArguments.PLAYLIST_ID))
     private var currentPlaylistBundle: PlaylistBundle? = null
+    private var currentArtistsById: Map<Long, Artist> = emptyMap()
     private val _uiState = MutableStateFlow(PlaylistUiState())
     private val _events = MutableSharedFlow<PlaylistScreenEvent>()
     val uiState: StateFlow<PlaylistUiState> = _uiState.asStateFlow()
@@ -156,13 +157,21 @@ class PlaylistViewModel @Inject constructor(
         if (playlistBundle.tracks.none { it.track.remoteId == trackId }) {
             return null
         }
-        return playbackQueueFactory.playlistQueue(playlistBundle, trackId)
+        return playbackQueueFactory.playlistQueue(
+            playlist = playlistBundle,
+            artistsById = currentArtistsById,
+            startTrackId = trackId,
+        )
     }
 
     fun playbackQueueFromStart(): PlaybackQueue? {
         val playlistBundle = currentPlaylistBundle ?: return null
         val firstTrackId = playlistBundle.tracks.firstOrNull()?.track?.remoteId ?: return null
-        return playbackQueueFactory.playlistQueue(playlistBundle, firstTrackId)
+        return playbackQueueFactory.playlistQueue(
+            playlist = playlistBundle,
+            artistsById = currentArtistsById,
+            startTrackId = firstTrackId,
+        )
     }
 
     private fun mutate(block: suspend () -> MusicLibraryData) {
@@ -186,6 +195,7 @@ class PlaylistViewModel @Inject constructor(
 
     private fun applyLibraryData(data: MusicLibraryData) {
         val artistsById = data.artists.associateBy { it.remoteId }
+        currentArtistsById = artistsById
         val playlistBundle = data.playlists.firstOrNull { it.playlist.remoteId == playlistId }
         currentPlaylistBundle = playlistBundle
         _uiState.value = _uiState.value.copy(

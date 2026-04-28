@@ -17,6 +17,7 @@ import sstu.grivvus.ym.RouteArguments
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.TrackBundle
+import sstu.grivvus.ym.data.local.Artist
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.library.LibraryTrackItemUi
 import sstu.grivvus.ym.library.albumDisplayReleaseYear
@@ -63,6 +64,7 @@ class AlbumViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AlbumUiState())
     private val _events = MutableSharedFlow<AlbumScreenEvent>()
     private var currentAlbumTracks: List<TrackBundle> = emptyList()
+    private var currentArtistsById: Map<Long, Artist> = emptyMap()
 
     val uiState: StateFlow<AlbumUiState> = _uiState.asStateFlow()
     val events: SharedFlow<AlbumScreenEvent> = _events.asSharedFlow()
@@ -145,6 +147,7 @@ class AlbumViewModel @Inject constructor(
         }
         return playbackQueueFactory.libraryQueue(
             tracks = currentAlbumTracks,
+            artistsById = currentArtistsById,
             startTrackId = trackId,
         )
     }
@@ -153,12 +156,14 @@ class AlbumViewModel @Inject constructor(
         val firstTrackId = currentAlbumTracks.firstOrNull()?.track?.remoteId ?: return null
         return playbackQueueFactory.libraryQueue(
             tracks = currentAlbumTracks,
+            artistsById = currentArtistsById,
             startTrackId = firstTrackId,
         )
     }
 
     private fun applyLibraryData(data: MusicLibraryData) {
         val artistsById = data.artists.associateBy { it.remoteId }
+        currentArtistsById = artistsById
         val album = data.albums.firstOrNull { item -> item.remoteId == albumId }
         currentAlbumTracks = data.libraryTracks.filter { track ->
             track.albums.any { linkedAlbum -> linkedAlbum.remoteId == albumId }
