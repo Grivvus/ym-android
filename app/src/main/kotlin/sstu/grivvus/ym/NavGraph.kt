@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,6 +60,7 @@ fun YMNavGraph(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
     startDestination: String = AppDestinations.STARTUP_ROUTE,
+    openPlayerRequestId: Long = 0L,
     navActions: NavigationActions = remember(navController) {
         NavigationActions(navController)
     }
@@ -66,6 +69,7 @@ fun YMNavGraph(
     val sessionState by sessionViewModel.sessionState.collectAsStateWithLifecycle()
     val playbackViewModel: PlaybackViewModel = hiltViewModel()
     val playbackState by playbackViewModel.playbackState.collectAsStateWithLifecycle()
+    var handledOpenPlayerRequestId by remember { mutableLongStateOf(0L) }
     val currentNavBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentNavBackStackEntry?.destination?.route ?: startDestination
     val protectedRoutes = remember { appProtectedRoutes() }
@@ -96,6 +100,35 @@ fun YMNavGraph(
     LaunchedEffect(sessionState, currentRoute, navController) {
         if (shouldRedirectToLogin(sessionState, currentRoute, protectedRoutes)) {
             navActions.navigateToLoginClearingBackStack()
+        }
+    }
+
+    LaunchedEffect(
+        openPlayerRequestId,
+        sessionState,
+        playbackState.isConnected,
+        playbackState.currentTrack?.id,
+    ) {
+        if (openPlayerRequestId == 0L || openPlayerRequestId == handledOpenPlayerRequestId) {
+            return@LaunchedEffect
+        }
+        when (sessionState) {
+            SessionState.Initializing -> return@LaunchedEffect
+            is SessionState.Unauthenticated -> {
+                handledOpenPlayerRequestId = openPlayerRequestId
+            }
+
+            is SessionState.Authenticated -> {
+                val currentTrackId = playbackState.currentTrack?.id
+                if (currentTrackId == null) {
+                    if (playbackState.isConnected) {
+                        handledOpenPlayerRequestId = openPlayerRequestId
+                    }
+                    return@LaunchedEffect
+                }
+                handledOpenPlayerRequestId = openPlayerRequestId
+                navActions.navigateToPlayer(currentTrackId)
+            }
         }
     }
 
