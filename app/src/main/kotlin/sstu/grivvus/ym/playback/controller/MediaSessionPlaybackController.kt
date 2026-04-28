@@ -30,6 +30,7 @@ import sstu.grivvus.ym.data.network.model.TrackQuality
 import sstu.grivvus.ym.data.network.model.toQueryValue
 import sstu.grivvus.ym.data.network.remote.stream.StreamingRemoteDataSource
 import sstu.grivvus.ym.di.ApplicationScope
+import sstu.grivvus.ym.playback.artwork.PlaybackArtworkCache
 import sstu.grivvus.ym.playback.model.PlayableTrack
 import sstu.grivvus.ym.playback.model.PlaybackQueue
 import sstu.grivvus.ym.playback.model.PlaybackUiState
@@ -46,6 +47,7 @@ class MediaSessionPlaybackController @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val streamingRemoteDataSource: StreamingRemoteDataSource,
     private val playbackPreferencesRepository: PlaybackPreferencesRepository,
+    private val playbackArtworkCache: PlaybackArtworkCache,
     @param:ApplicationScope private val applicationScope: CoroutineScope,
 ) : PlaybackController {
     private val internalState = MutableStateFlow(PlaybackUiState())
@@ -63,10 +65,11 @@ class MediaSessionPlaybackController @Inject constructor(
         if (queue.items.isEmpty()) {
             return
         }
+        val startIndex = queue.startIndex.coerceIn(0, queue.items.lastIndex)
+        prefetchPlaybackArtwork(queue, startIndex)
         onControllerThread {
             val controller = getController()
             val mediaItems = queue.items.map(::toMediaItem)
-            val startIndex = queue.startIndex.coerceIn(0, mediaItems.lastIndex)
             controller.setMediaItems(mediaItems, startIndex, queue.startPositionMs)
             controller.prepare()
             controller.play()
@@ -228,10 +231,13 @@ class MediaSessionPlaybackController @Inject constructor(
         preferredQuality: TrackQuality = playbackPreferencesRepository.currentPreferredTrackQuality(),
     ): MediaItem {
         val mediaUri = resolvePlaybackUri(track, preferredQuality)
+        val systemArtworkUri = playbackArtworkCache.cachedLocalArtworkUri(track.artworkUri)
+            ?: track.artworkUri
         val extras = Bundle().apply {
             putLong(EXTRA_TRACK_ID, track.id)
             putString(EXTRA_SUBTITLE, track.subtitle)
             putString(EXTRA_ARTWORK_URI, track.artworkUri?.toString())
+            putString(EXTRA_SYSTEM_ARTWORK_URI, systemArtworkUri?.toString())
             putLong(EXTRA_DURATION_MS, track.durationMs ?: 0L)
             putString(EXTRA_LOCAL_PATH, track.localPath)
             TrackQuality.entries.forEach { quality ->
@@ -241,7 +247,7 @@ class MediaSessionPlaybackController @Inject constructor(
         val metadata = MediaMetadata.Builder()
             .setTitle(track.title)
             .setArtist(track.subtitle)
-            .setArtworkUri(track.artworkUri)
+            .setArtworkUri(systemArtworkUri)
             .setDurationMs(track.durationMs)
             .setExtras(extras)
             .build()
@@ -353,6 +359,20 @@ class MediaSessionPlaybackController @Inject constructor(
         updateState(controller)
     }
 
+    private fun prefetchPlaybackArtwork(queue: PlaybackQueue, startIndex: Int) {
+        applicationScope.launch {
+            queue.items
+                .asSequence()
+                .drop(startIndex)
+                .take(PREFETCH_ARTWORK_ITEM_COUNT)
+                .forEach { track ->
+                    runCatching {
+                        playbackArtworkCache.ensureLocalArtwork(track.artworkUri)
+                    }
+                }
+        }
+    }
+
     private val playerListener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
             updateState(player)
@@ -370,8 +390,10 @@ class MediaSessionPlaybackController @Inject constructor(
         private const val EXTRA_TRACK_ID = "playable_track_id"
         private const val EXTRA_SUBTITLE = "playable_track_subtitle"
         private const val EXTRA_ARTWORK_URI = "playable_track_artwork_uri"
+        private const val EXTRA_SYSTEM_ARTWORK_URI = "playable_track_system_artwork_uri"
         private const val EXTRA_DURATION_MS = "playable_track_duration_ms"
         private const val EXTRA_LOCAL_PATH = "playable_track_local_path"
+        private const val PREFETCH_ARTWORK_ITEM_COUNT = 4
 
         private fun extraQualityUriKey(quality: TrackQuality): String {
             return "playable_track_quality_uri_${quality.name.lowercase()}"

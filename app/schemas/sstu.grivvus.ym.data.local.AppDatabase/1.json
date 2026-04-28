@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "f7a888fa497b1ed08cc7a1b4d2d775e7",
+    "identityHash": "6242609f669bb88804d8fb40f182c9fd",
     "entities": [
       {
         "tableName": "user",
@@ -172,7 +172,7 @@
       },
       {
         "tableName": "artist",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`remote_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `image_uri` TEXT, PRIMARY KEY(`remote_id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`remote_id` INTEGER NOT NULL, `name` TEXT NOT NULL, PRIMARY KEY(`remote_id`))",
         "fields": [
           {
             "fieldPath": "remoteId",
@@ -185,11 +185,6 @@
             "columnName": "name",
             "affinity": "TEXT",
             "notNull": true
-          },
-          {
-            "fieldPath": "imageUri",
-            "columnName": "image_uri",
-            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -201,7 +196,7 @@
       },
       {
         "tableName": "album",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`remote_id` INTEGER NOT NULL, `artist_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `cover_uri` TEXT, `release_year` INTEGER, `release_full_date` TEXT, PRIMARY KEY(`remote_id`), FOREIGN KEY(`artist_id`) REFERENCES `artist`(`remote_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`remote_id` INTEGER NOT NULL, `artist_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `release_year` INTEGER, `release_full_date` TEXT, PRIMARY KEY(`remote_id`), FOREIGN KEY(`artist_id`) REFERENCES `artist`(`remote_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
           {
             "fieldPath": "remoteId",
@@ -220,11 +215,6 @@
             "columnName": "name",
             "affinity": "TEXT",
             "notNull": true
-          },
-          {
-            "fieldPath": "coverUri",
-            "columnName": "cover_uri",
-            "affinity": "TEXT"
           },
           {
             "fieldPath": "releaseYear",
@@ -270,7 +260,7 @@
       },
       {
         "tableName": "playlist",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`remote_id` INTEGER NOT NULL, `owner_remote_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `cover_uri` TEXT, `name_is_local_override` INTEGER NOT NULL, `tracks_seeded` INTEGER NOT NULL, PRIMARY KEY(`remote_id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`remote_id` INTEGER NOT NULL, `owner_remote_id` INTEGER NOT NULL, `name` TEXT NOT NULL, `name_is_local_override` INTEGER NOT NULL, `tracks_seeded` INTEGER NOT NULL, PRIMARY KEY(`remote_id`))",
         "fields": [
           {
             "fieldPath": "remoteId",
@@ -289,11 +279,6 @@
             "columnName": "name",
             "affinity": "TEXT",
             "notNull": true
-          },
-          {
-            "fieldPath": "coverUri",
-            "columnName": "cover_uri",
-            "affinity": "TEXT"
           },
           {
             "fieldPath": "nameIsLocalOverride",
@@ -438,7 +423,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f7a888fa497b1ed08cc7a1b4d2d775e7')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6242609f669bb88804d8fb40f182c9fd')"
     ]
   }
 }

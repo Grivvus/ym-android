@@ -11,6 +11,8 @@ import okhttp3.OkHttpClient
 import sstu.grivvus.ym.data.network.auth.AuthenticatedMediaInterceptor
 import sstu.grivvus.ym.data.network.remote.stream.OkHttpStreamingRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.stream.StreamingRemoteDataSource
+import sstu.grivvus.ym.playback.artwork.FilePlaybackArtworkCache
+import sstu.grivvus.ym.playback.artwork.PlaybackArtworkCache
 import sstu.grivvus.ym.playback.controller.MediaSessionPlaybackController
 import sstu.grivvus.ym.playback.controller.PlaybackController
 import sstu.grivvus.ym.playback.queue.DefaultPlaybackQueueFactory
@@ -40,6 +42,12 @@ abstract class PlaybackBindingsModule {
     abstract fun bindStreamingRemoteDataSource(
         implementation: OkHttpStreamingRemoteDataSource,
     ): StreamingRemoteDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindPlaybackArtworkCache(
+        implementation: FilePlaybackArtworkCache,
+    ): PlaybackArtworkCache
 }
 
 @Module
