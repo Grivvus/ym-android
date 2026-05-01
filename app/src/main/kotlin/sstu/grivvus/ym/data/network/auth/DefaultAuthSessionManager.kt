@@ -9,15 +9,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import sstu.grivvus.ym.data.local.AlbumDao
-import sstu.grivvus.ym.data.local.ArtistDao
-import sstu.grivvus.ym.data.local.AudioTrackDao
+import sstu.grivvus.ym.data.local.LocalAccountDataInvalidator
 import sstu.grivvus.ym.data.local.LocalUser
-import sstu.grivvus.ym.data.local.PlaylistDao
-import sstu.grivvus.ym.data.local.PlaylistTrackDao
-import sstu.grivvus.ym.data.local.TrackAlbumDao
 import sstu.grivvus.ym.data.local.UserDao
-import sstu.grivvus.ym.data.download.LocalTrackFileStore
 import sstu.grivvus.ym.data.network.core.ApiException
 import sstu.grivvus.ym.data.network.model.NetworkSession
 import sstu.grivvus.ym.di.ApplicationScope
@@ -28,13 +22,7 @@ import javax.inject.Singleton
 @Singleton
 class DefaultAuthSessionManager @Inject constructor(
     private val userDao: UserDao,
-    private val audioTrackDao: AudioTrackDao,
-    private val albumDao: AlbumDao,
-    private val artistDao: ArtistDao,
-    private val playlistDao: PlaylistDao,
-    private val trackAlbumDao: TrackAlbumDao,
-    private val playlistTrackDao: PlaylistTrackDao,
-    private val localTrackFileStore: LocalTrackFileStore,
+    private val localAccountDataInvalidator: LocalAccountDataInvalidator,
     private val tokenRefresher: TokenRefresher,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     @ApplicationScope applicationScope: CoroutineScope,
@@ -53,6 +41,9 @@ class DefaultAuthSessionManager @Inject constructor(
     override suspend fun startSession(session: NetworkSession) {
         val existingUser = withContext(ioDispatcher) {
             userDao.getActiveUser()
+        }
+        if (existingUser != null && existingUser.remoteId != session.userId) {
+            localAccountDataInvalidator.invalidate()
         }
         val persistedUser = session.toLocalUser(previousUser = existingUser)
         withContext(ioDispatcher) {
@@ -134,16 +125,7 @@ class DefaultAuthSessionManager @Inject constructor(
     }
 
     override suspend fun clearSession(reason: SessionEndReason) {
-        withContext(ioDispatcher) {
-            userDao.clearTable()
-            playlistTrackDao.clearAll()
-            trackAlbumDao.clearAll()
-            audioTrackDao.clearAll()
-            albumDao.clearAll()
-            artistDao.clearAll()
-            playlistDao.clearAll()
-            localTrackFileStore.clearAll()
-        }
+        localAccountDataInvalidator.invalidate()
         internalState.value = SessionState.Unauthenticated(reason)
     }
 

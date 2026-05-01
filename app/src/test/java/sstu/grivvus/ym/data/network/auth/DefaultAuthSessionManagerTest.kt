@@ -19,11 +19,19 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import sstu.grivvus.ym.data.download.LocalTrackFileStore
+import sstu.grivvus.ym.data.local.Album
 import sstu.grivvus.ym.data.local.AppDatabase
+import sstu.grivvus.ym.data.local.Artist
+import sstu.grivvus.ym.data.local.AudioTrack
+import sstu.grivvus.ym.data.local.LocalAccountDataInvalidator
 import sstu.grivvus.ym.data.local.LocalUser
+import sstu.grivvus.ym.data.local.Playlist
+import sstu.grivvus.ym.data.local.PlaylistTrackCrossRef
+import sstu.grivvus.ym.data.local.TrackAlbumCrossRef
 import sstu.grivvus.ym.data.network.core.UnauthorizedApiException
 import sstu.grivvus.ym.data.network.model.NetworkSession
 import sstu.grivvus.ym.testutil.MainDispatcherRule
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -33,17 +41,21 @@ class DefaultAuthSessionManagerTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var database: AppDatabase
+    private lateinit var applicationContext: Context
 
     @Before
     fun setUp() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+        applicationContext = ApplicationProvider.getApplicationContext()
+        database = Room.inMemoryDatabaseBuilder(applicationContext, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
     }
 
     @After
     fun tearDown() {
+        File(applicationContext.noBackupFilesDir, DOWNLOAD_DIRECTORY_NAME)
+            .listFiles()
+            ?.forEach { file -> file.delete() }
         database.close()
     }
 
@@ -68,6 +80,83 @@ class DefaultAuthSessionManagerTest {
         assertThat(sessionManager.currentSessionOrNull()).isNull()
         assertThat(sessionManager.sessionState.value)
             .isEqualTo(SessionState.Unauthenticated(SessionEndReason.LOGOUT))
+    }
+
+    @Test
+    fun logout_clearsAccountDataButKeepsDownloadedTrackFiles() = runTest {
+        seedAccountScopedData()
+        val downloadedTrackFile = createDownloadedTrackFile()
+        val sessionManager = createSessionManager(FakeTokenRefresher(), backgroundScope)
+
+        advanceUntilIdle()
+        sessionManager.logout()
+
+        assertAccountDataCleared()
+        assertThat(downloadedTrackFile.exists()).isTrue()
+        assertThat(sessionManager.sessionState.value)
+            .isEqualTo(SessionState.Unauthenticated(SessionEndReason.LOGOUT))
+    }
+
+    @Test
+    fun startSession_whenDifferentUserExists_invalidatesPreviousAccountData() = runTest {
+        seedAccountScopedData(userId = 1L)
+        val downloadedTrackFile = createDownloadedTrackFile()
+        val sessionManager = createSessionManager(FakeTokenRefresher(), backgroundScope)
+        val newSession = NetworkSession(
+            userId = 2L,
+            accessToken = "new-access",
+            refreshToken = "new-refresh",
+        )
+
+        advanceUntilIdle()
+        sessionManager.startSession(newSession)
+
+        assertLibraryDataCleared()
+        assertThat(database.userDao().getActiveUser()).isEqualTo(
+            LocalUser(
+                remoteId = 2L,
+                username = "",
+                email = null,
+                access = "new-access",
+                refresh = "new-refresh",
+            ),
+        )
+        assertThat(downloadedTrackFile.exists()).isTrue()
+        assertThat(sessionManager.sessionState.value).isEqualTo(
+            SessionState.Authenticated(newSession),
+        )
+    }
+
+    @Test
+    fun startSession_whenSameUserExists_preservesAccountDataAndProfileFields() = runTest {
+        seedAccountScopedData(userId = 1L)
+        val sessionManager = createSessionManager(FakeTokenRefresher(), backgroundScope)
+        val refreshedSession = NetworkSession(
+            userId = 1L,
+            accessToken = "new-access",
+            refreshToken = "new-refresh",
+        )
+
+        advanceUntilIdle()
+        sessionManager.startSession(refreshedSession)
+
+        assertThat(database.userDao().getActiveUser()).isEqualTo(
+            LocalUser(
+                remoteId = 1L,
+                username = "tester",
+                email = "tester@example.com",
+                access = "new-access",
+                refresh = "new-refresh",
+                avatarUri = Uri.parse("http://example.com/users/1/avatar"),
+            ),
+        )
+        assertThat(database.artistDao().getAll()).hasSize(1)
+        assertThat(database.albumDao().getAll()).hasSize(1)
+        assertThat(database.audioTrackDao().getAll()).hasSize(1)
+        assertThat(database.playlistDao().getAll()).hasSize(1)
+        assertThat(database.trackAlbumDao().getAll()).hasSize(1)
+        assertThat(database.playlistTrackDao().getTrackIdsForPlaylist(TEST_PLAYLIST_ID))
+            .containsExactly(TEST_TRACK_ID)
     }
 
     @Test
@@ -236,20 +325,86 @@ class DefaultAuthSessionManagerTest {
     ): DefaultAuthSessionManager {
         return DefaultAuthSessionManager(
             userDao = database.userDao(),
-            audioTrackDao = database.audioTrackDao(),
-            albumDao = database.albumDao(),
-            artistDao = database.artistDao(),
-            playlistDao = database.playlistDao(),
-            trackAlbumDao = database.trackAlbumDao(),
-            playlistTrackDao = database.playlistTrackDao(),
-            localTrackFileStore = LocalTrackFileStore(
-                ApplicationProvider.getApplicationContext(),
-                mainDispatcherRule.dispatcher,
+            localAccountDataInvalidator = LocalAccountDataInvalidator(
+                database = database,
+                ioDispatcher = mainDispatcherRule.dispatcher,
             ),
             tokenRefresher = tokenRefresher,
             ioDispatcher = mainDispatcherRule.dispatcher,
             applicationScope = applicationScope,
         )
+    }
+
+    private suspend fun seedAccountScopedData(
+        userId: Long = 1L,
+    ) {
+        database.userDao().insert(
+            LocalUser(
+                remoteId = userId,
+                username = "tester",
+                email = "tester@example.com",
+                access = "old-access",
+                refresh = "old-refresh",
+                avatarUri = Uri.parse("http://example.com/users/$userId/avatar"),
+            ),
+        )
+        database.artistDao().upsert(Artist(remoteId = TEST_ARTIST_ID, name = "Artist"))
+        database.albumDao().upsert(
+            Album(
+                remoteId = TEST_ALBUM_ID,
+                artistId = TEST_ARTIST_ID,
+                name = "Album",
+            ),
+        )
+        database.audioTrackDao().upsert(
+            AudioTrack(
+                remoteId = TEST_TRACK_ID,
+                artistId = TEST_ARTIST_ID,
+                name = "Track",
+            ),
+        )
+        database.playlistDao().upsert(
+            Playlist(
+                remoteId = TEST_PLAYLIST_ID,
+                ownerRemoteId = userId,
+                name = "Playlist",
+            ),
+        )
+        database.trackAlbumDao().upsert(
+            TrackAlbumCrossRef(trackId = TEST_TRACK_ID, albumId = TEST_ALBUM_ID),
+        )
+        database.playlistTrackDao().upsert(
+            PlaylistTrackCrossRef(playlistId = TEST_PLAYLIST_ID, trackId = TEST_TRACK_ID),
+        )
+    }
+
+    private suspend fun createDownloadedTrackFile(
+        trackId: Long = TEST_TRACK_ID,
+    ): File {
+        return createLocalTrackFileStore()
+            .finalFileFor(trackId, "audio/mpeg")
+            .also { file -> file.writeText("downloaded audio") }
+    }
+
+    private fun createLocalTrackFileStore(): LocalTrackFileStore {
+        return LocalTrackFileStore(
+            applicationContext,
+            mainDispatcherRule.dispatcher,
+        )
+    }
+
+    private suspend fun assertAccountDataCleared() {
+        assertThat(database.userDao().getActiveUser()).isNull()
+        assertLibraryDataCleared()
+    }
+
+    private suspend fun assertLibraryDataCleared() {
+        assertThat(database.artistDao().getAll()).isEmpty()
+        assertThat(database.albumDao().getAll()).isEmpty()
+        assertThat(database.audioTrackDao().getAll()).isEmpty()
+        assertThat(database.playlistDao().getAll()).isEmpty()
+        assertThat(database.trackAlbumDao().getAll()).isEmpty()
+        assertThat(database.playlistTrackDao().getTrackIdsForPlaylist(TEST_PLAYLIST_ID)).isEmpty()
     }
 
     private class FakeTokenRefresher(
@@ -286,5 +441,13 @@ class DefaultAuthSessionManagerTest {
             throw error
         }
         throw AssertionError("Expected ${T::class.simpleName} to be thrown")
+    }
+
+    private companion object {
+        private const val TEST_ARTIST_ID = 10L
+        private const val TEST_ALBUM_ID = 20L
+        private const val TEST_TRACK_ID = 30L
+        private const val TEST_PLAYLIST_ID = 40L
+        private const val DOWNLOAD_DIRECTORY_NAME = "downloaded_tracks"
     }
 }

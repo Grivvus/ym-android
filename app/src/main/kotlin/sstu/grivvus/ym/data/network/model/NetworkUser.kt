@@ -7,3 +7,8 @@ data class NetworkUser(
     val isSuperuser: Boolean = false,
     val avatarUrl: String? = null,
 )
+
+data class SimpleNetworkUser(
+    val id: Long,
+    val username: String,
+)

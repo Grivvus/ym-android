@@ -199,7 +199,6 @@ class TrackDownloadManager @Inject constructor(
             authSessionManager.sessionState.collectLatest { state ->
                 if (state is SessionState.Unauthenticated) {
                     cancelAllDownloads()
-                    localTrackFileStore.clearAll()
                 }
             }
         }

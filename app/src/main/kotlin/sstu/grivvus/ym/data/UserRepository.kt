@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
 import sstu.grivvus.ym.data.local.LocalUser
 import sstu.grivvus.ym.data.local.UserDao
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
@@ -14,7 +15,6 @@ import sstu.grivvus.ym.data.network.remote.user.UserRemoteDataSource
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
-import kotlinx.coroutines.flow.Flow
 
 class UserRepository @Inject constructor(
     private val authRemoteDataSource: AuthRemoteDataSource,
@@ -111,6 +111,10 @@ class UserRepository @Inject constructor(
 
     suspend fun getUser(userId: Long): NetworkUser {
         return userRemoteDataSource.getUser(userId)
+    }
+
+    suspend fun getSimpleUser(userId: Long): NetworkUser {
+        return userRemoteDataSource.getSimpleUser(userId)
     }
 
     suspend fun getAllUsers(): List<NetworkUser> {

@@ -9,6 +9,7 @@ import coil3.request.ImageRequest
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+import sstu.grivvus.ym.data.download.LocalTrackFileStore
 import sstu.grivvus.ym.data.local.Album
 import sstu.grivvus.ym.data.local.AlbumDao
 import sstu.grivvus.ym.data.local.Artist
@@ -21,7 +22,6 @@ import sstu.grivvus.ym.data.local.PlaylistTrackCrossRef
 import sstu.grivvus.ym.data.local.PlaylistTrackDao
 import sstu.grivvus.ym.data.local.TrackAlbumCrossRef
 import sstu.grivvus.ym.data.local.TrackAlbumDao
-import sstu.grivvus.ym.data.download.LocalTrackFileStore
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
 import sstu.grivvus.ym.data.network.core.ConflictApiException
 import sstu.grivvus.ym.data.network.model.TrackQuality
@@ -509,7 +509,8 @@ class MusicRepository @Inject constructor(
         val allUsers = userRemoteDataSource.getAllUsers()
         val usersById = allUsers.associateBy { user -> user.id }
         val sharedUsers = sharedUserIds.mapNotNull { userId ->
-            usersById[userId] ?: runCatching { userRemoteDataSource.getUser(userId) }.getOrNull()
+            usersById[userId]
+                ?: runCatching { userRemoteDataSource.getSimpleUser(userId) }.getOrNull()
         }
             .map { user -> PlaylistSharingUser(id = user.id, username = user.username) }
             .sortedBy { user -> user.username.lowercase() }
@@ -623,7 +624,8 @@ class MusicRepository @Inject constructor(
             },
         )
 
-        val remotePlaylistSummaries = playlistRemoteDataSource.getAvailablePlaylists(playlistFilters)
+        val remotePlaylistSummaries =
+            playlistRemoteDataSource.getAvailablePlaylists(playlistFilters)
         val remotePlaylists = remotePlaylistSummaries.map { summary ->
             playlistRemoteDataSource.getPlaylist(summary.id)
         }
@@ -701,9 +703,10 @@ class MusicRepository @Inject constructor(
             .filter { playlist -> playlistFilters.includes(playlist.playlistType) }
             .map { playlist ->
                 val tracksForPlaylist =
-                    playlistTrackDao.getTrackIdsForPlaylist(playlist.remoteId).mapNotNull { trackId ->
-                        trackMap[trackId]
-                    }
+                    playlistTrackDao.getTrackIdsForPlaylist(playlist.remoteId)
+                        .mapNotNull { trackId ->
+                            trackMap[trackId]
+                        }
                 PlaylistBundle(playlist = playlist, tracks = tracksForPlaylist)
             }
         return MusicLibraryData(

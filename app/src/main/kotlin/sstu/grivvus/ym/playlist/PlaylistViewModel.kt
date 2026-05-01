@@ -366,7 +366,7 @@ class PlaylistViewModel @Inject constructor(
         if (ownerRemoteId == currentUserRemoteId) {
             return currentUsername
         }
-        return runCatching { userRepository.getUser(ownerRemoteId).username }.getOrNull()
+        return runCatching { userRepository.getSimpleUser(ownerRemoteId).username }.getOrNull()
     }
 
     private fun toTrackUi(
