@@ -10,6 +10,8 @@ import sstu.grivvus.ym.data.network.model.NetworkPlaylistDetails
 import sstu.grivvus.ym.data.network.model.NetworkPlaylistEmpty
 import sstu.grivvus.ym.data.network.model.UploadPart
 import sstu.grivvus.ym.openapi.models.AddTrackToPlaylistRequest
+import sstu.grivvus.ym.openapi.models.PlaylistRevokeAccessRequest
+import sstu.grivvus.ym.openapi.models.PlaylistShareRequest
 import sstu.grivvus.ym.openapi.models.PlaylistUpdateRequest
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,6 +26,14 @@ interface PlaylistRemoteDataSource {
     suspend fun updatePlaylist(playlistId: Long, name: String): NetworkPlaylistEmpty
 
     suspend fun deletePlaylist(playlistId: Long)
+
+    suspend fun sharePlaylist(
+        playlistId: Long,
+        userIds: Collection<Long>,
+        hasWritePermission: Boolean,
+    )
+
+    suspend fun revokePlaylistAccess(playlistId: Long, userId: Long)
 
     suspend fun addTrack(playlistId: Long, trackId: Long)
 
@@ -96,6 +106,37 @@ class OpenApiPlaylistRemoteDataSource @Inject constructor(
         generatedApiProvider.withAuthorizedApi { api ->
             apiExecutor.execute {
                 api.deletePlaylistWithHttpInfo(playlistId.toInt())
+            }
+        }
+    }
+
+    override suspend fun sharePlaylist(
+        playlistId: Long,
+        userIds: Collection<Long>,
+        hasWritePermission: Boolean,
+    ) {
+        generatedApiProvider.withAuthorizedApi { api ->
+            apiExecutor.execute {
+                api.sharePlaylistWithHttpInfo(
+                    playlistId = playlistId.toInt(),
+                    playlistShareRequest = PlaylistShareRequest(
+                        shareWithUsers = userIds.map { it.toInt() },
+                        hasWritePermission = hasWritePermission,
+                    ),
+                )
+            }
+        }
+    }
+
+    override suspend fun revokePlaylistAccess(playlistId: Long, userId: Long) {
+        generatedApiProvider.withAuthorizedApi { api ->
+            apiExecutor.execute {
+                api.revokePlaylistWithHttpInfo(
+                    playlistId = playlistId.toInt(),
+                    playlistRevokeAccessRequest = PlaylistRevokeAccessRequest(
+                        userId = userId.toInt(),
+                    ),
+                )
             }
         }
     }

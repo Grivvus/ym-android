@@ -27,11 +27,13 @@ import sstu.grivvus.ym.data.network.model.NetworkArtist
 import sstu.grivvus.ym.data.network.model.NetworkPlaylist
 import sstu.grivvus.ym.data.network.model.NetworkPlaylistDetails
 import sstu.grivvus.ym.data.network.model.NetworkPlaylistEmpty
+import sstu.grivvus.ym.data.network.model.NetworkUser
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
 import sstu.grivvus.ym.data.network.remote.album.AlbumRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.artist.ArtistRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.playlist.PlaylistRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.track.TrackRemoteDataSource
+import sstu.grivvus.ym.data.network.remote.user.UserRemoteDataSource
 import sstu.grivvus.ym.testutil.MainDispatcherRule
 import java.time.LocalDate
 
@@ -49,6 +51,7 @@ class MusicRepositoryTest {
     private val trackRemoteDataSource = mockk<TrackRemoteDataSource>()
     private val artistRemoteDataSource = mockk<ArtistRemoteDataSource>()
     private val albumRemoteDataSource = mockk<AlbumRemoteDataSource>()
+    private val userRemoteDataSource = mockk<UserRemoteDataSource>()
     private val serverInfoRepository = mockk<ServerInfoRepository>()
     private val authSessionManager = mockk<AuthSessionManager>()
 
@@ -142,6 +145,7 @@ class MusicRepositoryTest {
             id = 20L,
             name = "Shared playlist",
             trackIds = emptyList(),
+            sharedWithUserIds = emptyList(),
         )
         coEvery { serverInfoRepository.playlistCoverUri(20L) } returns
                 Uri.parse("https://example.com/playlists/20/cover")
@@ -275,6 +279,108 @@ class MusicRepositoryTest {
     }
 
     @Test
+    fun loadPlaylistSharingInfo_whenCurrentUserIsOwner_mapsSharedAndAvailableUsers() = runTest {
+        database.playlistDao().upsert(
+            Playlist(
+                remoteId = 70L,
+                ownerRemoteId = 42L,
+                name = "Owned playlist",
+                playlistType = PlaylistType.OWNED,
+                canEdit = true,
+            ),
+        )
+        coEvery { authSessionManager.requireCurrentUser() } returns currentUser(42L)
+        coEvery { playlistRemoteDataSource.getPlaylist(70L) } returns NetworkPlaylistDetails(
+            id = 70L,
+            name = "Owned playlist",
+            trackIds = emptyList(),
+            sharedWithUserIds = listOf(77L),
+        )
+        coEvery { userRemoteDataSource.getAllUsers() } returns listOf(
+            networkUser(42L, "owner"),
+            networkUser(77L, "editor"),
+            networkUser(88L, "listener"),
+        )
+
+        val repository = createRepository()
+
+        val sharingInfo = repository.loadPlaylistSharingInfo(70L)
+
+        assertThat(sharingInfo.sharedUsers).containsExactly(
+            PlaylistSharingUser(id = 77L, username = "editor"),
+        )
+        assertThat(sharingInfo.availableUsers).containsExactly(
+            PlaylistSharingUser(id = 88L, username = "listener"),
+        )
+    }
+
+    @Test
+    fun sharePlaylistAccess_whenCurrentUserIsOwner_callsRemoteAndReloadsSharingInfo() = runTest {
+        database.playlistDao().upsert(
+            Playlist(
+                remoteId = 80L,
+                ownerRemoteId = 42L,
+                name = "Owned playlist",
+                playlistType = PlaylistType.OWNED,
+                canEdit = true,
+            ),
+        )
+        coEvery { authSessionManager.requireCurrentUser() } returns currentUser(42L)
+        coEvery {
+            playlistRemoteDataSource.sharePlaylist(80L, listOf(88L), true)
+        } returns Unit
+        coEvery { playlistRemoteDataSource.getPlaylist(80L) } returns NetworkPlaylistDetails(
+            id = 80L,
+            name = "Owned playlist",
+            trackIds = emptyList(),
+            sharedWithUserIds = listOf(88L),
+        )
+        coEvery { userRemoteDataSource.getAllUsers() } returns listOf(
+            networkUser(42L, "owner"),
+            networkUser(88L, "editor"),
+        )
+
+        val repository = createRepository()
+
+        val sharingInfo = repository.sharePlaylistAccess(
+            playlistId = 80L,
+            userIds = listOf(88L),
+            hasWritePermission = true,
+        )
+
+        assertThat(sharingInfo.sharedUsers).containsExactly(
+            PlaylistSharingUser(id = 88L, username = "editor"),
+        )
+        coVerify(exactly = 1) {
+            playlistRemoteDataSource.sharePlaylist(80L, listOf(88L), true)
+        }
+    }
+
+    @Test
+    fun revokePlaylistAccess_whenCurrentUserIsNotOwner_skipsRemoteCall() = runTest {
+        database.playlistDao().upsert(
+            Playlist(
+                remoteId = 90L,
+                ownerRemoteId = 99L,
+                name = "Shared playlist",
+                playlistType = PlaylistType.SHARED,
+                canEdit = true,
+            ),
+        )
+        coEvery { authSessionManager.requireCurrentUser() } returns currentUser(42L)
+
+        val repository = createRepository()
+
+        val error = expectThrows<PlaylistAccessDenied> {
+            repository.revokePlaylistAccess(90L, 77L)
+        }
+
+        assertThat(error).hasMessageThat()
+            .isEqualTo("Only playlist owner can delete this playlist")
+        coVerify(exactly = 0) { playlistRemoteDataSource.revokePlaylistAccess(any(), any()) }
+    }
+
+    @Test
     fun createAlbum_savesReleaseMetadataReturnedByRemoteSource() = runTest {
         database.artistDao().upsert(
             Artist(
@@ -357,11 +463,20 @@ class MusicRepositoryTest {
             trackRemoteDataSource = trackRemoteDataSource,
             artistRemoteDataSource = artistRemoteDataSource,
             albumRemoteDataSource = albumRemoteDataSource,
+            userRemoteDataSource = userRemoteDataSource,
             serverInfoRepository = serverInfoRepository,
             authSessionManager = authSessionManager,
             localTrackFileStore = LocalTrackFileStore(applicationContext, mainDispatcherRule.dispatcher),
             context = applicationContext,
             dispatcher = mainDispatcherRule.dispatcher,
+        )
+    }
+
+    private fun networkUser(id: Long, username: String): NetworkUser {
+        return NetworkUser(
+            id = id,
+            username = username,
+            email = null,
         )
     }
 

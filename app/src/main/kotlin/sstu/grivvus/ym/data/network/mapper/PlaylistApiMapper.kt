@@ -21,6 +21,7 @@ class PlaylistApiMapper @Inject constructor() {
         return NetworkPlaylistDetails(
             id = response.playlistId.toLong(), name = response.playlistName,
             trackIds = response.tracks.map { it.toLong() },
+            sharedWithUserIds = response.sharedWith.map { it.toLong() },
         )
     }
 

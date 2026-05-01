@@ -18,6 +18,7 @@ import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.PlaylistBundle
 import sstu.grivvus.ym.data.PlaylistCreationConflict
+import sstu.grivvus.ym.data.PlaylistSharingInfo
 import sstu.grivvus.ym.data.PlaylistType
 import sstu.grivvus.ym.data.TrackBundle
 import sstu.grivvus.ym.data.UserRepository
@@ -52,12 +53,27 @@ data class PlaylistDetailUi(
     val tracks: List<TrackItemUi> = emptyList(),
 )
 
+data class PlaylistSharingUserUi(
+    val id: Long,
+    val username: String,
+)
+
+data class PlaylistSharingUiState(
+    val isLoading: Boolean = false,
+    val isMutating: Boolean = false,
+    val sharedUsers: List<PlaylistSharingUserUi> = emptyList(),
+    val availableUsers: List<PlaylistSharingUserUi> = emptyList(),
+    val selectedUserIds: Set<Long> = emptySet(),
+    val hasWritePermission: Boolean = false,
+)
+
 data class PlaylistUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val isMutating: Boolean = false,
     val playlist: PlaylistDetailUi? = null,
     val libraryTracks: List<TrackItemUi> = emptyList(),
+    val sharing: PlaylistSharingUiState = PlaylistSharingUiState(),
     val errorMessage: UiText? = null,
 )
 
@@ -139,6 +155,97 @@ class PlaylistViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
             } finally {
                 _uiState.value = _uiState.value.copy(isMutating = false)
+            }
+        }
+    }
+
+    fun loadSharingInfo() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                sharing = _uiState.value.sharing.copy(isLoading = true),
+                errorMessage = null,
+            )
+            try {
+                applySharingInfo(repository.loadPlaylistSharingInfo(playlistId))
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (e: Exception) {
+                e.logHandledException("PlaylistViewModel.loadSharingInfo")
+                _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
+            } finally {
+                _uiState.value = _uiState.value.copy(
+                    sharing = _uiState.value.sharing.copy(isLoading = false),
+                )
+            }
+        }
+    }
+
+    fun toggleSharingUserSelection(userId: Long) {
+        val sharing = _uiState.value.sharing
+        val selectedUserIds = if (userId in sharing.selectedUserIds) {
+            sharing.selectedUserIds - userId
+        } else {
+            sharing.selectedUserIds + userId
+        }
+        _uiState.value = _uiState.value.copy(
+            sharing = sharing.copy(selectedUserIds = selectedUserIds),
+        )
+    }
+
+    fun setSharingWritePermission(hasWritePermission: Boolean) {
+        _uiState.value = _uiState.value.copy(
+            sharing = _uiState.value.sharing.copy(hasWritePermission = hasWritePermission),
+        )
+    }
+
+    fun shareWithSelectedUsers() {
+        val sharing = _uiState.value.sharing
+        if (sharing.selectedUserIds.isEmpty()) {
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                sharing = sharing.copy(isMutating = true),
+                errorMessage = null,
+            )
+            try {
+                applySharingInfo(
+                    repository.sharePlaylistAccess(
+                        playlistId = playlistId,
+                        userIds = sharing.selectedUserIds,
+                        hasWritePermission = sharing.hasWritePermission,
+                    ),
+                )
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (e: Exception) {
+                e.logHandledException("PlaylistViewModel.shareWithSelectedUsers")
+                _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
+            } finally {
+                _uiState.value = _uiState.value.copy(
+                    sharing = _uiState.value.sharing.copy(isMutating = false),
+                )
+            }
+        }
+    }
+
+    fun revokeUserAccess(userId: Long) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                sharing = _uiState.value.sharing.copy(isMutating = true),
+                errorMessage = null,
+            )
+            try {
+                applySharingInfo(repository.revokePlaylistAccess(playlistId, userId))
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (e: Exception) {
+                e.logHandledException("PlaylistViewModel.revokeUserAccess")
+                _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
+            } finally {
+                _uiState.value = _uiState.value.copy(
+                    sharing = _uiState.value.sharing.copy(isMutating = false),
+                )
             }
         }
     }
@@ -234,6 +341,20 @@ class PlaylistViewModel @Inject constructor(
             } else {
                 null
             },
+        )
+    }
+
+    private fun applySharingInfo(info: PlaylistSharingInfo) {
+        _uiState.value = _uiState.value.copy(
+            sharing = _uiState.value.sharing.copy(
+                sharedUsers = info.sharedUsers.map { user ->
+                    PlaylistSharingUserUi(id = user.id, username = user.username)
+                },
+                availableUsers = info.availableUsers.map { user ->
+                    PlaylistSharingUserUi(id = user.id, username = user.username)
+                },
+                selectedUserIds = emptySet(),
+            ),
         )
     }
 

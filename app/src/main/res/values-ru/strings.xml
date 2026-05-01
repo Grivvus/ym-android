@@ -137,7 +137,11 @@
     <string name="music_upload_route_unused">Этот экран загрузки больше не используется</string>
 
     <string name="playlist_default_title">Плейлист</string>
+    <string name="playlist_filter_owned">Мои</string>
+    <string name="playlist_filter_shared">Совместные</string>
+    <string name="playlist_filter_public">Публичные</string>
     <string name="playlist_owner_label">Владелец: %1$s</string>
+    <string name="playlist_cd_manage_access">Управление доступом к плейлисту</string>
     <string name="playlist_unavailable_title">Плейлист недоступен</string>
     <string name="playlist_unavailable_description">Не удалось загрузить этот плейлист. Вернитесь к списку и обновите его.</string>
     <string name="playlist_delete_title">Удалить плейлист</string>
@@ -150,6 +154,15 @@
     <string name="playlist_add_tracks_title">Добавить треки</string>
     <string name="playlist_all_library_tracks_added">Все треки из библиотеки уже добавлены в этот плейлист.</string>
     <string name="playlist_error_not_found">Плейлист не найден</string>
+    <string name="playlist_share_title">Доступ к плейлисту</string>
+    <string name="playlist_share_loading">Загрузка пользователей...</string>
+    <string name="playlist_share_existing">Доступ выдан</string>
+    <string name="playlist_share_available">Поделиться с пользователями</string>
+    <string name="playlist_share_empty_shared">Пока нет пользователей с доступом.</string>
+    <string name="playlist_share_empty_available">Нет пользователей, которым можно выдать доступ.</string>
+    <string name="playlist_share_allow_edit">Разрешить редактирование</string>
+    <string name="playlist_share_button">Поделиться</string>
+    <string name="playlist_share_revoke">Забрать доступ</string>
 
     <string name="album_default_title">Альбом</string>
     <string name="album_unavailable_title">Альбом недоступен</string>
@@ -267,7 +280,4 @@
     <string name="upload_uploading">Загрузка...</string>
     <string name="upload_error_select_artist_first">Сначала выберите исполнителя</string>
     <string name="common_action_proceed">Продолжить</string>
-    <string name="playlist_filter_owned">Мои</string>
-    <string name="playlist_filter_shared">Совместные</string>
-    <string name="playlist_filter_public">Публичные</string>
 </resources>

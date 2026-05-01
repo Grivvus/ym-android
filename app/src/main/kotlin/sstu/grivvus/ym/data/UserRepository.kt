@@ -113,6 +113,10 @@ class UserRepository @Inject constructor(
         return userRemoteDataSource.getUser(userId)
     }
 
+    suspend fun getAllUsers(): List<NetworkUser> {
+        return userRemoteDataSource.getAllUsers()
+    }
+
     fun observeCurrentUser(): Flow<LocalUser?> {
         return userDao.observeActiveUser()
     }

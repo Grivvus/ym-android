@@ -26,3 +26,13 @@ data class PlaylistFilters(
 class PlaylistAccessDenied(
     message: String,
 ) : Exception(message)
+
+data class PlaylistSharingUser(
+    val id: Long,
+    val username: String,
+)
+
+data class PlaylistSharingInfo(
+    val sharedUsers: List<PlaylistSharingUser>,
+    val availableUsers: List<PlaylistSharingUser>,
+)

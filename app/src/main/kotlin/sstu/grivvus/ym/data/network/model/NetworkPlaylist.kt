@@ -14,6 +14,7 @@ data class NetworkPlaylistDetails(
     val id: Long,
     val name: String,
     val trackIds: List<Long>,
+    val sharedWithUserIds: List<Long>,
 )
 
 data class NetworkPlaylistEmpty(

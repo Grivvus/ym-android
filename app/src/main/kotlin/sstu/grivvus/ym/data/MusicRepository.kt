@@ -30,6 +30,7 @@ import sstu.grivvus.ym.data.network.remote.album.AlbumRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.artist.ArtistRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.playlist.PlaylistRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.track.TrackRemoteDataSource
+import sstu.grivvus.ym.data.network.remote.user.UserRemoteDataSource
 import sstu.grivvus.ym.di.DefaultDispatcher
 import java.io.File
 import java.io.IOException
@@ -73,6 +74,7 @@ class MusicRepository @Inject constructor(
     private val trackRemoteDataSource: TrackRemoteDataSource,
     private val artistRemoteDataSource: ArtistRemoteDataSource,
     private val albumRemoteDataSource: AlbumRemoteDataSource,
+    private val userRemoteDataSource: UserRemoteDataSource,
     private val serverInfoRepository: ServerInfoRepository,
     private val authSessionManager: AuthSessionManager,
     private val localTrackFileStore: LocalTrackFileStore,
@@ -310,6 +312,44 @@ class MusicRepository @Inject constructor(
         buildLocalState()
     }
 
+    suspend fun loadPlaylistSharingInfo(playlistId: Long): PlaylistSharingInfo =
+        withContext(dispatcher) {
+            buildPlaylistSharingInfo(requirePlaylistOwner(playlistId))
+        }
+
+    suspend fun sharePlaylistAccess(
+        playlistId: Long,
+        userIds: Collection<Long>,
+        hasWritePermission: Boolean,
+    ): PlaylistSharingInfo = withContext(dispatcher) {
+        val playlist = requirePlaylistOwner(playlistId)
+        val distinctUserIds = userIds
+            .filterNot { userId -> userId == playlist.ownerRemoteId }
+            .distinct()
+        if (distinctUserIds.isNotEmpty()) {
+            playlistRemoteDataSource.sharePlaylist(
+                playlistId = playlistId,
+                userIds = distinctUserIds,
+                hasWritePermission = hasWritePermission,
+            )
+        }
+        buildPlaylistSharingInfo(playlist)
+    }
+
+    suspend fun revokePlaylistAccess(
+        playlistId: Long,
+        userId: Long,
+    ): PlaylistSharingInfo = withContext(dispatcher) {
+        val playlist = requirePlaylistOwner(playlistId)
+        if (userId != playlist.ownerRemoteId) {
+            playlistRemoteDataSource.revokePlaylistAccess(
+                playlistId = playlistId,
+                userId = userId,
+            )
+        }
+        buildPlaylistSharingInfo(playlist)
+    }
+
     suspend fun renamePlaylist(playlistId: Long, newName: String): MusicLibraryData =
         withContext(dispatcher) {
             val currentPlaylist = requireEditablePlaylist(playlistId)
@@ -459,6 +499,30 @@ class MusicRepository @Inject constructor(
             throw PlaylistAccessDenied("Only playlist owner can delete this playlist")
         }
         return playlist
+    }
+
+    private suspend fun buildPlaylistSharingInfo(playlist: Playlist): PlaylistSharingInfo {
+        val details = playlistRemoteDataSource.getPlaylist(playlist.remoteId)
+        val sharedUserIds = details.sharedWithUserIds
+            .filterNot { userId -> userId == playlist.ownerRemoteId }
+            .distinct()
+        val allUsers = userRemoteDataSource.getAllUsers()
+        val usersById = allUsers.associateBy { user -> user.id }
+        val sharedUsers = sharedUserIds.mapNotNull { userId ->
+            usersById[userId] ?: runCatching { userRemoteDataSource.getUser(userId) }.getOrNull()
+        }
+            .map { user -> PlaylistSharingUser(id = user.id, username = user.username) }
+            .sortedBy { user -> user.username.lowercase() }
+        val sharedUserIdSet = sharedUserIds.toSet()
+        val availableUsers = allUsers
+            .filterNot { user -> user.id == playlist.ownerRemoteId }
+            .filterNot { user -> user.id in sharedUserIdSet }
+            .map { user -> PlaylistSharingUser(id = user.id, username = user.username) }
+            .sortedBy { user -> user.username.lowercase() }
+        return PlaylistSharingInfo(
+            sharedUsers = sharedUsers,
+            availableUsers = availableUsers,
+        )
     }
 
     private suspend fun syncRemoteState(playlistFilters: PlaylistFilters = PlaylistFilters()) {

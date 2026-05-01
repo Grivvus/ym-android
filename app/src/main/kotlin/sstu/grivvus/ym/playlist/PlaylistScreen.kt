@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,14 +13,20 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.sharp.Delete
+import androidx.compose.material.icons.sharp.Edit
+import androidx.compose.material.icons.sharp.Share
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -88,6 +95,7 @@ fun PlaylistScreen(
 
     var renameDraft by remember { mutableStateOf<RenamePlaylistDraft?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showSharingDialog by remember { mutableStateOf(false) }
     var showAddTracksDialog by remember { mutableStateOf(false) }
     var uploadTrackRequest by remember { mutableStateOf<UploadTrackModalRequest?>(null) }
 
@@ -143,21 +151,29 @@ fun PlaylistScreen(
                         )
                     }
                     if (playlist != null) {
-                        if (playlist.canEdit) {
-                            TextButton(
+                        if (playlist.canDelete) {
+                            IconButton(
                                 onClick = {
-                                    renameDraft = RenamePlaylistDraft(value = playlist.name)
+                                    showSharingDialog = true
+                                    viewModel.loadSharingInfo()
                                 },
                             ) {
-                                Text(stringResource(R.string.common_action_rename))
-                            }
-                            TextButton(onClick = { coverPicker.launch("image/*") }) {
-                                Text(stringResource(R.string.common_action_cover))
+                                Icon(
+                                    appIcons.Share,
+                                    contentDescription = stringResource(
+                                        R.string.playlist_cd_manage_access,
+                                    ),
+                                )
                             }
                         }
                         if (playlist.canDelete) {
-                            TextButton(onClick = { showDeleteDialog = true }) {
-                                Text(stringResource(R.string.common_action_delete))
+                            IconButton(onClick = { showDeleteDialog = true }) {
+                                Icon(
+                                    appIcons.Delete,
+                                    contentDescription = stringResource(
+                                        R.string.common_action_delete,
+                                    ),
+                                )
                             }
                         }
                     }
@@ -186,6 +202,10 @@ fun PlaylistScreen(
                     },
                     onAddExistingTrack = { showAddTracksDialog = true },
                     onUploadTrack = { audioPicker.launch("audio/*") },
+                    onRename = {
+                        renameDraft = RenamePlaylistDraft(value = playlist.name)
+                    },
+                    onSelectCover = { coverPicker.launch("image/*") },
                     onTrackClick = { trackId ->
                         viewModel.playbackQueueFor(trackId)?.let { queue ->
                             playbackViewModel.play(queue)
@@ -246,6 +266,17 @@ fun PlaylistScreen(
         )
     }
 
+    if (showSharingDialog && playlist != null) {
+        PlaylistSharingDialog(
+            sharing = uiState.sharing,
+            onDismiss = { showSharingDialog = false },
+            onToggleUser = viewModel::toggleSharingUserSelection,
+            onWritePermissionChange = viewModel::setSharingWritePermission,
+            onShare = viewModel::shareWithSelectedUsers,
+            onRevoke = viewModel::revokeUserAccess,
+        )
+    }
+
     if (showAddTracksDialog && playlist != null && playlist.canEdit) {
         val selectedIds = playlist.tracks.map { it.id }.toSet()
         AddTracksDialog(
@@ -275,12 +306,169 @@ fun PlaylistScreen(
 }
 
 @Composable
+private fun PlaylistSharingDialog(
+    sharing: PlaylistSharingUiState,
+    onDismiss: () -> Unit,
+    onToggleUser: (Long) -> Unit,
+    onWritePermissionChange: (Boolean) -> Unit,
+    onShare: () -> Unit,
+    onRevoke: (Long) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.playlist_share_title)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 440.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (sharing.isLoading) {
+                    Text(
+                        text = stringResource(R.string.playlist_share_loading),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    SharingSectionTitle(text = stringResource(R.string.playlist_share_existing))
+                    if (sharing.sharedUsers.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.playlist_share_empty_shared),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        sharing.sharedUsers.forEach { user ->
+                            SharedUserRow(
+                                user = user,
+                                isBusy = sharing.isMutating,
+                                onRevoke = onRevoke,
+                            )
+                        }
+                    }
+
+                    SharingSectionTitle(text = stringResource(R.string.playlist_share_available))
+                    if (sharing.availableUsers.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.playlist_share_empty_available),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        sharing.availableUsers.forEach { user ->
+                            AvailableUserRow(
+                                user = user,
+                                selected = user.id in sharing.selectedUserIds,
+                                enabled = !sharing.isMutating,
+                                onToggleUser = onToggleUser,
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(
+                                checked = sharing.hasWritePermission,
+                                onCheckedChange = onWritePermissionChange,
+                                enabled = !sharing.isMutating,
+                            )
+                            Text(
+                                text = stringResource(R.string.playlist_share_allow_edit),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onShare,
+                enabled = sharing.selectedUserIds.isNotEmpty() &&
+                        !sharing.isLoading &&
+                        !sharing.isMutating,
+            ) {
+                Text(stringResource(R.string.playlist_share_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_action_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun SharingSectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+    )
+}
+
+@Composable
+private fun SharedUserRow(
+    user: PlaylistSharingUserUi,
+    isBusy: Boolean,
+    onRevoke: (Long) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = user.username,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(
+            onClick = { onRevoke(user.id) },
+            enabled = !isBusy,
+        ) {
+            Text(stringResource(R.string.playlist_share_revoke))
+        }
+    }
+}
+
+@Composable
+private fun AvailableUserRow(
+    user: PlaylistSharingUserUi,
+    selected: Boolean,
+    enabled: Boolean,
+    onToggleUser: (Long) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onToggleUser(user.id) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked = selected,
+            onCheckedChange = { onToggleUser(user.id) },
+            enabled = enabled,
+        )
+        Text(
+            text = user.username,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
 private fun PlaylistDetails(
     playlist: PlaylistDetailUi,
     isBusy: Boolean,
     onPlayAll: () -> Unit,
     onAddExistingTrack: () -> Unit,
     onUploadTrack: () -> Unit,
+    onRename: () -> Unit,
+    onSelectCover: () -> Unit,
     onTrackClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -299,14 +487,33 @@ private fun PlaylistDetails(
                         uri = playlist.coverUri,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(1f),
+                            .aspectRatio(1f)
+                            .clickable(enabled = playlist.canEdit, onClick = onSelectCover),
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = playlist.name,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = playlist.name,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (playlist.canEdit) {
+                            IconButton(onClick = onRename) {
+                                Icon(
+                                    appIcons.Edit,
+                                    contentDescription = stringResource(
+                                        R.string.common_action_rename,
+                                    ),
+                                )
+                            }
+                        }
+                    }
                     playlist.ownerUsername?.let { ownerUsername ->
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(

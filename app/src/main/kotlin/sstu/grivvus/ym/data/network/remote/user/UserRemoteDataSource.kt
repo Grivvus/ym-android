@@ -17,6 +17,8 @@ interface UserRemoteDataSource {
 
     suspend fun getUser(userId: Long): NetworkUser
 
+    suspend fun getAllUsers(): List<NetworkUser>
+
     suspend fun updateCurrentUser(newUsername: String, newEmail: String): NetworkUser
 
     suspend fun changePassword(currentPassword: String, newPassword: String)
@@ -42,6 +44,16 @@ class OpenApiUserRemoteDataSource @Inject constructor(
             userApiMapper.mapUser(
                 apiExecutor.execute {
                     api.getUserWithHttpInfo(userId.toInt())
+                },
+            )
+        }
+    }
+
+    override suspend fun getAllUsers(): List<NetworkUser> {
+        return generatedApiProvider.withAuthorizedApi { api ->
+            userApiMapper.mapSimpleUsers(
+                apiExecutor.execute {
+                    api.getAllUsersWithHttpInfo()
                 },
             )
         }
