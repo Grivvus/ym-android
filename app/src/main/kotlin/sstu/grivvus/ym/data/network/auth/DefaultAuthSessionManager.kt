@@ -139,8 +139,10 @@ class DefaultAuthSessionManager @Inject constructor(
 
     private suspend fun syncSessionStateFromStorage() {
         val currentSession = currentSessionOrNull()
-        internalState.value = currentSession?.let(SessionState::Authenticated)
-            ?: SessionState.Unauthenticated()
+        if (internalState.value is SessionState.Initializing) {
+            internalState.value = currentSession?.let(SessionState::Authenticated)
+                ?: SessionState.Unauthenticated()
+        }
     }
 
     private fun NetworkSession.toSessionState(): SessionState.Authenticated {

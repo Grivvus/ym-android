@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.sharp.Delete
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -139,17 +140,14 @@ fun AlbumScreen(
                         )
                     }
                     if (album != null) {
-                        TextButton(
-                            onClick = { coverPicker.launch("image/*") },
-                            enabled = !uiState.isMutating,
-                        ) {
-                            Text(stringResource(R.string.common_action_cover))
-                        }
-                        TextButton(
+                        IconButton(
                             onClick = { showDeleteDialog = true },
                             enabled = !uiState.isMutating,
                         ) {
-                            Text(stringResource(R.string.common_action_delete))
+                            Icon(
+                                appIcons.Delete,
+                                contentDescription = stringResource(R.string.common_action_delete),
+                            )
                         }
                     }
                 },
@@ -176,6 +174,7 @@ fun AlbumScreen(
                         }
                     },
                     onUploadTrack = { audioPicker.launch("audio/*") },
+                    onSelectCover = { coverPicker.launch("image/*") },
                     onTrackClick = { trackId ->
                         viewModel.playbackQueueFor(trackId)?.let { queue ->
                             playbackViewModel.play(queue)
@@ -253,6 +252,7 @@ private fun AlbumDetails(
     isBusy: Boolean,
     onPlayAll: () -> Unit,
     onUploadTrack: () -> Unit,
+    onSelectCover: () -> Unit,
     onTrackClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -271,7 +271,8 @@ private fun AlbumDetails(
                         uri = album.coverUri,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(1f),
+                            .aspectRatio(1f)
+                            .clickable(enabled = !isBusy, onClick = onSelectCover),
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
