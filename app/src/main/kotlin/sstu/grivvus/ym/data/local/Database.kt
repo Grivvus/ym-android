@@ -9,7 +9,7 @@ import androidx.room.TypeConverters
         LocalUser::class, AudioTrack::class, ServerInfo::class, Artist::class,
         Album::class, Playlist::class, PlaylistTrackCrossRef::class, TrackAlbumCrossRef::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(UriConverter::class)

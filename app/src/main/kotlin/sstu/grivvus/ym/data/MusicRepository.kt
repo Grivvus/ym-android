@@ -79,12 +79,15 @@ class MusicRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
     @param:DefaultDispatcher private val dispatcher: CoroutineDispatcher,
 ) {
-    suspend fun loadLibrary(refreshFromNetwork: Boolean): MusicLibraryData =
+    suspend fun loadLibrary(
+        refreshFromNetwork: Boolean,
+        playlistFilters: PlaylistFilters = PlaylistFilters(),
+    ): MusicLibraryData =
         withContext(dispatcher) {
             if (refreshFromNetwork) {
-                syncRemoteState()
+                syncRemoteState(playlistFilters)
             }
-            buildLocalState()
+            buildLocalState(playlistFilters)
         }
 
     suspend fun loadUploadTrackCatalog(refreshFromNetwork: Boolean): UploadTrackCatalog =
@@ -246,6 +249,8 @@ class MusicRepository @Inject constructor(
                         name = name,
                         coverUri = resolvedCoverUri,
                         ownerRemoteId = authSessionManager.requireCurrentUser().remoteId,
+                        playlistType = PlaylistType.OWNED,
+                        canEdit = true,
                         nameIsLocalOverride = false,
                         tracksSeeded = true,
                     ),
@@ -299,6 +304,7 @@ class MusicRepository @Inject constructor(
     }
 
     suspend fun deletePlaylist(playlistId: Long): MusicLibraryData = withContext(dispatcher) {
+        requirePlaylistOwner(playlistId)
         playlistRemoteDataSource.deletePlaylist(playlistId)
         playlistDao.deleteById(playlistId)
         buildLocalState()
@@ -306,8 +312,7 @@ class MusicRepository @Inject constructor(
 
     suspend fun renamePlaylist(playlistId: Long, newName: String): MusicLibraryData =
         withContext(dispatcher) {
-            val currentPlaylist = playlistDao.getById(playlistId)
-                ?: throw IOException("Playlist was not found")
+            val currentPlaylist = requireEditablePlaylist(playlistId)
             val updatedPlaylist = playlistRemoteDataSource.updatePlaylist(playlistId, newName)
             playlistDao.upsert(
                 currentPlaylist.copy(
@@ -322,6 +327,7 @@ class MusicRepository @Inject constructor(
 
     suspend fun uploadPlaylistCover(playlistId: Long, coverUri: Uri): MusicLibraryData =
         withContext(dispatcher) {
+            requireEditablePlaylist(playlistId)
             val preparedCover = prepareUploadFile(coverUri)
             try {
                 playlistRemoteDataSource.uploadCover(
@@ -350,8 +356,7 @@ class MusicRepository @Inject constructor(
         playlistId: Long,
         trackIds: Collection<Long>,
     ): MusicLibraryData = withContext(dispatcher) {
-        val playlist = playlistDao.getById(playlistId)
-            ?: throw IOException("Playlist was not found")
+        val playlist = requireEditablePlaylist(playlistId)
         trackIds.forEach { trackId ->
             playlistRemoteDataSource.addTrack(playlistId, trackId)
         }
@@ -397,6 +402,7 @@ class MusicRepository @Inject constructor(
         isSingle: Boolean,
         isGloballyAvailable: Boolean?,
     ): MusicLibraryData = withContext(dispatcher) {
+        val playlist = requireEditablePlaylist(playlistId)
         val trackId = uploadTrackInternal(
             trackUri = trackUri,
             title = title,
@@ -405,8 +411,6 @@ class MusicRepository @Inject constructor(
             isSingle = isSingle,
             isGloballyAvailable = isGloballyAvailable,
         )
-        val playlist = playlistDao.getById(playlistId)
-            ?: throw IOException("Playlist was not found")
         playlistRemoteDataSource.addTrack(playlistId, trackId)
         playlistTrackDao.upsert(
             PlaylistTrackCrossRef(
@@ -438,7 +442,26 @@ class MusicRepository @Inject constructor(
             buildLocalState()
         }
 
-    private suspend fun syncRemoteState() {
+    private suspend fun requireEditablePlaylist(playlistId: Long): Playlist {
+        val playlist = playlistDao.getById(playlistId)
+            ?: throw IOException("Playlist was not found")
+        if (!playlist.canEdit) {
+            throw PlaylistAccessDenied("Playlist cannot be edited")
+        }
+        return playlist
+    }
+
+    private suspend fun requirePlaylistOwner(playlistId: Long): Playlist {
+        val playlist = playlistDao.getById(playlistId)
+            ?: throw IOException("Playlist was not found")
+        val currentUser = authSessionManager.requireCurrentUser()
+        if (playlist.ownerRemoteId != currentUser.remoteId) {
+            throw PlaylistAccessDenied("Only playlist owner can delete this playlist")
+        }
+        return playlist
+    }
+
+    private suspend fun syncRemoteState(playlistFilters: PlaylistFilters = PlaylistFilters()) {
         val existingArtists = artistRemoteDataSource.getAllArtists()
 
         artistDao.upsertAll(
@@ -536,7 +559,7 @@ class MusicRepository @Inject constructor(
             },
         )
 
-        val remotePlaylistSummaries = playlistRemoteDataSource.getMyPlaylists()
+        val remotePlaylistSummaries = playlistRemoteDataSource.getAvailablePlaylists(playlistFilters)
         val remotePlaylists = remotePlaylistSummaries.map { summary ->
             playlistRemoteDataSource.getPlaylist(summary.id)
         }
@@ -544,6 +567,7 @@ class MusicRepository @Inject constructor(
         val remoteIds = remotePlaylistSummaries.map { it.id }.toSet()
 
         existingPlaylists.values
+            .filter { playlistFilters.includes(it.playlistType) }
             .filterNot { it.remoteId in remoteIds }
             .forEach { stalePlaylist ->
                 playlistDao.deleteById(stalePlaylist.remoteId)
@@ -556,8 +580,10 @@ class MusicRepository @Inject constructor(
                     remoteId = remotePlaylist.id,
                     name = remotePlaylist.name,
                     coverUri = existingPlaylist?.coverUri,
+                    playlistType = remotePlaylist.playlistType,
+                    canEdit = remotePlaylist.canEdit,
                     nameIsLocalOverride = false,
-                    ownerRemoteId = authSessionManager.requireCurrentUser().remoteId,
+                    ownerRemoteId = remotePlaylist.ownerRemoteId,
                     tracksSeeded = existingPlaylist?.tracksSeeded ?: false,
                 )
             },
@@ -587,7 +613,9 @@ class MusicRepository @Inject constructor(
         }
     }
 
-    private suspend fun buildLocalState(): MusicLibraryData {
+    private suspend fun buildLocalState(
+        playlistFilters: PlaylistFilters = PlaylistFilters(),
+    ): MusicLibraryData {
         val artists = artistDao.getAll()
         val tracks = resolveLocalDownloadState(audioTrackDao.getAll())
         val albums = albumDao.getAll()
@@ -605,13 +633,15 @@ class MusicRepository @Inject constructor(
             )
         }
         val trackMap = libraryTracks.associateBy { it.track.remoteId }
-        val playlists = playlistDao.getAll().map { playlist ->
-            val tracksForPlaylist =
-                playlistTrackDao.getTrackIdsForPlaylist(playlist.remoteId).mapNotNull { trackId ->
-                    trackMap[trackId]
-                }
-            PlaylistBundle(playlist = playlist, tracks = tracksForPlaylist)
-        }
+        val playlists = playlistDao.getAll()
+            .filter { playlist -> playlistFilters.includes(playlist.playlistType) }
+            .map { playlist ->
+                val tracksForPlaylist =
+                    playlistTrackDao.getTrackIdsForPlaylist(playlist.remoteId).mapNotNull { trackId ->
+                        trackMap[trackId]
+                    }
+                PlaylistBundle(playlist = playlist, tracks = tracksForPlaylist)
+            }
         return MusicLibraryData(
             playlists = playlists,
             libraryTracks = libraryTracks,

@@ -15,6 +15,8 @@ import javax.inject.Singleton
 interface UserRemoteDataSource {
     suspend fun getCurrentUser(): NetworkUser
 
+    suspend fun getUser(userId: Long): NetworkUser
+
     suspend fun updateCurrentUser(newUsername: String, newEmail: String): NetworkUser
 
     suspend fun changePassword(currentPassword: String, newPassword: String)
@@ -32,10 +34,14 @@ class OpenApiUserRemoteDataSource @Inject constructor(
 ) : UserRemoteDataSource {
     override suspend fun getCurrentUser(): NetworkUser {
         val currentUser = authSessionManager.requireCurrentUser()
+        return getUser(currentUser.remoteId)
+    }
+
+    override suspend fun getUser(userId: Long): NetworkUser {
         return generatedApiProvider.withAuthorizedApi { api ->
             userApiMapper.mapUser(
                 apiExecutor.execute {
-                    api.getUserWithHttpInfo(currentUser.remoteId.toInt())
+                    api.getUserWithHttpInfo(userId.toInt())
                 },
             )
         }

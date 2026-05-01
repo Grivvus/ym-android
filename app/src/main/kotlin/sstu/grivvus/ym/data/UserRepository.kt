@@ -7,6 +7,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import sstu.grivvus.ym.data.local.LocalUser
 import sstu.grivvus.ym.data.local.UserDao
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
+import sstu.grivvus.ym.data.network.model.NetworkUser
 import sstu.grivvus.ym.data.network.model.UploadPart
 import sstu.grivvus.ym.data.network.remote.auth.AuthRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.user.UserRemoteDataSource
@@ -106,6 +107,10 @@ class UserRepository @Inject constructor(
 
     suspend fun requireCurrentUser(): LocalUser {
         return authSessionManager.requireCurrentUser()
+    }
+
+    suspend fun getUser(userId: Long): NetworkUser {
+        return userRemoteDataSource.getUser(userId)
     }
 
     fun observeCurrentUser(): Flow<LocalUser?> {

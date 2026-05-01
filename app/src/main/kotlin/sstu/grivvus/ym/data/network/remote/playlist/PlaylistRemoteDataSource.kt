@@ -3,8 +3,10 @@ package sstu.grivvus.ym.data.network.remote.playlist
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
 import sstu.grivvus.ym.data.network.core.ApiExecutor
 import sstu.grivvus.ym.data.network.core.GeneratedApiProvider
+import sstu.grivvus.ym.data.PlaylistFilters
 import sstu.grivvus.ym.data.network.mapper.PlaylistApiMapper
 import sstu.grivvus.ym.data.network.model.NetworkPlaylist
+import sstu.grivvus.ym.data.network.model.NetworkPlaylistDetails
 import sstu.grivvus.ym.data.network.model.NetworkPlaylistEmpty
 import sstu.grivvus.ym.data.network.model.UploadPart
 import sstu.grivvus.ym.openapi.models.AddTrackToPlaylistRequest
@@ -13,9 +15,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 interface PlaylistRemoteDataSource {
-    suspend fun getMyPlaylists(): List<NetworkPlaylist>
+    suspend fun getAvailablePlaylists(filters: PlaylistFilters = PlaylistFilters()): List<NetworkPlaylist>
 
-    suspend fun getPlaylist(playlistId: Long): NetworkPlaylist
+    suspend fun getPlaylist(playlistId: Long): NetworkPlaylistDetails
 
     suspend fun createPlaylist(name: String, isPublic: Boolean, cover: UploadPart?): Long
 
@@ -37,17 +39,21 @@ class OpenApiPlaylistRemoteDataSource @Inject constructor(
     private val apiExecutor: ApiExecutor,
     private val playlistApiMapper: PlaylistApiMapper,
 ) : PlaylistRemoteDataSource {
-    override suspend fun getMyPlaylists(): List<NetworkPlaylist> {
+    override suspend fun getAvailablePlaylists(filters: PlaylistFilters): List<NetworkPlaylist> {
         return generatedApiProvider.withAuthorizedApi { api ->
             playlistApiMapper.mapPlaylists(
                 apiExecutor.execute {
-                    api.getPlaylistsWithHttpInfo()
+                    api.getPlaylistsWithHttpInfo(
+                        includeOwned = filters.includeOwned,
+                        includeShared = filters.includeShared,
+                        includePublic = filters.includePublic,
+                    )
                 },
             )
         }
     }
 
-    override suspend fun getPlaylist(playlistId: Long): NetworkPlaylist {
+    override suspend fun getPlaylist(playlistId: Long): NetworkPlaylistDetails {
         return generatedApiProvider.withAuthorizedApi { api ->
             playlistApiMapper.mapPlaylist(
                 apiExecutor.execute {

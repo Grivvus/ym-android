@@ -137,6 +137,7 @@
     <string name="music_upload_route_unused">Этот экран загрузки больше не используется</string>
 
     <string name="playlist_default_title">Плейлист</string>
+    <string name="playlist_owner_label">Владелец: %1$s</string>
     <string name="playlist_unavailable_title">Плейлист недоступен</string>
     <string name="playlist_unavailable_description">Не удалось загрузить этот плейлист. Вернитесь к списку и обновите его.</string>
     <string name="playlist_delete_title">Удалить плейлист</string>
@@ -144,6 +145,7 @@
     <string name="playlist_status_applying_changes">Применение изменений...</string>
     <string name="playlist_empty_title">Плейлист пуст</string>
     <string name="playlist_empty_description">Добавьте треки из библиотеки или загрузите новые прямо здесь.</string>
+    <string name="playlist_empty_read_only_description">В этом плейлисте пока нет треков</string>
     <string name="playlist_rename_title">Переименовать плейлист</string>
     <string name="playlist_add_tracks_title">Добавить треки</string>
     <string name="playlist_all_library_tracks_added">Все треки из библиотеки уже добавлены в этот плейлист.</string>
@@ -265,4 +267,7 @@
     <string name="upload_uploading">Загрузка...</string>
     <string name="upload_error_select_artist_first">Сначала выберите исполнителя</string>
     <string name="common_action_proceed">Продолжить</string>
+    <string name="playlist_filter_owned">Мои</string>
+    <string name="playlist_filter_shared">Совместные</string>
+    <string name="playlist_filter_public">Публичные</string>
 </resources>

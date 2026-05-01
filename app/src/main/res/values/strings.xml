@@ -138,6 +138,10 @@
     <string name="music_upload_route_unused">Upload route is no longer used</string>
 
     <string name="playlist_default_title">Playlist</string>
+    <string name="playlist_filter_owned">Mine</string>
+    <string name="playlist_filter_shared">Shared</string>
+    <string name="playlist_filter_public">Public</string>
+    <string name="playlist_owner_label">Owner: %1$s</string>
     <string name="playlist_unavailable_title">Playlist unavailable</string>
     <string name="playlist_unavailable_description">This playlist could not be loaded. Go back to the list and refresh.</string>
     <string name="playlist_delete_title">Delete playlist</string>
@@ -145,6 +149,7 @@
     <string name="playlist_status_applying_changes">Applying changes...</string>
     <string name="playlist_empty_title">Playlist is empty</string>
     <string name="playlist_empty_description">Add tracks from the library or upload new ones directly here.</string>
+    <string name="playlist_empty_read_only_description">No tracks are available in this playlist yet.</string>
     <string name="playlist_rename_title">Rename playlist</string>
     <string name="playlist_add_tracks_title">Add tracks</string>
     <string name="playlist_all_library_tracks_added">All library tracks are already in this playlist.</string>

@@ -3,6 +3,8 @@ package sstu.grivvus.ym.music
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,12 +16,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,6 +52,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomNavScaffold
 import sstu.grivvus.ym.components.ScreenStateHost
+import sstu.grivvus.ym.data.PlaylistFilters
+import sstu.grivvus.ym.data.PlaylistType
 import sstu.grivvus.ym.ui.theme.appIcons
 
 private data class CreatePlaylistDraft(
@@ -116,7 +123,9 @@ fun MusicScreen(
         ) {
             PlaylistOverview(
                 playlists = uiState.playlists,
+                filters = uiState.playlistFilters,
                 isBusy = uiState.isMutating || uiState.isRefreshing,
+                onFiltersChange = viewModel::updatePlaylistFilters,
                 onPlaylistClick = navigateToPlaylist,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -152,7 +161,9 @@ fun MusicScreen(
 @Composable
 private fun PlaylistOverview(
     playlists: List<PlaylistListItemUi>,
+    filters: PlaylistFilters,
     isBusy: Boolean,
+    onFiltersChange: (PlaylistFilters) -> Unit,
     onPlaylistClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -180,6 +191,13 @@ private fun PlaylistOverview(
             }
         }
 
+        item {
+            PlaylistFilterRow(
+                filters = filters,
+                onFiltersChange = onFiltersChange,
+            )
+        }
+
         if (playlists.isEmpty()) {
             item {
                 EmptyStateCard(
@@ -189,10 +207,16 @@ private fun PlaylistOverview(
             }
         } else {
             items(playlists, key = { it.id }) { playlist ->
+                val cardShape = RoundedCornerShape(12.dp)
                 ElevatedCard(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .border(
+                            BorderStroke(1.dp, playlist.playlistType.borderColor()),
+                            cardShape,
+                        )
                         .clickable { onPlaylistClick(playlist.id) },
+                    shape = cardShape,
                 ) {
                     Row(
                         modifier = Modifier
@@ -238,6 +262,52 @@ private fun PlaylistOverview(
             Spacer(modifier = Modifier.height(80.dp))
         }
     }
+}
+
+@Composable
+private fun PlaylistFilterRow(
+    filters: PlaylistFilters,
+    onFiltersChange: (PlaylistFilters) -> Unit,
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        item {
+            FilterChip(
+                selected = filters.includeOwned,
+                onClick = {
+                    onFiltersChange(filters.copy(includeOwned = !filters.includeOwned))
+                },
+                label = { Text(stringResource(R.string.playlist_filter_owned)) },
+            )
+        }
+        item {
+            FilterChip(
+                selected = filters.includeShared,
+                onClick = {
+                    onFiltersChange(filters.copy(includeShared = !filters.includeShared))
+                },
+                label = { Text(stringResource(R.string.playlist_filter_shared)) },
+            )
+        }
+        item {
+            FilterChip(
+                selected = filters.includePublic,
+                onClick = {
+                    onFiltersChange(filters.copy(includePublic = !filters.includePublic))
+                },
+                label = { Text(stringResource(R.string.playlist_filter_public)) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlaylistType.borderColor() = when (this) {
+    PlaylistType.OWNED -> MaterialTheme.colorScheme.primary
+    PlaylistType.SHARED -> MaterialTheme.colorScheme.secondary
+    PlaylistType.PUBLIC -> MaterialTheme.colorScheme.tertiary
 }
 
 @Composable

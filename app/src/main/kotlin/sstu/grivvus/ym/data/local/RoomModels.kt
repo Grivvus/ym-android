@@ -7,6 +7,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
+import sstu.grivvus.ym.data.PlaylistType
 import java.time.LocalDate
 
 @Entity(tableName = "server_info", primaryKeys = ["host", "port"])
@@ -91,13 +92,20 @@ data class Album(
 )
 
 @Entity(tableName = "playlist")
-@TypeConverters(UriConverter::class)
+@TypeConverters(
+    UriConverter::class,
+    PlaylistTypeConverter::class,
+)
 data class Playlist(
     @PrimaryKey
     @ColumnInfo(name = "remote_id") val remoteId: Long,
     @ColumnInfo(name = "owner_remote_id") val ownerRemoteId: Long,
     @ColumnInfo() val name: String,
     @ColumnInfo(name = "cover_uri") val coverUri: Uri? = null,
+    @ColumnInfo(name = "playlist_type", defaultValue = "'owned'")
+    val playlistType: PlaylistType = PlaylistType.OWNED,
+    @ColumnInfo(name = "can_edit", defaultValue = "1")
+    val canEdit: Boolean = true,
     @ColumnInfo(name = "name_is_local_override") val nameIsLocalOverride: Boolean = false,
     @ColumnInfo(name = "tracks_seeded") val tracksSeeded: Boolean = false,
 )

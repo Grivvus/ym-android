@@ -143,18 +143,22 @@ fun PlaylistScreen(
                         )
                     }
                     if (playlist != null) {
-                        TextButton(
-                            onClick = {
-                                renameDraft = RenamePlaylistDraft(value = playlist.name)
-                            },
-                        ) {
-                            Text(stringResource(R.string.common_action_rename))
+                        if (playlist.canEdit) {
+                            TextButton(
+                                onClick = {
+                                    renameDraft = RenamePlaylistDraft(value = playlist.name)
+                                },
+                            ) {
+                                Text(stringResource(R.string.common_action_rename))
+                            }
+                            TextButton(onClick = { coverPicker.launch("image/*") }) {
+                                Text(stringResource(R.string.common_action_cover))
+                            }
                         }
-                        TextButton(onClick = { coverPicker.launch("image/*") }) {
-                            Text(stringResource(R.string.common_action_cover))
-                        }
-                        TextButton(onClick = { showDeleteDialog = true }) {
-                            Text(stringResource(R.string.common_action_delete))
+                        if (playlist.canDelete) {
+                            TextButton(onClick = { showDeleteDialog = true }) {
+                                Text(stringResource(R.string.common_action_delete))
+                            }
                         }
                     }
                 },
@@ -242,7 +246,7 @@ fun PlaylistScreen(
         )
     }
 
-    if (showAddTracksDialog && playlist != null) {
+    if (showAddTracksDialog && playlist != null && playlist.canEdit) {
         val selectedIds = playlist.tracks.map { it.id }.toSet()
         AddTracksDialog(
             tracks = uiState.libraryTracks.filterNot { it.id in selectedIds },
@@ -303,6 +307,14 @@ private fun PlaylistDetails(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                     )
+                    playlist.ownerUsername?.let { ownerUsername ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.playlist_owner_label, ownerUsername),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = pluralStringResource(
@@ -322,12 +334,14 @@ private fun PlaylistDetails(
                             Text(stringResource(R.string.common_action_play_all))
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        FilledTonalButton(onClick = onAddExistingTrack) {
-                            Text(stringResource(R.string.common_action_add_from_library))
-                        }
-                        Button(onClick = onUploadTrack) {
-                            Text(stringResource(R.string.common_action_upload_track))
+                    if (playlist.canEdit) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            FilledTonalButton(onClick = onAddExistingTrack) {
+                                Text(stringResource(R.string.common_action_add_from_library))
+                            }
+                            Button(onClick = onUploadTrack) {
+                                Text(stringResource(R.string.common_action_upload_track))
+                            }
                         }
                     }
                     if (isBusy) {
@@ -354,7 +368,11 @@ private fun PlaylistDetails(
             item {
                 EmptyStateCard(
                     title = stringResource(R.string.playlist_empty_title),
-                    description = stringResource(R.string.playlist_empty_description),
+                    description = if (playlist.canEdit) {
+                        stringResource(R.string.playlist_empty_description)
+                    } else {
+                        stringResource(R.string.playlist_empty_read_only_description)
+                    },
                 )
             }
         } else {

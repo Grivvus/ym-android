@@ -11,6 +11,7 @@ import sstu.grivvus.ym.data.local.AlbumDao
 import sstu.grivvus.ym.data.local.AppDatabase
 import sstu.grivvus.ym.data.local.ArtistDao
 import sstu.grivvus.ym.data.local.AudioTrackDao
+import sstu.grivvus.ym.data.local.MIGRATION_1_2
 import sstu.grivvus.ym.data.local.PlaylistDao
 import sstu.grivvus.ym.data.local.PlaylistTrackDao
 import sstu.grivvus.ym.data.local.ServerInfoDao
@@ -26,7 +27,9 @@ object DatabaseModule {
     @Singleton
     @Provides
     fun provideDataBase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME).build()
+        return Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME)
+            .addMigrations(MIGRATION_1_2)
+            .build()
     }
 
     @Provides

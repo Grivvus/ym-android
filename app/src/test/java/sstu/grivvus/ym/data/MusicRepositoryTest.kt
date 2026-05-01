@@ -24,6 +24,9 @@ import sstu.grivvus.ym.data.local.Playlist
 import sstu.grivvus.ym.data.download.LocalTrackFileStore
 import sstu.grivvus.ym.data.network.model.NetworkAlbum
 import sstu.grivvus.ym.data.network.model.NetworkArtist
+import sstu.grivvus.ym.data.network.model.NetworkPlaylist
+import sstu.grivvus.ym.data.network.model.NetworkPlaylistDetails
+import sstu.grivvus.ym.data.network.model.NetworkPlaylistEmpty
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
 import sstu.grivvus.ym.data.network.remote.album.AlbumRemoteDataSource
 import sstu.grivvus.ym.data.network.remote.artist.ArtistRemoteDataSource
@@ -115,6 +118,160 @@ class MusicRepositoryTest {
             ),
         )
         coVerify(exactly = 1) { playlistRemoteDataSource.createPlaylist("Favorites", true, null) }
+    }
+
+    @Test
+    fun loadLibrary_savesPlaylistOwnerTypeAndEditPermissionFromRemoteSummary() = runTest {
+        val filters = PlaylistFilters(
+            includeOwned = false,
+            includeShared = true,
+            includePublic = false,
+        )
+        coEvery { artistRemoteDataSource.getAllArtists() } returns emptyList()
+        coEvery { trackRemoteDataSource.getMyTracks() } returns emptyList()
+        coEvery { playlistRemoteDataSource.getAvailablePlaylists(filters) } returns listOf(
+            NetworkPlaylist(
+                id = 20L,
+                name = "Shared playlist",
+                ownerRemoteId = 99L,
+                playlistType = PlaylistType.SHARED,
+                canEdit = true,
+            ),
+        )
+        coEvery { playlistRemoteDataSource.getPlaylist(20L) } returns NetworkPlaylistDetails(
+            id = 20L,
+            name = "Shared playlist",
+            trackIds = emptyList(),
+        )
+        coEvery { serverInfoRepository.playlistCoverUri(20L) } returns
+                Uri.parse("https://example.com/playlists/20/cover")
+
+        val repository = createRepository()
+
+        val data = repository.loadLibrary(refreshFromNetwork = true, playlistFilters = filters)
+
+        assertThat(data.playlists).hasSize(1)
+        assertThat(database.playlistDao().getById(20L)).isEqualTo(
+            Playlist(
+                remoteId = 20L,
+                ownerRemoteId = 99L,
+                name = "Shared playlist",
+                coverUri = Uri.parse("https://example.com/playlists/20/cover"),
+                playlistType = PlaylistType.SHARED,
+                canEdit = true,
+                nameIsLocalOverride = false,
+                tracksSeeded = true,
+            ),
+        )
+    }
+
+    @Test
+    fun loadLibrary_whenFiltersArePartial_doesNotDeletePlaylistsOutsideRequestedTypes() = runTest {
+        database.playlistDao().upsert(
+            Playlist(
+                remoteId = 60L,
+                ownerRemoteId = 42L,
+                name = "Owned playlist",
+                playlistType = PlaylistType.OWNED,
+                canEdit = true,
+            ),
+        )
+        database.playlistDao().upsert(
+            Playlist(
+                remoteId = 61L,
+                ownerRemoteId = 99L,
+                name = "Stale public playlist",
+                playlistType = PlaylistType.PUBLIC,
+                canEdit = false,
+            ),
+        )
+        val filters = PlaylistFilters(
+            includeOwned = false,
+            includeShared = false,
+            includePublic = true,
+        )
+        coEvery { artistRemoteDataSource.getAllArtists() } returns emptyList()
+        coEvery { trackRemoteDataSource.getMyTracks() } returns emptyList()
+        coEvery { playlistRemoteDataSource.getAvailablePlaylists(filters) } returns emptyList()
+
+        val repository = createRepository()
+
+        val data = repository.loadLibrary(refreshFromNetwork = true, playlistFilters = filters)
+
+        assertThat(data.playlists).isEmpty()
+        assertThat(database.playlistDao().getById(60L)).isNotNull()
+        assertThat(database.playlistDao().getById(61L)).isNull()
+    }
+
+    @Test
+    fun renamePlaylist_whenPlaylistCannotBeEdited_skipsRemoteCall() = runTest {
+        database.playlistDao().upsert(
+            Playlist(
+                remoteId = 30L,
+                ownerRemoteId = 99L,
+                name = "Public playlist",
+                playlistType = PlaylistType.PUBLIC,
+                canEdit = false,
+            ),
+        )
+
+        val repository = createRepository()
+
+        val error = expectThrows<PlaylistAccessDenied> {
+            repository.renamePlaylist(30L, "New name")
+        }
+
+        assertThat(error).hasMessageThat().isEqualTo("Playlist cannot be edited")
+        coVerify(exactly = 0) { playlistRemoteDataSource.updatePlaylist(any(), any()) }
+    }
+
+    @Test
+    fun renamePlaylist_whenSharedPlaylistCanBeEdited_updatesRemoteAndLocalState() = runTest {
+        database.playlistDao().upsert(
+            Playlist(
+                remoteId = 40L,
+                ownerRemoteId = 99L,
+                name = "Shared playlist",
+                playlistType = PlaylistType.SHARED,
+                canEdit = true,
+            ),
+        )
+        coEvery {
+            playlistRemoteDataSource.updatePlaylist(40L, "New shared name")
+        } returns NetworkPlaylistEmpty(id = 40L, name = "New shared name")
+
+        val repository = createRepository()
+
+        repository.renamePlaylist(40L, "New shared name")
+
+        assertThat(database.playlistDao().getById(40L)?.name).isEqualTo("New shared name")
+        coVerify(exactly = 1) {
+            playlistRemoteDataSource.updatePlaylist(40L, "New shared name")
+        }
+    }
+
+    @Test
+    fun deletePlaylist_whenCurrentUserIsNotOwner_skipsRemoteCall() = runTest {
+        database.playlistDao().upsert(
+            Playlist(
+                remoteId = 50L,
+                ownerRemoteId = 99L,
+                name = "Someone else's playlist",
+                playlistType = PlaylistType.SHARED,
+                canEdit = true,
+            ),
+        )
+        coEvery { authSessionManager.requireCurrentUser() } returns currentUser(42L)
+
+        val repository = createRepository()
+
+        val error = expectThrows<PlaylistAccessDenied> {
+            repository.deletePlaylist(50L)
+        }
+
+        assertThat(error).hasMessageThat()
+            .isEqualTo("Only playlist owner can delete this playlist")
+        coVerify(exactly = 0) { playlistRemoteDataSource.deletePlaylist(any()) }
     }
 
     @Test

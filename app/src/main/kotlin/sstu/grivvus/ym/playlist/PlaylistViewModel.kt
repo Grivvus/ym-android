@@ -18,7 +18,9 @@ import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.PlaylistBundle
 import sstu.grivvus.ym.data.PlaylistCreationConflict
+import sstu.grivvus.ym.data.PlaylistType
 import sstu.grivvus.ym.data.TrackBundle
+import sstu.grivvus.ym.data.UserRepository
 import sstu.grivvus.ym.data.local.Artist
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.library.albumDisplayName
@@ -40,8 +42,13 @@ data class TrackItemUi(
 
 data class PlaylistDetailUi(
     val id: Long,
+    val ownerRemoteId: Long,
+    val ownerUsername: String? = null,
     val name: String,
     val coverUri: Uri? = null,
+    val playlistType: PlaylistType,
+    val canEdit: Boolean,
+    val canDelete: Boolean,
     val tracks: List<TrackItemUi> = emptyList(),
 )
 
@@ -61,6 +68,7 @@ sealed interface PlaylistScreenEvent {
 @HiltViewModel
 class PlaylistViewModel @Inject constructor(
     private val repository: MusicRepository,
+    private val userRepository: UserRepository,
     private val playbackQueueFactory: PlaybackQueueFactory,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -193,17 +201,26 @@ class PlaylistViewModel @Inject constructor(
         }
     }
 
-    private fun applyLibraryData(data: MusicLibraryData) {
+    private suspend fun applyLibraryData(data: MusicLibraryData) {
+        val currentUser = userRepository.requireCurrentUser()
         val artistsById = data.artists.associateBy { it.remoteId }
         currentArtistsById = artistsById
         val playlistBundle = data.playlists.firstOrNull { it.playlist.remoteId == playlistId }
         currentPlaylistBundle = playlistBundle
+        val ownerUsername = playlistBundle?.playlist?.ownerRemoteId?.let { ownerRemoteId ->
+            resolveOwnerUsername(ownerRemoteId, currentUser.remoteId, currentUser.username)
+        }
         _uiState.value = _uiState.value.copy(
             playlist = playlistBundle?.let { bundle ->
                 PlaylistDetailUi(
                     id = bundle.playlist.remoteId,
+                    ownerRemoteId = bundle.playlist.ownerRemoteId,
+                    ownerUsername = ownerUsername,
                     name = bundle.playlist.name,
                     coverUri = bundle.playlist.coverUri,
+                    playlistType = bundle.playlist.playlistType,
+                    canEdit = bundle.playlist.canEdit,
+                    canDelete = bundle.playlist.ownerRemoteId == currentUser.remoteId,
                     tracks = bundle.tracks.map { track ->
                         toTrackUi(track, artistsById)
                     },
@@ -218,6 +235,17 @@ class PlaylistViewModel @Inject constructor(
                 null
             },
         )
+    }
+
+    private suspend fun resolveOwnerUsername(
+        ownerRemoteId: Long,
+        currentUserRemoteId: Long,
+        currentUsername: String,
+    ): String? {
+        if (ownerRemoteId == currentUserRemoteId) {
+            return currentUsername
+        }
+        return runCatching { userRepository.getUser(ownerRemoteId).username }.getOrNull()
     }
 
     private fun toTrackUi(

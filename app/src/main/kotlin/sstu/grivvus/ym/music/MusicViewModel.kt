@@ -11,6 +11,8 @@ import kotlinx.coroutines.launch
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
+import sstu.grivvus.ym.data.PlaylistFilters
+import sstu.grivvus.ym.data.PlaylistType
 import sstu.grivvus.ym.data.PlaylistCreationConflict
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.logHandledException
@@ -24,6 +26,7 @@ data class PlaylistListItemUi(
     val name: String,
     val coverUri: Uri? = null,
     val trackCount: Int = 0,
+    val playlistType: PlaylistType,
 )
 
 data class MusicUiState(
@@ -31,6 +34,7 @@ data class MusicUiState(
     val isRefreshing: Boolean = false,
     val isMutating: Boolean = false,
     val playlists: List<PlaylistListItemUi> = emptyList(),
+    val playlistFilters: PlaylistFilters = PlaylistFilters(),
     val errorMessage: UiText? = null,
 )
 
@@ -53,13 +57,21 @@ class MusicViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isRefreshing = true, errorMessage = null)
             }
             try {
-                val data = repository.loadLibrary(refreshFromNetwork = true)
+                val data = repository.loadLibrary(
+                    refreshFromNetwork = true,
+                    playlistFilters = _uiState.value.playlistFilters,
+                )
                 applyLibraryData(data)
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (error: Exception) {
                 val fallbackData =
-                    runCatching { repository.loadLibrary(refreshFromNetwork = false) }.getOrNull()
+                    runCatching {
+                        repository.loadLibrary(
+                            refreshFromNetwork = false,
+                            playlistFilters = _uiState.value.playlistFilters,
+                        )
+                    }.getOrNull()
                 if (fallbackData != null) {
                     applyLibraryData(fallbackData)
                 }
@@ -73,6 +85,14 @@ class MusicViewModel @Inject constructor(
 
     fun createPlaylist(name: String, coverUri: Uri?, isPublic: Boolean) {
         mutate { repository.createPlaylist(name, coverUri, isPublic) }
+    }
+
+    fun updatePlaylistFilters(filters: PlaylistFilters) {
+        if (!filters.hasEnabledFilter || filters == _uiState.value.playlistFilters) {
+            return
+        }
+        _uiState.value = _uiState.value.copy(playlistFilters = filters)
+        refresh()
     }
 
     fun dismissError() {
@@ -99,14 +119,18 @@ class MusicViewModel @Inject constructor(
     }
 
     private fun applyLibraryData(data: MusicLibraryData) {
-        val playlists = data.playlists.map { bundle ->
-            PlaylistListItemUi(
-                id = bundle.playlist.remoteId,
-                name = bundle.playlist.name,
-                coverUri = bundle.playlist.coverUri,
-                trackCount = bundle.tracks.size,
-            )
-        }
+        val filters = _uiState.value.playlistFilters
+        val playlists = data.playlists
+            .filter { bundle -> filters.includes(bundle.playlist.playlistType) }
+            .map { bundle ->
+                PlaylistListItemUi(
+                    id = bundle.playlist.remoteId,
+                    name = bundle.playlist.name,
+                    coverUri = bundle.playlist.coverUri,
+                    trackCount = bundle.tracks.size,
+                    playlistType = bundle.playlist.playlistType,
+                )
+            }
         _uiState.value = _uiState.value.copy(
             playlists = playlists,
         )
