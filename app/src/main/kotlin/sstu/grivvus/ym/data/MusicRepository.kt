@@ -120,7 +120,10 @@ class MusicRepository @Inject constructor(
         val artist = Artist(
             remoteId = artistId,
             name = remoteArtistMetadata?.name?.takeIf { it.isNotBlank() } ?: normalizedName,
-            imageUri = remoteArtistMetadata?.imageUri,
+            imageUri = remoteArtistMetadata?.imageUri ?: resolveArtistImageUri(
+                artistId = artistId,
+                existingImageUri = null,
+            ),
         )
         artistDao.upsert(artist)
         artist
@@ -137,7 +140,11 @@ class MusicRepository @Inject constructor(
                 Artist(
                     remoteId = remoteArtist.id,
                     name = remoteArtist.name,
-                    imageUri = remoteArtist.coverUrl?.toUri() ?: existingArtist?.imageUri,
+                    imageUri = resolveArtistImageUri(
+                        artistId = remoteArtist.id,
+                        existingImageUri = remoteArtist.coverUrl?.toUri()
+                            ?: existingArtist?.imageUri,
+                    ),
                 ),
             )
 
@@ -302,6 +309,40 @@ class MusicRepository @Inject constructor(
         val album = albumDao.getById(albumId)
             ?: throw IOException("Album was not found")
         albumDao.upsert(album.copy(coverUri = null))
+        buildLocalState()
+    }
+
+    suspend fun uploadArtistCover(artistId: Long, coverUri: Uri): MusicLibraryData =
+        withContext(dispatcher) {
+            val preparedCover = prepareUploadFile(coverUri)
+            try {
+                artistRemoteDataSource.uploadCover(
+                    artistId = artistId,
+                    image = preparedCover.toUploadPart(),
+                )
+            } finally {
+                preparedCover.file.delete()
+            }
+
+            val artist = artistDao.getById(artistId)
+                ?: throw IOException("Artist was not found")
+            val resolvedImageUri = serverInfoRepository.artistImageUri(
+                artistId = artistId,
+                cacheBust = true,
+            ).also { uri -> warmImageCache(uri) }
+            artistDao.upsert(
+                artist.copy(
+                    imageUri = resolvedImageUri,
+                ),
+            )
+            buildLocalState()
+        }
+
+    suspend fun deleteArtistCover(artistId: Long): MusicLibraryData = withContext(dispatcher) {
+        artistRemoteDataSource.deleteCover(artistId)
+        val artist = artistDao.getById(artistId)
+            ?: throw IOException("Artist was not found")
+        artistDao.upsert(artist.copy(imageUri = null))
         buildLocalState()
     }
 
@@ -528,10 +569,19 @@ class MusicRepository @Inject constructor(
 
     private suspend fun syncRemoteState(playlistFilters: PlaylistFilters = PlaylistFilters()) {
         val existingArtists = artistRemoteDataSource.getAllArtists()
+        val existingArtistsById = artistDao.getAll().associateBy { artist -> artist.remoteId }
 
         artistDao.upsertAll(
-            existingArtists.map {
-                Artist(it.id, it.name, it.coverUrl?.toUri())
+            existingArtists.map { artist ->
+                Artist(
+                    artist.id,
+                    artist.name,
+                    resolveArtistImageUri(
+                        artistId = artist.id,
+                        existingImageUri = artist.coverUrl?.toUri()
+                            ?: existingArtistsById[artist.id]?.imageUri,
+                    ),
+                )
             }
         )
 
@@ -547,7 +597,15 @@ class MusicRepository @Inject constructor(
         if (missingArtists.isNotEmpty()) {
             artistDao.upsertAll(
                 missingArtists.map { artist ->
-                    Artist(artist.id, artist.name, artist.coverUrl?.toUri())
+                    Artist(
+                        artist.id,
+                        artist.name,
+                        resolveArtistImageUri(
+                            artistId = artist.id,
+                            existingImageUri = artist.coverUrl?.toUri()
+                                ?: existingArtistsById[artist.id]?.imageUri,
+                        ),
+                    )
                 },
             )
         }
@@ -761,7 +819,10 @@ class MusicRepository @Inject constructor(
                     remoteId = artistId,
                     name = remoteArtistMetadata?.name?.takeIf { it.isNotBlank() }
                         ?: existingArtist?.name.orEmpty(),
-                    imageUri = remoteArtistMetadata?.imageUri ?: existingArtist?.imageUri,
+                    imageUri = remoteArtistMetadata?.imageUri ?: resolveArtistImageUri(
+                        artistId = artistId,
+                        existingImageUri = existingArtist?.imageUri,
+                    ),
                 ),
             )
             audioTrackDao.upsert(
@@ -838,7 +899,10 @@ class MusicRepository @Inject constructor(
         }.getOrNull()?.let { artist ->
             RemoteArtistMetadata(
                 name = artist.name,
-                imageUri = artist.coverUrl?.toUri(),
+                imageUri = resolveArtistImageUri(
+                    artistId = artistId,
+                    existingImageUri = artist.coverUrl?.toUri(),
+                ),
             )
         }
     }
@@ -890,6 +954,20 @@ class MusicRepository @Inject constructor(
         }
         warmImageCache(resolvedCoverUri)
         return resolvedCoverUri
+    }
+
+    private suspend fun resolveArtistImageUri(
+        artistId: Long,
+        existingImageUri: Uri?,
+        useImageRouteFallback: Boolean = true,
+    ): Uri? {
+        val resolvedImageUri = existingImageUri ?: if (useImageRouteFallback) {
+            serverInfoRepository.artistImageUri(artistId)
+        } else {
+            null
+        }
+        warmImageCache(resolvedImageUri)
+        return resolvedImageUri
     }
 
     private suspend fun warmImageCache(uri: Uri?) {

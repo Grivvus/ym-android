@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.sharp.Delete
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ElevatedCard
@@ -74,10 +76,17 @@ fun ArtistScreen(
     var showCreateAlbumDialog by rememberSaveable { mutableStateOf(false) }
     var createAlbumDraft by remember { mutableStateOf(CreateAlbumDraft()) }
 
-    val coverPicker = rememberLauncherForActivityResult(
+    val albumCoverPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri ->
         createAlbumDraft = createAlbumDraft.copy(coverUri = uri)
+    }
+    val artistImagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null) {
+            viewModel.uploadArtistCover(uri)
+        }
     }
 
     LaunchedEffect(viewModel) {
@@ -136,7 +145,10 @@ fun ArtistScreen(
                 ArtistDetails(
                     artist = artist,
                     isRefreshing = uiState.isRefreshing,
+                    isBusy = uiState.isRefreshing || uiState.isMutating,
                     onAlbumClick = navigateToAlbum,
+                    onSelectCover = { artistImagePicker.launch("image/*") },
+                    onDeleteCover = viewModel::deleteArtistCover,
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
@@ -172,7 +184,7 @@ fun ArtistScreen(
             onReleaseYearChange = { value ->
                 createAlbumDraft = createAlbumDraft.copy(releaseYear = value)
             },
-            onSelectCover = { coverPicker.launch("image/*") },
+            onSelectCover = { albumCoverPicker.launch("image/*") },
             onClearCover = {
                 createAlbumDraft = createAlbumDraft.copy(coverUri = null)
             },
@@ -191,7 +203,10 @@ fun ArtistScreen(
 private fun ArtistDetails(
     artist: ArtistDetailUi,
     isRefreshing: Boolean,
+    isBusy: Boolean,
     onAlbumClick: (Long) -> Unit,
+    onSelectCover: () -> Unit,
+    onDeleteCover: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -205,10 +220,28 @@ private fun ArtistDetails(
                     .padding(top = 16.dp),
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Artwork(
-                        uri = artist.imageUri,
-                        modifier = Modifier.size(120.dp),
-                    )
+                    Box {
+                        Artwork(
+                            uri = artist.imageUri,
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clickable(enabled = !isBusy, onClick = onSelectCover),
+                        )
+                        if (artist.imageUri != null) {
+                            IconButton(
+                                onClick = onDeleteCover,
+                                enabled = !isBusy,
+                                modifier = Modifier.align(Alignment.TopEnd),
+                            ) {
+                                Icon(
+                                    appIcons.Delete,
+                                    contentDescription = stringResource(
+                                        R.string.common_action_clear_cover,
+                                    ),
+                                )
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = artist.name.resolve(),

@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -61,6 +62,8 @@ class MusicRepositoryTest {
         database = Room.inMemoryDatabaseBuilder(applicationContext, AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
+        every { serverInfoRepository.artistImageUri(any(), any()) } returns
+                Uri.parse("https://example.com/artists/0/image")
     }
 
     @After

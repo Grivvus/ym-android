@@ -98,6 +98,19 @@ class ServerInfoRepository @Inject constructor(
         }
     }
 
+    fun artistImageUrl(artistId: Long): String {
+        return "${currentBaseUrl()}/artists/$artistId/image"
+    }
+
+    fun artistImageUri(artistId: Long, cacheBust: Boolean = false): Uri {
+        val baseUrl = artistImageUrl(artistId)
+        return if (cacheBust) {
+            Uri.parse("$baseUrl?ts=${System.currentTimeMillis()}")
+        } else {
+            Uri.parse(baseUrl)
+        }
+    }
+
     private suspend fun refreshFromStorage(): ServerInfo? {
         val storedInfo = withContext(ioDispatcher) {
             serverInfoDao.get()

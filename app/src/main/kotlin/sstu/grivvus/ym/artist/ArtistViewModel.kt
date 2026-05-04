@@ -99,6 +99,14 @@ class ArtistViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 
+    fun uploadArtistCover(coverUri: Uri) {
+        mutate { repository.uploadArtistCover(artistId, coverUri) }
+    }
+
+    fun deleteArtistCover() {
+        mutate { repository.deleteArtistCover(artistId) }
+    }
+
     fun createAlbum(name: String, releaseYearInput: String, coverUri: Uri?) {
         val normalizedName = name.trim()
         if (normalizedName.isBlank()) {
@@ -171,6 +179,22 @@ class ArtistViewModel @Inject constructor(
                 null
             },
         )
+    }
+
+    private fun mutate(block: suspend () -> MusicLibraryData) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isMutating = true, errorMessage = null)
+            try {
+                applyLibraryData(block())
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                error.logHandledException("ArtistViewModel.mutate")
+                _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
+            } finally {
+                _uiState.value = _uiState.value.copy(isMutating = false)
+            }
+        }
     }
 
     private fun Throwable.toReadableMessage(): UiText {
