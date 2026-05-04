@@ -3,11 +3,6 @@ package sstu.grivvus.ym.playback.artwork
 import android.content.Context
 import android.net.Uri
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
-import java.io.IOException
-import java.security.MessageDigest
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -16,6 +11,11 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import sstu.grivvus.ym.di.IoDispatcher
 import sstu.grivvus.ym.di.PlaybackHttpClient
+import java.io.File
+import java.io.IOException
+import java.security.MessageDigest
+import javax.inject.Inject
+import javax.inject.Singleton
 
 interface PlaybackArtworkCache {
     suspend fun ensureLocalArtwork(sourceUri: Uri?): Uri?
@@ -49,7 +49,8 @@ class FilePlaybackArtworkCache @Inject constructor(
 
             runCatching {
                 cacheDirectory.mkdirs()
-                val tempFile = File.createTempFile("${targetFile.name}.", TEMP_EXTENSION, cacheDirectory)
+                val tempFile =
+                    File.createTempFile("${targetFile.name}.", TEMP_EXTENSION, cacheDirectory)
                 try {
                     writeSourceToFile(uri, tempFile)
                     if (!tempFile.isValidArtworkFile()) {
@@ -105,7 +106,7 @@ class FilePlaybackArtworkCache @Inject constructor(
             if (!response.isSuccessful) {
                 throw IOException("Artwork request failed with status ${response.code}")
             }
-            val body = response.body ?: throw IOException("Artwork response body is empty")
+            val body = response.body
             body.byteStream().use { input ->
                 targetFile.outputStream().use { output ->
                     input.copyTo(output)

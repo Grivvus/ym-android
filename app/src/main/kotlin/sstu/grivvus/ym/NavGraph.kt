@@ -21,6 +21,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import sstu.grivvus.ym.album.AlbumScreen
 import sstu.grivvus.ym.artist.ArtistScreen
+import sstu.grivvus.ym.data.network.auth.SessionEndReason
 import sstu.grivvus.ym.data.network.auth.SessionState
 import sstu.grivvus.ym.library.LibraryScreen
 import sstu.grivvus.ym.login.LoginScreen
@@ -52,7 +53,9 @@ internal fun shouldRedirectToLogin(
     currentRoute: String?,
     protectedRoutes: Set<String> = appProtectedRoutes(),
 ): Boolean {
-    return sessionState is SessionState.Unauthenticated && currentRoute in protectedRoutes
+    return sessionState is SessionState.Unauthenticated &&
+            sessionState.reason != SessionEndReason.LOGOUT &&
+            currentRoute in protectedRoutes
 }
 
 @Composable
@@ -165,6 +168,7 @@ fun YMNavGraph(
             LoginScreen(
                 onSignUpClick = { navActions.navigateToRegistration() },
                 onPasswordResetClick = { navActions.navigateToPasswordReset() },
+                onChangeServerClick = { navActions.navigateToServerSetupClearingBackStack() },
                 onSuccess = { navActions.navigateToMusicFromAuth() },
             )
         }
@@ -172,6 +176,7 @@ fun YMNavGraph(
             RegistrationScreen(
                 onSignInClick = { navActions.navigateToLogin() },
                 onPasswordResetClick = { navActions.navigateToPasswordReset() },
+                onChangeServerClick = { navActions.navigateToServerSetupClearingBackStack() },
                 onSuccess = { navActions.navigateToMusicFromAuth() },
             )
         }
@@ -182,9 +187,11 @@ fun YMNavGraph(
         }
         composable(AppDestinations.PROFILE_ROUTE) {
             ProfileScreen(
-                { navActions.navigateToMusic() },
-                { navActions.navigateToLibrary() },
-                { navActions.navigateToProfile() },
+                navigateToMusic = { navActions.navigateToMusic() },
+                navigateToLibrary = { navActions.navigateToLibrary() },
+                navigateToProfile = { navActions.navigateToProfile() },
+                onLoggedOut = { navActions.navigateToLoginClearingBackStack() },
+                onServerSetupRequired = { navActions.navigateToServerSetupClearingBackStack() },
                 miniPlayer = miniPlayer,
             )
         }

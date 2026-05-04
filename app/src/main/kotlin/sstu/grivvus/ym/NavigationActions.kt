@@ -96,6 +96,15 @@ class NavigationActions(private val navController: NavController) {
         navController.navigateSingleTopTo(AppDestinations.SERVER_SETUP_ROUTE)
     }
 
+    fun navigateToServerSetupClearingBackStack() {
+        navController.navigate(AppDestinations.SERVER_SETUP_ROUTE) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                inclusive = true
+            }
+            launchSingleTop = true
+        }
+    }
+
     fun navigateToMusic() {
         navController.navigateToTopLevel(AppDestinations.MUSIC_ROUTE)
     }

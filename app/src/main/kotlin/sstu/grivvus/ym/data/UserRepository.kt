@@ -125,8 +125,11 @@ class UserRepository @Inject constructor(
         return userDao.observeActiveUser()
     }
 
-    suspend fun logout() {
+    suspend fun logout(clearServerInfo: Boolean = false) {
         authSessionManager.logout()
+        if (clearServerInfo) {
+            serverInfoRepository.clearServerInfo()
+        }
     }
 
     suspend fun updateCurrentUserAvatar(uriStr: String) {

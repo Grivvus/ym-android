@@ -34,6 +34,7 @@ import sstu.grivvus.ym.ui.theme.appIconsMirrored
 fun LoginScreen(
     onSignUpClick: () -> Unit,
     onPasswordResetClick: () -> Unit,
+    onChangeServerClick: () -> Unit,
     onSuccess: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = hiltViewModel(),
@@ -92,6 +93,12 @@ fun LoginScreen(
             TextButton(onClick = onSignUpClick) {
                 Text(stringResource(R.string.common_action_sign_up))
             }
+        }
+        TextButton(
+            onClick = { viewModel.resetServerInfo(onChangeServerClick) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.auth_action_change_server))
         }
 
         Spacer(modifier = Modifier.height(16.dp))

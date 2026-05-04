@@ -90,6 +90,7 @@
     <string name="login_error_wrong_credentials">Неверный логин или пароль</string>
     <string name="login_error_server">Не удалось войти из-за ошибки сервера</string>
     <string name="login_error_unknown_server">Не удалось войти из-за неизвестной ошибки сервера</string>
+    <string name="auth_action_change_server">Изменить сервер</string>
 
     <string name="register_title_create_account">Создать аккаунт</string>
     <string name="register_cd_username_icon">Иконка имени пользователя</string>
@@ -238,6 +239,10 @@
     <string name="profile_settings_language_system_default">Как в системе</string>
     <string name="profile_settings_language_english">Английский</string>
     <string name="profile_settings_language_russian">Русский</string>
+    <string name="profile_logout_title">Выход из аккаунта</string>
+    <string name="profile_logout_message">Удалить данные этого сервера из приложения и ввести другой сервер?</string>
+    <string name="profile_logout_action_keep_server">Выйти</string>
+    <string name="profile_logout_action_delete_server">Удалить сервер</string>
     <string name="profile_error_server_unreachable_local_data">Не удалось подключиться к серверу, будут использованы локальные данные</string>
     <string name="profile_error_avatar_upload_failed">Не удалось установить изображение аватара</string>
     <string name="profile_error_nothing_to_save">Нет изменений для сохранения</string>

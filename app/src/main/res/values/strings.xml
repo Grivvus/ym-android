@@ -91,6 +91,7 @@
     <string name="login_error_wrong_credentials">Wrong login or password</string>
     <string name="login_error_server">Can\'t proceed login due to server error</string>
     <string name="login_error_unknown_server">Can\'t proceed login due to unknown server error</string>
+    <string name="auth_action_change_server">Change server</string>
 
     <string name="register_title_create_account">Create Account</string>
     <string name="register_cd_username_icon">Username icon</string>
@@ -239,6 +240,10 @@
     <string name="profile_settings_language_system_default">System default</string>
     <string name="profile_settings_language_english">English</string>
     <string name="profile_settings_language_russian">Russian</string>
+    <string name="profile_logout_title">Sign out</string>
+    <string name="profile_logout_message">Do you also want to delete this server from the app and enter another one?</string>
+    <string name="profile_logout_action_keep_server">Sign out</string>
+    <string name="profile_logout_action_delete_server">Delete server</string>
     <string name="profile_error_server_unreachable_local_data">Can\'t connect to the server, local data will be used</string>
     <string name="profile_error_avatar_upload_failed">Failed to set avatar image</string>
     <string name="profile_error_nothing_to_save">Nothing that can be saved</string>

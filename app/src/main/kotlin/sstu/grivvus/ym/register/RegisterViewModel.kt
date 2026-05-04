@@ -10,8 +10,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.WhileUiSubscribed
+import sstu.grivvus.ym.data.ServerInfoRepository
 import sstu.grivvus.ym.data.UserRepository
 import sstu.grivvus.ym.data.network.core.ApiException
+import sstu.grivvus.ym.logHandledException
 import sstu.grivvus.ym.ui.UiText
 import timber.log.Timber
 import javax.inject.Inject
@@ -28,6 +30,7 @@ data class RegisterUiState(
 class RegisterViewModel
 @Inject constructor(
     private val userRepository: UserRepository,
+    private val serverInfoRepository: ServerInfoRepository,
 ) : ViewModel() {
     private val _username: MutableStateFlow<String> = MutableStateFlow("")
     private val _password: MutableStateFlow<String> = MutableStateFlow("")
@@ -112,5 +115,18 @@ class RegisterViewModel
         _passwordCheck.value = ""
         _showError.value = false
         _errorMessage.value = null
+    }
+
+    fun resetServerInfo(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                serverInfoRepository.clearServerInfo()
+                onSuccess()
+            } catch (e: Exception) {
+                e.logHandledException("RegisterViewModel.resetServerInfo")
+                _showError.value = true
+                _errorMessage.value = UiText.StringResource(R.string.common_error_unexpected)
+            }
+        }
     }
 }

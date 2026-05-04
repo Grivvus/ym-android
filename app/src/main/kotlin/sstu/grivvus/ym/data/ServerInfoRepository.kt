@@ -59,6 +59,13 @@ class ServerInfoRepository @Inject constructor(
         updateCurrentInfo(info)
     }
 
+    suspend fun clearServerInfo() {
+        withContext(ioDispatcher) {
+            serverInfoDao.clear()
+        }
+        updateCurrentInfo(null)
+    }
+
     fun currentServerConfig(): ServerConfig = currentConfig
 
     fun currentBaseUrl(): String = currentConfig.baseUrl()

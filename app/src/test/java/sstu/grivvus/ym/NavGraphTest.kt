@@ -18,6 +18,16 @@ class NavGraphTest {
     }
 
     @Test
+    fun shouldRedirectToLogin_returnsFalseForManualLogoutProtectedRoute() {
+        assertThat(
+            shouldRedirectToLogin(
+                sessionState = SessionState.Unauthenticated(SessionEndReason.LOGOUT),
+                currentRoute = AppDestinations.PROFILE_ROUTE,
+            )
+        ).isFalse()
+    }
+
+    @Test
     fun shouldRedirectToLogin_returnsFalseForUnauthenticatedPublicRoute() {
         assertThat(
             shouldRedirectToLogin(

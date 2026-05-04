@@ -5,8 +5,11 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -17,10 +20,9 @@ import sstu.grivvus.ym.data.PlaybackPreferencesRepository
 import sstu.grivvus.ym.WhileUiSubscribed
 import sstu.grivvus.ym.data.ServerInfoRepository
 import sstu.grivvus.ym.data.UserRepository
-import sstu.grivvus.ym.data.network.model.TrackQuality
-import sstu.grivvus.ym.data.network.ChangeServerDto
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.data.network.core.ApiException
+import sstu.grivvus.ym.data.network.model.TrackQuality
 import sstu.grivvus.ym.logHandledException
 import sstu.grivvus.ym.ui.UiText
 import javax.inject.Inject
@@ -37,6 +39,11 @@ data class ProfileUiState(
     val preferredTrackQuality: TrackQuality = TrackQuality.STANDARD,
     val selectedAppLanguage: AppLanguage = AppLanguage.SYSTEM_DEFAULT,
 )
+
+sealed interface ProfileEvent {
+    data object LoggedOut : ProfileEvent
+    data object ServerSetupRequired : ProfileEvent
+}
 
 @HiltViewModel
 class ProfileViewModel
@@ -57,6 +64,8 @@ class ProfileViewModel
     private val _preferredTrackQuality: MutableStateFlow<TrackQuality> = MutableStateFlow(
         playbackPreferencesRepository.currentPreferredTrackQuality(),
     )
+    private val _events = MutableSharedFlow<ProfileEvent>()
+    val events: SharedFlow<ProfileEvent> = _events.asSharedFlow()
 
     val uiState: StateFlow<ProfileUiState> =
         combine(
@@ -152,14 +161,6 @@ class ProfileViewModel
         _username.value = value
     }
 
-    fun changeServerHost(value: String) {
-        _serverHost.value = value
-    }
-
-    fun changeServerPort(value: String) {
-        _serverPort.value = value
-    }
-
     fun changePreferredTrackQuality(value: TrackQuality) {
         _preferredTrackQuality.value = value
     }
@@ -168,9 +169,24 @@ class ProfileViewModel
         appLanguageRepository.applyLanguage(value)
     }
 
-    fun logOut() {
+    fun logOut(clearServerInfo: Boolean) {
         viewModelScope.launch {
-            userRepository.logout()
+            _isLoading.value = true
+            try {
+                userRepository.logout(clearServerInfo = clearServerInfo)
+                _events.emit(
+                    if (clearServerInfo) {
+                        ProfileEvent.ServerSetupRequired
+                    } else {
+                        ProfileEvent.LoggedOut
+                    },
+                )
+            } catch (e: Exception) {
+                e.logHandledException("ProfileViewModel.logOut")
+                _errorMsg.value = UiText.StringResource(R.string.common_error_unexpected)
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
@@ -196,27 +212,17 @@ class ProfileViewModel
             val newUsername =
                 if (_username.value != currentUserData.username) _username.value else null
             val newEmail = if (_email.value != currentUserData.email) _email.value else null
-            val changeServer = ChangeServerDto(
-                if (_serverHost.value != serverInfoRepository.getServerInfo()?.host) _serverHost.value else null,
-                if (_serverPort.value != serverInfoRepository.getServerInfo()?.port) _serverPort.value else null
-            )
             val newTrackQuality = _preferredTrackQuality.value.takeIf {
                 it != playbackPreferencesRepository.currentPreferredTrackQuality()
             }
             if (newEmail == null &&
                 newUsername == null &&
-                changeServer.host == null &&
-                changeServer.port == null &&
                 newTrackQuality == null
             ) {
                 _errorMsg.value = UiText.StringResource(R.string.profile_error_nothing_to_save)
                 return@launch
             }
             _isLoading.value = true
-            // я не проверяю правильность хоста/порта
-            // а так же не проверяю, что сервер по этим данным доступен
-            serverInfoRepository.saveServerInfo(_serverHost.value, _serverPort.value)
-            applyCurrentServerSettings()
 
             if (newTrackQuality != null) {
                 playbackPreferencesRepository.savePreferredTrackQuality(newTrackQuality)

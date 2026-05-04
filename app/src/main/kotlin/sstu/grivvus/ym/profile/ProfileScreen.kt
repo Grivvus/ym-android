@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
@@ -40,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,11 +75,14 @@ fun ProfileScreen(
     navigateToMusic: () -> Unit,
     navigateToLibrary: () -> Unit,
     navigateToProfile: () -> Unit,
+    onLoggedOut: () -> Unit,
+    onServerSetupRequired: () -> Unit,
     miniPlayer: @Composable () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scrollState = rememberScrollState()
@@ -85,6 +90,15 @@ fun ProfileScreen(
         refreshing = uiState.isRefreshing,
         onRefresh = viewModel::refreshUser,
     )
+
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                ProfileEvent.LoggedOut -> onLoggedOut()
+                ProfileEvent.ServerSetupRequired -> onServerSetupRequired()
+            }
+        }
+    }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -127,6 +141,19 @@ fun ProfileScreen(
                             }
                         },
                         onDismiss = { showSettingsDialog = false },
+                    )
+                }
+                if (showLogoutDialog) {
+                    ProfileLogoutDialog(
+                        onDismiss = { showLogoutDialog = false },
+                        onLogout = {
+                            showLogoutDialog = false
+                            viewModel.logOut(clearServerInfo = false)
+                        },
+                        onLogoutAndClearServer = {
+                            showLogoutDialog = false
+                            viewModel.logOut(clearServerInfo = true)
+                        },
                     )
                 }
                 if (showPasswordDialog) {
@@ -182,29 +209,29 @@ fun ProfileScreen(
                 UserInfoItem(
                     label = stringResource(R.string.common_label_username),
                     value = uiState.username,
-                ) { viewModel.changeUsername(it) }
+                    onValueChange = viewModel::changeUsername,
+                )
 
                 Spacer(Modifier.height(16.dp))
 
                 UserInfoItem(
                     label = stringResource(R.string.common_label_email),
                     value = uiState.email ?: "",
-                    { viewModel.changeEmail(it) },
+                    onValueChange = viewModel::changeEmail,
                 )
 
                 Spacer(Modifier.height(32.dp))
 
-                UserInfoItem(
+                ReadOnlyUserInfoItem(
                     label = stringResource(R.string.common_label_server_host),
                     value = uiState.serverHost,
-                ) { viewModel.changeServerHost(it) }
+                )
 
                 Spacer(Modifier.height(32.dp))
 
-                UserInfoItem(
+                ReadOnlyUserInfoItem(
                     label = stringResource(R.string.common_label_server_port),
                     value = uiState.serverPort,
-                    { viewModel.changeServerPort(it) }
                 )
 
                 Spacer(Modifier.height(32.dp))
@@ -240,7 +267,10 @@ fun ProfileScreen(
                         }
                     }
                     Column {
-                        IconButton(onClick = viewModel::logOut) {
+                        IconButton(
+                            onClick = { showLogoutDialog = true },
+                            enabled = !uiState.isLoading,
+                        ) {
                             Icon(
                                 appIconsMirrored.Logout,
                                 stringResource(R.string.profile_cd_logout_button),
@@ -256,6 +286,44 @@ fun ProfileScreen(
             )
         }
     }
+}
+
+@Composable
+private fun ProfileLogoutDialog(
+    onDismiss: () -> Unit,
+    onLogout: () -> Unit,
+    onLogoutAndClearServer: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.profile_logout_title),
+                style = MaterialTheme.typography.headlineSmall,
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.profile_logout_message),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onLogoutAndClearServer) {
+                Text(stringResource(R.string.profile_logout_action_delete_server))
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.common_action_cancel))
+                }
+                TextButton(onClick = onLogout) {
+                    Text(stringResource(R.string.profile_logout_action_keep_server))
+                }
+            }
+        },
+    )
 }
 
 @Composable
@@ -368,7 +436,11 @@ private fun AppLanguage.toLabelResId(): Int =
     }
 
 @Composable
-fun UserInfoItem(label: String, value: String, onValueChange: (String) -> Unit) {
+fun UserInfoItem(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
     Column(Modifier.fillMaxWidth()) {
         Text(
             text = label,
@@ -382,6 +454,34 @@ fun UserInfoItem(label: String, value: String, onValueChange: (String) -> Unit) 
             modifier = Modifier.padding(top = 4.dp)
         )
         Modifier.padding(top = 8.dp)
+        HorizontalDivider(
+            Modifier.padding(top = 8.dp), 1.dp,
+            MaterialTheme.colorScheme.surfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun ReadOnlyUserInfoItem(
+    label: String,
+    value: String,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SelectionContainer {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 4.dp),
+            )
+        }
         HorizontalDivider(
             Modifier.padding(top = 8.dp), 1.dp,
             MaterialTheme.colorScheme.surfaceVariant,

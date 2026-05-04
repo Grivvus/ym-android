@@ -72,4 +72,20 @@ class ServerInfoRepositoryTest {
         assertThat(repository.playlistCoverUri(7L).toString())
             .isEqualTo("http://example.com:8081/playlists/7/cover")
     }
+
+    @Test
+    fun clearServerInfo_removesStorageAndRestoresDefaultConfig() = runTest {
+        val repository = ServerInfoRepository(
+            serverInfoDao = database.serverInfoDao(),
+            ioDispatcher = mainDispatcherRule.dispatcher,
+            applicationScope = backgroundScope,
+        )
+
+        repository.saveServerInfo("example.com", "8081")
+        repository.clearServerInfo()
+
+        assertThat(repository.getServerInfo()).isNull()
+        assertThat(repository.currentServerConfig()).isEqualTo(ServerConfig("10.0.2.2", "8000"))
+        assertThat(repository.currentBaseUrl()).isEqualTo("http://10.0.2.2:8000")
+    }
 }
