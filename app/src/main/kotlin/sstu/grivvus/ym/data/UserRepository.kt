@@ -4,10 +4,12 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import sstu.grivvus.ym.data.local.LocalUser
 import sstu.grivvus.ym.data.local.UserDao
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
+import sstu.grivvus.ym.data.network.model.NetworkSession
 import sstu.grivvus.ym.data.network.model.NetworkUser
 import sstu.grivvus.ym.data.network.model.UploadPart
 import sstu.grivvus.ym.data.network.remote.auth.AuthRemoteDataSource
@@ -29,17 +31,7 @@ class UserRepository @Inject constructor(
             username = username,
             password = password,
         )
-        authSessionManager.startSession(session)
-        authSessionManager.updateCurrentUser(
-            LocalUser(
-                remoteId = session.userId,
-                username = username,
-                email = null,
-                access = session.accessToken,
-                refresh = session.refreshToken,
-                isSuperuser = false,
-            ),
-        )
+        startSessionWithBestEffortProfileSync(session, username)
     }
 
     suspend fun login(username: String, password: String) {
@@ -47,17 +39,7 @@ class UserRepository @Inject constructor(
             username = username,
             password = password,
         )
-        authSessionManager.startSession(session)
-        authSessionManager.updateCurrentUser(
-            LocalUser(
-                remoteId = session.userId,
-                username = username,
-                email = null,
-                access = session.accessToken,
-                refresh = session.refreshToken,
-                isSuperuser = false,
-            ),
-        )
+        startSessionWithBestEffortProfileSync(session, username)
     }
 
     suspend fun changePassword(currentPassword: String, newPassword: String) {
@@ -99,6 +81,35 @@ class UserRepository @Inject constructor(
                 avatarUri = buildRemoteAvatarUri(localUser.remoteId),
             ),
         )
+    }
+
+    private suspend fun startSessionWithBestEffortProfileSync(
+        session: NetworkSession,
+        username: String,
+    ) {
+        val fallbackUser = LocalUser(
+            remoteId = session.userId,
+            username = username,
+            email = null,
+            access = session.accessToken,
+            refresh = session.refreshToken,
+            isSuperuser = false,
+        )
+        authSessionManager.startSession(session)
+        authSessionManager.updateCurrentUser(fallbackUser)
+        try {
+            updateLocalUserFromNetwork()
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
+            restoreFallbackUserIfMissing(fallbackUser)
+        }
+    }
+
+    private suspend fun restoreFallbackUserIfMissing(fallbackUser: LocalUser) {
+        val currentUser = authSessionManager.getCurrentUser()
+        if (currentUser == null || currentUser.remoteId != fallbackUser.remoteId) {
+            authSessionManager.updateCurrentUser(fallbackUser)
+        }
     }
 
     suspend fun getCurrentUser(): LocalUser? {
