@@ -4,8 +4,6 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.io.IOException
-import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -37,6 +35,8 @@ import sstu.grivvus.ym.data.network.core.UnauthorizedApiException
 import sstu.grivvus.ym.logHandledException
 import sstu.grivvus.ym.ui.UiText
 import sstu.grivvus.ym.ui.asUiTextOrNull
+import java.io.IOException
+import javax.inject.Inject
 
 data class ArchiveStatusUi(
     val operationId: String,
@@ -137,6 +137,12 @@ class LibraryViewModel @Inject constructor(
             }
             try {
                 applyLibraryData(musicRepository.loadLibrary(refreshFromNetwork = true))
+                _uiState.value.backupStatus?.let { backupStatus ->
+                    startBackupPolling(backupStatus.operationId)
+                }
+                _uiState.value.restoreStatus?.let { restoreStatus ->
+                    startRestorePolling(restoreStatus.operationId)
+                }
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (error: Exception) {
@@ -232,7 +238,13 @@ class LibraryViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            _uiState.update { it.copy(isTrackMutating = true, errorMessage = null, infoMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isTrackMutating = true,
+                    errorMessage = null,
+                    infoMessage = null
+                )
+            }
             try {
                 trackDownloadManager.cancelDownloads(pendingDeleteTrackIds)
                 val updatedLibrary = musicRepository.deleteTracks(pendingDeleteTrackIds)
@@ -297,7 +309,13 @@ class LibraryViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            _uiState.update { it.copy(isCreatingBackup = true, errorMessage = null, infoMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isCreatingBackup = true,
+                    errorMessage = null,
+                    infoMessage = null
+                )
+            }
             try {
                 pendingBackupArchive?.let { archive ->
                     backupRestoreRepository.discardBackupArchive(archive)
@@ -337,7 +355,13 @@ class LibraryViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            _uiState.update { it.copy(isSavingBackup = true, errorMessage = null, infoMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isSavingBackup = true,
+                    errorMessage = null,
+                    infoMessage = null
+                )
+            }
             try {
                 backupRestoreRepository.saveBackupArchive(archive, destinationUri)
                 _uiState.update {
@@ -376,7 +400,13 @@ class LibraryViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            _uiState.update { it.copy(isStartingRestore = true, errorMessage = null, infoMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isStartingRestore = true,
+                    errorMessage = null,
+                    infoMessage = null
+                )
+            }
             try {
                 val restoreId = backupRestoreRepository.startRestore(sourceUri)
                 _uiState.update { state ->
@@ -506,7 +536,13 @@ class LibraryViewModel @Inject constructor(
     }
 
     private suspend fun downloadFinishedBackup(backupId: String) {
-        _uiState.update { it.copy(isDownloadingBackup = true, errorMessage = null, infoMessage = null) }
+        _uiState.update {
+            it.copy(
+                isDownloadingBackup = true,
+                errorMessage = null,
+                infoMessage = null
+            )
+        }
         try {
             val archive = backupRestoreRepository.downloadBackupArchive(backupId)
             pendingBackupArchive = archive
@@ -764,7 +800,10 @@ class LibraryViewModel @Inject constructor(
                 UiText.StringResource(R.string.library_error_track_download_failed, listOf(cause))
 
             TrackDownloadOperation.DELETE_LOCAL_COPY ->
-                UiText.StringResource(R.string.library_error_local_track_copy_delete_failed, listOf(cause))
+                UiText.StringResource(
+                    R.string.library_error_local_track_copy_delete_failed,
+                    listOf(cause)
+                )
         }
     }
 
