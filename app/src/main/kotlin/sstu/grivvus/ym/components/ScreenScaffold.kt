@@ -64,8 +64,9 @@ fun ScreenStateHost(
             content()
         }
 
-        ErrorSnackbar(
-            errorMessage = errorMessage?.resolve(),
+        ErrorTooltip(
+            message = errorMessage?.resolve().orEmpty(),
+            visible = errorMessage != null,
             onDismiss = onDismissError,
             modifier = Modifier.align(Alignment.BottomCenter),
         )

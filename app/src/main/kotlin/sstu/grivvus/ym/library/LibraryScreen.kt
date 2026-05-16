@@ -864,13 +864,6 @@ private fun ArchiveStatusBanner(
                     )
                 }
             }
-            status.errorMessage?.let { errorMessage ->
-                Text(
-                    text = errorMessage.resolve(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
         }
     }
 }

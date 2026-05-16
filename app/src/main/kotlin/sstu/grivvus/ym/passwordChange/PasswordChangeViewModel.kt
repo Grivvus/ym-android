@@ -123,4 +123,8 @@ class PasswordChangeViewModel @Inject constructor(
         _isLoading.value = false
         _success.value = false
     }
+
+    fun dismissError() {
+        _errorMessage.value = null
+    }
 }

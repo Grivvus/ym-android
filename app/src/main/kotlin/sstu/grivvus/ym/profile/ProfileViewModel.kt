@@ -35,6 +35,7 @@ data class ProfileUiState(
     val serverHost: String = "",
     val serverPort: String = "8000",
     val errorMsg: UiText? = null,
+    val infoMsg: UiText? = null,
     val avatarUri: Uri? = null,
     val preferredTrackQuality: TrackQuality = TrackQuality.STANDARD,
     val selectedAppLanguage: AppLanguage = AppLanguage.SYSTEM_DEFAULT,
@@ -60,6 +61,7 @@ class ProfileViewModel
     private val _serverHost: MutableStateFlow<String> = MutableStateFlow("")
     private val _serverPort: MutableStateFlow<String> = MutableStateFlow("8000")
     private val _errorMsg: MutableStateFlow<UiText?> = MutableStateFlow(null)
+    private val _infoMsg: MutableStateFlow<UiText?> = MutableStateFlow(null)
     private val _avatarUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
     private val _preferredTrackQuality: MutableStateFlow<TrackQuality> = MutableStateFlow(
         playbackPreferencesRepository.currentPreferredTrackQuality(),
@@ -94,8 +96,9 @@ class ProfileViewModel
                     preferredTrackQuality = preferredTrackQuality,
                     selectedAppLanguage = selectedAppLanguage,
                 )
-            }
-        ) { baseState, otherState ->
+            },
+            _infoMsg,
+        ) { baseState, otherState, infoMsg ->
             ProfileUiState(
                 username = baseState.username,
                 email = baseState.email,
@@ -104,6 +107,7 @@ class ProfileViewModel
                 serverHost = otherState.serverHost,
                 serverPort = otherState.serverPort,
                 errorMsg = baseState.errorMsg,
+                infoMsg = infoMsg,
                 avatarUri = baseState.avatarUri,
                 preferredTrackQuality = otherState.preferredTrackQuality,
                 selectedAppLanguage = otherState.selectedAppLanguage,
@@ -141,6 +145,7 @@ class ProfileViewModel
                 return@launch
             } catch (e: Exception) {
                 e.logHandledException("ProfileViewModel.refreshUser")
+                _infoMsg.value = null
                 _errorMsg.value =
                     UiText.StringResource(R.string.profile_error_server_unreachable_local_data)
             } finally {
@@ -151,6 +156,7 @@ class ProfileViewModel
 
     fun dismissErrorMessage() {
         _errorMsg.value = null
+        _infoMsg.value = null
     }
 
     fun changeEmail(value: String) {
@@ -183,6 +189,7 @@ class ProfileViewModel
                 )
             } catch (e: Exception) {
                 e.logHandledException("ProfileViewModel.logOut")
+                _infoMsg.value = null
                 _errorMsg.value = UiText.StringResource(R.string.common_error_unexpected)
             } finally {
                 _isLoading.value = false
@@ -200,6 +207,7 @@ class ProfileViewModel
             return@launch
         } catch (e: Exception) {
             e.logHandledException("ProfileViewModel.uploadAvatar")
+            _infoMsg.value = null
             _errorMsg.value = UiText.StringResource(R.string.profile_error_avatar_upload_failed)
         } finally {
             _isLoading.value = false
@@ -219,6 +227,7 @@ class ProfileViewModel
                 newUsername == null &&
                 newTrackQuality == null
             ) {
+                _infoMsg.value = null
                 _errorMsg.value = UiText.StringResource(R.string.profile_error_nothing_to_save)
                 return@launch
             }
@@ -232,11 +241,13 @@ class ProfileViewModel
                 userRepository.applyChanges(newUsername, newEmail)
                 applyCurrentUser()
             }
-            _errorMsg.value = UiText.StringResource(R.string.profile_info_updated_successfully)
+            _errorMsg.value = null
+            _infoMsg.value = UiText.StringResource(R.string.profile_info_updated_successfully)
         } catch (_: SessionExpiredException) {
             return@launch
         } catch (e: ApiException) {
             e.logHandledException("ProfileViewModel.tryToApplyChanges")
+            _infoMsg.value = null
             _errorMsg.value =
                 if (e.statusCode in 400..499) {
                     UiText.StringResource(R.string.profile_error_username_or_email_not_unique)
@@ -245,6 +256,7 @@ class ProfileViewModel
                 }
         } catch (e: Exception) {
             e.logHandledException("ProfileViewModel.tryToApplyChanges")
+            _infoMsg.value = null
             _errorMsg.value = UiText.StringResource(R.string.profile_error_update_unexpected)
         } finally {
             _isLoading.value = false

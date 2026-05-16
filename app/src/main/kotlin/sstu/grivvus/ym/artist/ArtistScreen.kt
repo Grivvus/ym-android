@@ -41,18 +41,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomNavScaffold
+import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
-import androidx.compose.ui.text.input.KeyboardType
 
 private data class CreateAlbumDraft(
     val name: String = "",
@@ -137,7 +138,7 @@ fun ArtistScreen(
     ) { innerPadding ->
         ScreenStateHost(
             isLoading = uiState.isLoading && artist == null,
-            errorMessage = uiState.errorMessage,
+            errorMessage = if (showCreateAlbumDialog) null else uiState.errorMessage,
             onDismissError = viewModel::dismissError,
             modifier = Modifier.padding(innerPadding),
         ) {
@@ -409,13 +410,11 @@ private fun CreateAlbumDialog(
                         }
                     }
                 }
-                if (errorMessage != null) {
-                    Text(
-                        text = errorMessage,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
+                ErrorTooltip(
+                    message = errorMessage.orEmpty(),
+                    visible = errorMessage != null,
+                    onDismiss = onDismissError,
+                )
             }
         },
         confirmButton = {

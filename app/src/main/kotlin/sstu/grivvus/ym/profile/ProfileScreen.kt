@@ -60,7 +60,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomNavScaffold
-import sstu.grivvus.ym.components.ErrorTooltip
+import sstu.grivvus.ym.components.FeedbackTooltip
+import sstu.grivvus.ym.components.FeedbackTooltipTone
 import sstu.grivvus.ym.data.AppLanguage
 import sstu.grivvus.ym.data.network.model.TrackQuality
 import sstu.grivvus.ym.data.network.model.toDisplayNameRes
@@ -84,6 +85,12 @@ fun ProfileScreen(
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val feedbackMessage = uiState.errorMsg ?: uiState.infoMsg
+    val feedbackTone = if (uiState.errorMsg != null) {
+        FeedbackTooltipTone.Error
+    } else {
+        FeedbackTooltipTone.Success
+    }
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val refreshState = rememberPullRefreshState(
@@ -126,11 +133,6 @@ fun ProfileScreen(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                ErrorTooltip(
-                    uiState.errorMsg?.resolve().orEmpty(),
-                    uiState.errorMsg != null,
-                    onTimeout = { viewModel.dismissErrorMessage() },
-                )
                 if (showSettingsDialog) {
                     ProfileSettingsDialog(
                         selectedLanguage = uiState.selectedAppLanguage,
@@ -283,6 +285,13 @@ fun ProfileScreen(
                 refreshing = uiState.isRefreshing,
                 state = refreshState,
                 modifier = Modifier.align(Alignment.TopCenter),
+            )
+            FeedbackTooltip(
+                message = feedbackMessage?.resolve().orEmpty(),
+                visible = feedbackMessage != null,
+                tone = feedbackTone,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                onDismiss = viewModel::dismissErrorMessage,
             )
         }
     }

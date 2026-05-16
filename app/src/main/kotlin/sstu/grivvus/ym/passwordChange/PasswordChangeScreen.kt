@@ -29,6 +29,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import sstu.grivvus.ym.R
+import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.components.PasswordOutlinedField
 import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
@@ -104,14 +105,11 @@ fun PasswordChangeDialog(
                     isError = uiState.errorMessage != null,
                 )
 
-                uiState.errorMessage?.let {
-                    Text(
-                        text = it.resolve(),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
+                ErrorTooltip(
+                    message = uiState.errorMessage?.resolve().orEmpty(),
+                    visible = uiState.errorMessage != null,
+                    onDismiss = viewModel::dismissError,
+                )
 
                 if (uiState.success) {
                     Text(

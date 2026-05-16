@@ -42,6 +42,7 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.collectLatest
 import sstu.grivvus.ym.R
+import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.ui.resolve
 
@@ -545,13 +546,11 @@ private fun UploadTrackModalContent(
                         }
                     }
                 }
-                uiState.errorMessage?.let { message ->
-                    Text(
-                        text = message.resolve(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
+                ErrorTooltip(
+                    message = uiState.errorMessage?.resolve().orEmpty(),
+                    visible = uiState.errorMessage != null,
+                    onDismiss = onDismissError,
+                )
             }
         },
         confirmButton = {

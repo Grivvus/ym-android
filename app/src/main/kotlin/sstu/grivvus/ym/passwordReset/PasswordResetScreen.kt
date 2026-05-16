@@ -45,9 +45,10 @@ fun PasswordResetScreen(
         verticalSpacing = 12.dp,
         overlay = {
             ErrorTooltip(
-                uiState.errorMessage?.resolve().orEmpty(),
-                uiState.showError,
-                onTimeout = { viewModel.dismissErrorMessage() },
+                message = uiState.errorMessage?.resolve().orEmpty(),
+                visible = uiState.showError,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                onDismiss = viewModel::dismissErrorMessage,
             )
         },
     ) {

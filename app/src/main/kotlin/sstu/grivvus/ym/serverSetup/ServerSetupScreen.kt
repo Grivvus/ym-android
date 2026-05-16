@@ -11,6 +11,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -37,9 +38,10 @@ fun ServerSetup(
         modifier = modifier,
         overlay = {
             ErrorTooltip(
-                uiState.errorMessage?.resolve().orEmpty(),
-                uiState.showError,
-                onTimeout = { viewModel.dismissErrorMessage() },
+                message = uiState.errorMessage?.resolve().orEmpty(),
+                visible = uiState.showError,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                onDismiss = viewModel::dismissErrorMessage,
             )
         },
     ) {

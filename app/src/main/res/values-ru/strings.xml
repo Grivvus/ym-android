@@ -59,6 +59,7 @@
     <string name="common_cd_show_password">Показать пароль</string>
     <string name="common_cd_hide_password">Скрыть пароль</string>
     <string name="common_cd_error">Ошибка</string>
+    <string name="common_cd_success">Успешно</string>
     <string name="common_cd_dismiss">Закрыть</string>
     <string name="common_cd_previous_track">Предыдущий трек</string>
     <string name="common_cd_next_track">Следующий трек</string>
