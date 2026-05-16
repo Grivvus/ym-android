@@ -25,20 +25,32 @@ data class DownloadedBackupArchive(
     val suggestedFileName: String,
 )
 
-enum class RestoreOperationState {
+enum class ArchiveOperationState {
     PENDING,
     STARTED,
     FINISHED,
     ERROR,
 }
 
-data class RestoreOperationStatus(
-    val restoreId: String,
-    val state: RestoreOperationState,
+data class BackupOperationStatus(
+    val backupId: String,
+    val state: ArchiveOperationState,
+    val includeImages: Boolean,
+    val includeTranscodedTracks: Boolean,
+    val sizeBytes: Long? = null,
     val errorMessage: String? = null,
 ) {
     val isTerminal: Boolean
-        get() = state == RestoreOperationState.FINISHED || state == RestoreOperationState.ERROR
+        get() = state == ArchiveOperationState.FINISHED || state == ArchiveOperationState.ERROR
+}
+
+data class RestoreOperationStatus(
+    val restoreId: String,
+    val state: ArchiveOperationState,
+    val errorMessage: String? = null,
+) {
+    val isTerminal: Boolean
+        get() = state == ArchiveOperationState.FINISHED || state == ArchiveOperationState.ERROR
 }
 
 @Singleton
@@ -49,12 +61,20 @@ class BackupRestoreRepository @Inject constructor(
     @param:ApplicationContext private val context: Context,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
-    suspend fun createBackupArchive(options: BackupCreationOptions): DownloadedBackupArchive {
+    suspend fun startBackup(options: BackupCreationOptions): BackupOperationStatus {
+        return remoteDataSource.startBackup(options)
+    }
+
+    suspend fun getBackupStatus(backupId: String): BackupOperationStatus {
+        return remoteDataSource.getBackupStatus(backupId)
+    }
+
+    suspend fun downloadBackupArchive(backupId: String): DownloadedBackupArchive {
         return withContext(ioDispatcher) {
             val tempFile = File.createTempFile("ym_backup_", ".zip", context.cacheDir)
             try {
                 val suggestedFileName = remoteDataSource.downloadBackupArchive(
-                    options = options,
+                    backupId = backupId,
                     destinationFile = tempFile,
                 )
                 DownloadedBackupArchive(

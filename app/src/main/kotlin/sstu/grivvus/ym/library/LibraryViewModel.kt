@@ -17,12 +17,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import sstu.grivvus.ym.R
+import sstu.grivvus.ym.data.ArchiveOperationState
 import sstu.grivvus.ym.data.BackupCreationOptions
+import sstu.grivvus.ym.data.BackupOperationStatus
 import sstu.grivvus.ym.data.BackupRestoreRepository
 import sstu.grivvus.ym.data.DownloadedBackupArchive
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
-import sstu.grivvus.ym.data.RestoreOperationState
 import sstu.grivvus.ym.data.RestoreOperationStatus
 import sstu.grivvus.ym.data.UserRepository
 import sstu.grivvus.ym.data.download.TrackDownloadEvent
@@ -31,16 +32,20 @@ import sstu.grivvus.ym.data.download.TrackDownloadOperation
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.data.network.core.ApiException
 import sstu.grivvus.ym.data.network.core.ClientApiException
+import sstu.grivvus.ym.data.network.core.ConflictApiException
 import sstu.grivvus.ym.data.network.core.UnauthorizedApiException
 import sstu.grivvus.ym.logHandledException
 import sstu.grivvus.ym.ui.UiText
 import sstu.grivvus.ym.ui.asUiTextOrNull
 
-data class RestoreStatusUi(
-    val restoreId: String,
+data class ArchiveStatusUi(
+    val operationId: String,
+    val idLabel: UiText,
     val title: UiText,
+    val pollingMessage: UiText,
     val isFinished: Boolean,
     val isFailed: Boolean,
+    val sizeBytes: Long? = null,
     val errorMessage: UiText? = null,
 )
 
@@ -56,9 +61,11 @@ data class LibraryUiState(
     val includeImages: Boolean = true,
     val includeTranscodedTracks: Boolean = true,
     val isCreatingBackup: Boolean = false,
+    val isDownloadingBackup: Boolean = false,
     val isSavingBackup: Boolean = false,
     val isStartingRestore: Boolean = false,
-    val restoreStatus: RestoreStatusUi? = null,
+    val backupStatus: ArchiveStatusUi? = null,
+    val restoreStatus: ArchiveStatusUi? = null,
     val errorMessage: UiText? = null,
     val infoMessage: UiText? = null,
 ) {
@@ -91,6 +98,7 @@ class LibraryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LibraryUiState())
     private val _events = MutableSharedFlow<LibraryScreenEvent>()
     private var pendingBackupArchive: DownloadedBackupArchive? = null
+    private var backupPollingJob: Job? = null
     private var restorePollingJob: Job? = null
 
     val uiState = _uiState.asStateFlow()
@@ -280,8 +288,10 @@ class LibraryViewModel @Inject constructor(
     fun createBackup() {
         if (!_uiState.value.isSuperuser ||
             _uiState.value.isCreatingBackup ||
+            _uiState.value.isDownloadingBackup ||
             _uiState.value.isSavingBackup ||
             _uiState.value.isStartingRestore ||
+            hasRunningBackup() ||
             hasRunningRestore()
         ) {
             return
@@ -292,18 +302,17 @@ class LibraryViewModel @Inject constructor(
                 pendingBackupArchive?.let { archive ->
                     backupRestoreRepository.discardBackupArchive(archive)
                 }
-                val archive = backupRestoreRepository.createBackupArchive(
+                pendingBackupArchive = null
+                val status = backupRestoreRepository.startBackup(
                     options = BackupCreationOptions(
                         includeImages = _uiState.value.includeImages,
                         includeTranscodedTracks = _uiState.value.includeTranscodedTracks,
                     ),
                 )
-                pendingBackupArchive = archive
-                _events.emit(
-                    LibraryScreenEvent.RequestBackupSaveLocation(
-                        suggestedFileName = archive.suggestedFileName,
-                    ),
-                )
+                _uiState.update { state ->
+                    state.copy(backupStatus = status.toUi())
+                }
+                startBackupPolling(status.backupId)
             } catch (_: SessionExpiredException) {
                 return@launch
             } catch (error: Exception) {
@@ -323,6 +332,7 @@ class LibraryViewModel @Inject constructor(
             viewModelScope.launch {
                 backupRestoreRepository.discardBackupArchive(archive)
                 pendingBackupArchive = null
+                _uiState.update { it.copy(backupStatus = null) }
             }
             return
         }
@@ -332,6 +342,7 @@ class LibraryViewModel @Inject constructor(
                 backupRestoreRepository.saveBackupArchive(archive, destinationUri)
                 _uiState.update {
                     it.copy(
+                        backupStatus = null,
                         infoMessage = UiText.StringResource(
                             R.string.library_info_backup_saved_successfully,
                         ),
@@ -356,8 +367,10 @@ class LibraryViewModel @Inject constructor(
         if (sourceUri == null ||
             !_uiState.value.isSuperuser ||
             _uiState.value.isCreatingBackup ||
+            _uiState.value.isDownloadingBackup ||
             _uiState.value.isSavingBackup ||
             _uiState.value.isStartingRestore ||
+            hasRunningBackup() ||
             hasRunningRestore()
         ) {
             return
@@ -370,7 +383,7 @@ class LibraryViewModel @Inject constructor(
                     state.copy(
                         restoreStatus = RestoreOperationStatus(
                             restoreId = restoreId,
-                            state = RestoreOperationState.PENDING,
+                            state = ArchiveOperationState.PENDING,
                         ).toUi(),
                     )
                 }
@@ -455,6 +468,65 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    private fun startBackupPolling(backupId: String) {
+        backupPollingJob?.cancel()
+        backupPollingJob = viewModelScope.launch {
+            while (true) {
+                try {
+                    val status = backupRestoreRepository.getBackupStatus(backupId)
+                    _uiState.update { state ->
+                        state.copy(
+                            backupStatus = status.toUi(),
+                            errorMessage = if (status.state == ArchiveOperationState.ERROR) {
+                                status.errorMessage.asUiTextOrNull()
+                                    ?: UiText.StringResource(R.string.library_error_backup_failed)
+                            } else {
+                                state.errorMessage
+                            },
+                        )
+                    }
+                    if (status.isTerminal) {
+                        if (status.state == ArchiveOperationState.FINISHED) {
+                            downloadFinishedBackup(status.backupId)
+                        }
+                        break
+                    }
+                } catch (_: SessionExpiredException) {
+                    return@launch
+                } catch (error: Exception) {
+                    error.logHandledException("LibraryViewModel.startBackupPolling")
+                    _uiState.update { state ->
+                        state.copy(errorMessage = error.toReadableMessage())
+                    }
+                    break
+                }
+                delay(ARCHIVE_POLL_INTERVAL_MS)
+            }
+        }
+    }
+
+    private suspend fun downloadFinishedBackup(backupId: String) {
+        _uiState.update { it.copy(isDownloadingBackup = true, errorMessage = null, infoMessage = null) }
+        try {
+            val archive = backupRestoreRepository.downloadBackupArchive(backupId)
+            pendingBackupArchive = archive
+            _events.emit(
+                LibraryScreenEvent.RequestBackupSaveLocation(
+                    suggestedFileName = archive.suggestedFileName,
+                ),
+            )
+        } catch (_: SessionExpiredException) {
+            throw SessionExpiredException()
+        } catch (error: Exception) {
+            error.logHandledException("LibraryViewModel.downloadFinishedBackup")
+            _uiState.update { state ->
+                state.copy(errorMessage = error.toReadableMessage())
+            }
+        } finally {
+            _uiState.update { it.copy(isDownloadingBackup = false) }
+        }
+    }
+
     private fun startRestorePolling(restoreId: String) {
         restorePollingJob?.cancel()
         restorePollingJob = viewModelScope.launch {
@@ -464,7 +536,7 @@ class LibraryViewModel @Inject constructor(
                     _uiState.update { state ->
                         state.copy(
                             restoreStatus = status.toUi(),
-                            errorMessage = if (status.state == RestoreOperationState.ERROR) {
+                            errorMessage = if (status.state == ArchiveOperationState.ERROR) {
                                 status.errorMessage.asUiTextOrNull()
                                     ?: UiText.StringResource(R.string.library_error_restore_failed)
                             } else {
@@ -473,7 +545,7 @@ class LibraryViewModel @Inject constructor(
                         )
                     }
                     if (status.isTerminal) {
-                        if (status.state == RestoreOperationState.FINISHED) {
+                        if (status.state == ArchiveOperationState.FINISHED) {
                             refreshLocalStateAfterRestore()
                         }
                         break
@@ -487,7 +559,7 @@ class LibraryViewModel @Inject constructor(
                     }
                     break
                 }
-                delay(RESTORE_POLL_INTERVAL_MS)
+                delay(ARCHIVE_POLL_INTERVAL_MS)
             }
         }
     }
@@ -540,6 +612,11 @@ class LibraryViewModel @Inject constructor(
         return !restoreStatus.isFinished && !restoreStatus.isFailed
     }
 
+    private fun hasRunningBackup(): Boolean {
+        val backupStatus = _uiState.value.backupStatus ?: return false
+        return !backupStatus.isFinished && !backupStatus.isFailed
+    }
+
     private fun toggleTrackSelection(trackId: Long) {
         _uiState.update { state ->
             state.copy(
@@ -568,32 +645,85 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    private fun RestoreOperationStatus.toUi(): RestoreStatusUi {
+    private fun BackupOperationStatus.toUi(): ArchiveStatusUi {
         return when (state) {
-            RestoreOperationState.PENDING -> RestoreStatusUi(
-                restoreId = restoreId,
+            ArchiveOperationState.PENDING -> ArchiveStatusUi(
+                operationId = backupId,
+                idLabel = UiText.StringResource(R.string.library_backup_id, listOf(backupId)),
+                title = UiText.StringResource(R.string.library_backup_status_queued),
+                pollingMessage = UiText.StringResource(R.string.library_backup_polling_status),
+                isFinished = false,
+                isFailed = false,
+                sizeBytes = sizeBytes,
+            )
+
+            ArchiveOperationState.STARTED -> ArchiveStatusUi(
+                operationId = backupId,
+                idLabel = UiText.StringResource(R.string.library_backup_id, listOf(backupId)),
+                title = UiText.StringResource(R.string.library_backup_status_in_progress),
+                pollingMessage = UiText.StringResource(R.string.library_backup_polling_status),
+                isFinished = false,
+                isFailed = false,
+                sizeBytes = sizeBytes,
+            )
+
+            ArchiveOperationState.FINISHED -> ArchiveStatusUi(
+                operationId = backupId,
+                idLabel = UiText.StringResource(R.string.library_backup_id, listOf(backupId)),
+                title = UiText.StringResource(R.string.library_backup_status_finished),
+                pollingMessage = UiText.StringResource(R.string.library_backup_download_status),
+                isFinished = true,
+                isFailed = false,
+                sizeBytes = sizeBytes,
+            )
+
+            ArchiveOperationState.ERROR -> ArchiveStatusUi(
+                operationId = backupId,
+                idLabel = UiText.StringResource(R.string.library_backup_id, listOf(backupId)),
+                title = UiText.StringResource(R.string.library_backup_status_failed),
+                pollingMessage = UiText.StringResource(R.string.library_backup_polling_status),
+                isFinished = false,
+                isFailed = true,
+                sizeBytes = sizeBytes,
+                errorMessage = errorMessage.asUiTextOrNull(),
+            )
+        }
+    }
+
+    private fun RestoreOperationStatus.toUi(): ArchiveStatusUi {
+        return when (state) {
+            ArchiveOperationState.PENDING -> ArchiveStatusUi(
+                operationId = restoreId,
+                idLabel = UiText.StringResource(R.string.library_restore_id, listOf(restoreId)),
                 title = UiText.StringResource(R.string.library_restore_status_queued),
+                pollingMessage = UiText.StringResource(R.string.library_restore_polling_status),
                 isFinished = false,
                 isFailed = false,
             )
 
-            RestoreOperationState.STARTED -> RestoreStatusUi(
-                restoreId = restoreId,
+            ArchiveOperationState.STARTED -> ArchiveStatusUi(
+                operationId = restoreId,
+                idLabel = UiText.StringResource(R.string.library_restore_id, listOf(restoreId)),
                 title = UiText.StringResource(R.string.library_restore_status_in_progress),
+                pollingMessage = UiText.StringResource(R.string.library_restore_polling_status),
                 isFinished = false,
                 isFailed = false,
             )
 
-            RestoreOperationState.FINISHED -> RestoreStatusUi(
-                restoreId = restoreId,
+            ArchiveOperationState.FINISHED -> ArchiveStatusUi(
+                operationId = restoreId,
+                idLabel = UiText.StringResource(R.string.library_restore_id, listOf(restoreId)),
                 title = UiText.StringResource(R.string.library_restore_status_finished),
+                pollingMessage = UiText.StringResource(R.string.library_restore_polling_status),
                 isFinished = true,
                 isFailed = false,
             )
 
-            RestoreOperationState.ERROR -> RestoreStatusUi(
-                restoreId = restoreId,
+            ArchiveOperationState.ERROR -> ArchiveStatusUi(
+                operationId = restoreId,
+                idLabel = UiText.StringResource(R.string.library_restore_id, listOf(restoreId)),
                 title = UiText.StringResource(R.string.library_restore_status_failed),
+                pollingMessage = UiText.StringResource(R.string.library_restore_polling_status),
                 isFinished = false,
                 isFailed = true,
                 errorMessage = errorMessage.asUiTextOrNull(),
@@ -606,9 +736,12 @@ class LibraryViewModel @Inject constructor(
             is UnauthorizedApiException ->
                 UiText.StringResource(R.string.common_error_authentication_required)
 
+            is ConflictApiException ->
+                UiText.StringResource(R.string.library_error_archive_operation_already_running)
+
             is ClientApiException -> when (statusCode) {
                 403 -> UiText.StringResource(R.string.common_error_superuser_access_required)
-                409 -> UiText.StringResource(R.string.library_error_restore_operation_already_running)
+                409 -> UiText.StringResource(R.string.library_error_archive_operation_already_running)
                 else -> message.asUiTextOrNull()
                     ?: UiText.StringResource(R.string.common_error_request_failed)
             }
@@ -636,6 +769,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        backupPollingJob?.cancel()
         restorePollingJob?.cancel()
         pendingBackupArchive?.file?.delete()
         pendingBackupArchive = null
@@ -643,6 +777,6 @@ class LibraryViewModel @Inject constructor(
     }
 
     private companion object {
-        private const val RESTORE_POLL_INTERVAL_MS = 2_000L
+        private const val ARCHIVE_POLL_INTERVAL_MS = 2_000L
     }
 }

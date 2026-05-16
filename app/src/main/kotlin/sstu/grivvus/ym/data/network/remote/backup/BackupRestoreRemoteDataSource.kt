@@ -8,16 +8,22 @@ import javax.inject.Singleton
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
+import sstu.grivvus.ym.data.ArchiveOperationState
 import sstu.grivvus.ym.data.BackupCreationOptions
-import sstu.grivvus.ym.data.RestoreOperationState
+import sstu.grivvus.ym.data.BackupOperationStatus
 import sstu.grivvus.ym.data.RestoreOperationStatus
 import sstu.grivvus.ym.data.ServerInfoRepository
 import sstu.grivvus.ym.data.network.core.ApiExecutor
 import sstu.grivvus.ym.data.network.core.ClientApiException
+import sstu.grivvus.ym.data.network.core.ConflictApiException
 import sstu.grivvus.ym.data.network.core.GeneratedApiProvider
+import sstu.grivvus.ym.data.network.core.NotFoundApiException
 import sstu.grivvus.ym.data.network.core.ServerApiException
 import sstu.grivvus.ym.data.network.core.UnauthorizedApiException
 import sstu.grivvus.ym.di.ArchiveTransferHttpClient
+import sstu.grivvus.ym.openapi.models.BackupStatusResponse
+import sstu.grivvus.ym.openapi.models.OperationStatus
 import sstu.grivvus.ym.openapi.models.RestoreStatusResponse
 
 @Singleton
@@ -27,62 +33,56 @@ class BackupRestoreRemoteDataSource @Inject constructor(
     private val serverInfoRepository: ServerInfoRepository,
     @param:ArchiveTransferHttpClient private val okHttpClient: OkHttpClient,
 ) {
+    suspend fun startBackup(options: BackupCreationOptions): BackupOperationStatus {
+        return generatedApiProvider.withAuthorizedApi { api ->
+            val response = apiExecutor.execute {
+                api.backupWithHttpInfo(
+                    includeImages = options.includeImages,
+                    includeTranscodedTracks = options.includeTranscodedTracks,
+                )
+            }
+            response.toDomainStatus()
+        }
+    }
+
+    suspend fun getBackupStatus(backupId: String): BackupOperationStatus {
+        return generatedApiProvider.withAuthorizedApi { api ->
+            val response = apiExecutor.execute {
+                api.getBackupStatusWithHttpInfo(backupId = backupId)
+            }
+            response.toDomainStatus()
+        }
+    }
+
     suspend fun downloadBackupArchive(
-        options: BackupCreationOptions,
+        backupId: String,
         destinationFile: File,
     ): String? {
         return apiExecutor.executeRaw {
             val baseUrl = serverInfoRepository.currentBaseUrl().toHttpUrlOrNull()
                 ?: throw IllegalStateException("Backup base URL is invalid")
             val url = baseUrl.newBuilder()
-                .addPathSegments("backup")
-                .addQueryParameter("include_images", options.includeImages.toString())
-                .addQueryParameter(
-                    "include_transcoded_tracks",
-                    options.includeTranscodedTracks.toString(),
-                )
+                .addPathSegment("backup")
+                .addPathSegment(backupId)
+                .addPathSegment("download")
                 .build()
 
             okHttpClient.newCall(
                 Request.Builder()
                     .url(url)
                     .get()
+                    .header("Accept", "application/zip")
                     .build(),
             ).execute().use { response ->
-                val responseBody = response.body
-                when {
-                    response.isSuccessful -> {
-                        responseBody.byteStream().use { input ->
-                            destinationFile.outputStream().use { output ->
-                                input.copyTo(output)
-                            }
-                        }
-                        extractSuggestedFileName(response.header("Content-Disposition"))
-                    }
-
-                    response.code == 401 -> throw UnauthorizedApiException(
-                        message = "Authentication required",
-                        rawBody = responseBody.string(),
-                    )
-
-                    response.code == 403 -> throw ClientApiException(
-                        statusCode = response.code,
-                        message = "Superuser access required",
-                        rawBody = responseBody.string(),
-                    )
-
-                    response.code in 400..499 -> throw ClientApiException(
-                        statusCode = response.code,
-                        message = "Backup request failed",
-                        rawBody = responseBody.string(),
-                    )
-
-                    else -> throw ServerApiException(
-                        statusCode = response.code,
-                        message = "Backup request failed",
-                        rawBody = responseBody.string(),
-                    )
+                if (!response.isSuccessful) {
+                    throw response.toBackupDownloadException()
                 }
+                response.body.byteStream().use { input ->
+                    destinationFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                extractSuggestedFileName(response.header("Content-Disposition"))
             }
         }
     }
@@ -100,12 +100,27 @@ class BackupRestoreRemoteDataSource @Inject constructor(
             val response = apiExecutor.execute {
                 api.getRestoreStatusWithHttpInfo(restoreId = restoreId)
             }
-            RestoreOperationStatus(
-                restoreId = response.restoreId,
-                state = response.status.toDomainState(),
-                errorMessage = response.error,
-            )
+            response.toDomainStatus()
         }
+    }
+
+    private fun BackupStatusResponse.toDomainStatus(): BackupOperationStatus {
+        return BackupOperationStatus(
+            backupId = backupId,
+            state = status.toDomainState(),
+            includeImages = includeImages,
+            includeTranscodedTracks = includeTranscodedTracks,
+            sizeBytes = sizeBytes,
+            errorMessage = error,
+        )
+    }
+
+    private fun RestoreStatusResponse.toDomainStatus(): RestoreOperationStatus {
+        return RestoreOperationStatus(
+            restoreId = restoreId,
+            state = status.toDomainState(),
+            errorMessage = error,
+        )
     }
 
     private fun extractSuggestedFileName(contentDisposition: String?): String? {
@@ -120,12 +135,50 @@ class BackupRestoreRemoteDataSource @Inject constructor(
             ?: FALLBACK_FILENAME_REGEX.find(contentDisposition)?.groupValues?.getOrNull(1)?.trim()
     }
 
-    private fun RestoreStatusResponse.Status.toDomainState(): RestoreOperationState {
+    private fun Response.toBackupDownloadException(): Exception {
+        val rawBody = body.string()
+        return when (code) {
+            401 -> UnauthorizedApiException(
+                message = "Authentication required",
+                rawBody = rawBody,
+            )
+
+            403 -> ClientApiException(
+                statusCode = code,
+                message = "Superuser access required",
+                rawBody = rawBody,
+            )
+
+            404 -> NotFoundApiException(
+                message = "Backup operation not found",
+                rawBody = rawBody,
+            )
+
+            409 -> ConflictApiException(
+                message = "Backup operation is not finished yet",
+                rawBody = rawBody,
+            )
+
+            in 400..499 -> ClientApiException(
+                statusCode = code,
+                message = "Backup download request failed",
+                rawBody = rawBody,
+            )
+
+            else -> ServerApiException(
+                statusCode = code,
+                message = "Backup download request failed",
+                rawBody = rawBody,
+            )
+        }
+    }
+
+    private fun OperationStatus.toDomainState(): ArchiveOperationState {
         return when (this) {
-            RestoreStatusResponse.Status.pending -> RestoreOperationState.PENDING
-            RestoreStatusResponse.Status.started -> RestoreOperationState.STARTED
-            RestoreStatusResponse.Status.finished -> RestoreOperationState.FINISHED
-            RestoreStatusResponse.Status.error -> RestoreOperationState.ERROR
+            OperationStatus.pending -> ArchiveOperationState.PENDING
+            OperationStatus.started -> ArchiveOperationState.STARTED
+            OperationStatus.finished -> ArchiveOperationState.FINISHED
+            OperationStatus.error -> ArchiveOperationState.ERROR
         }
     }
 

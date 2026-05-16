@@ -72,6 +72,7 @@ import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
 import sstu.grivvus.ym.music.queryDisplayName
+import sstu.grivvus.ym.music.queryDisplayNameWithoutExtension
 import sstu.grivvus.ym.ui.UiText
 import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
@@ -100,11 +101,17 @@ fun LibraryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val backupStatus = uiState.backupStatus
     val restoreStatus = uiState.restoreStatus
+    val isBackupRunning =
+        backupStatus != null && !backupStatus.isFinished && !backupStatus.isFailed
     val isRestoreRunning =
         restoreStatus != null && !restoreStatus.isFinished && !restoreStatus.isFailed
     val isArchiveOperationInProgress =
-        uiState.isCreatingBackup || uiState.isSavingBackup || uiState.isStartingRestore
+        uiState.isCreatingBackup ||
+            uiState.isDownloadingBackup ||
+            uiState.isSavingBackup ||
+            uiState.isStartingRestore
     val pendingDeleteTrackIds = uiState.pendingDeleteTrackIds
     var showBackupDialog by rememberSaveable { mutableStateOf(false) }
     var uploadTrackRequest by remember { mutableStateOf<UploadTrackModalRequest?>(null) }
@@ -133,7 +140,7 @@ fun LibraryScreen(
             uploadTrackRequest = UploadTrackModalRequest(
                 sessionId = System.nanoTime(),
                 uri = uri,
-                initialTitle = context.queryDisplayName(uri),
+                initialTitle = context.queryDisplayNameWithoutExtension(uri),
             )
         }
     }
@@ -252,6 +259,7 @@ fun LibraryScreen(
                     item {
                         BackupRestoreActionsCard(
                             isBusy = isArchiveOperationInProgress,
+                            isBackupRunning = isBackupRunning,
                             isRestoreRunning = isRestoreRunning,
                             onCreateBackupClick = { showBackupDialog = true },
                             onRestoreClick = {
@@ -265,11 +273,24 @@ fun LibraryScreen(
                             },
                         )
                     }
+                    backupStatus
+                        ?.takeIf { status ->
+                            !status.isFinished || status.isFailed || uiState.isDownloadingBackup
+                        }
+                        ?.let { status ->
+                            item {
+                                ArchiveStatusBanner(
+                                    status = status,
+                                    showProgress = !status.isFailed &&
+                                        (!status.isFinished || uiState.isDownloadingBackup),
+                                )
+                            }
+                        }
                     restoreStatus
                         ?.takeIf { status -> !status.isFinished || status.isFailed }
                         ?.let { status ->
                             item {
-                                RestoreStatusBanner(status = status)
+                                ArchiveStatusBanner(status = status)
                             }
                         }
                 }
@@ -348,7 +369,7 @@ fun LibraryScreen(
         BackupOptionsDialog(
             includeImages = uiState.includeImages,
             includeTranscodedTracks = uiState.includeTranscodedTracks,
-            isBusy = isArchiveOperationInProgress || isRestoreRunning,
+            isBusy = isArchiveOperationInProgress || isBackupRunning || isRestoreRunning,
             onDismiss = { showBackupDialog = false },
             onIncludeImagesChange = viewModel::changeIncludeImages,
             onIncludeTranscodedTracksChange = viewModel::changeIncludeTranscodedTracks,
@@ -362,7 +383,7 @@ fun LibraryScreen(
     pendingRestoreRequest?.let { request ->
         RestoreConfirmationDialog(
             archiveName = request.displayName,
-            isBusy = isArchiveOperationInProgress || isRestoreRunning,
+            isBusy = isArchiveOperationInProgress || isBackupRunning || isRestoreRunning,
             onDismiss = { pendingRestoreRequest = null },
             onConfirm = {
                 pendingRestoreRequest = null
@@ -622,6 +643,7 @@ private data class DownloadResultSnackbarVisuals(
 @Composable
 private fun BackupRestoreActionsCard(
     isBusy: Boolean,
+    isBackupRunning: Boolean,
     isRestoreRunning: Boolean,
     onCreateBackupClick: () -> Unit,
     onRestoreClick: () -> Unit,
@@ -637,7 +659,9 @@ private fun BackupRestoreActionsCard(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = if (isRestoreRunning) {
+                text = if (isBackupRunning) {
+                    stringResource(R.string.library_backup_restore_status_backup_running)
+                } else if (isRestoreRunning) {
                     stringResource(R.string.library_backup_restore_status_running)
                 } else if (isBusy) {
                     stringResource(R.string.library_backup_restore_status_busy)
@@ -653,14 +677,20 @@ private fun BackupRestoreActionsCard(
             ) {
                 Button(
                     onClick = onCreateBackupClick,
-                    enabled = !isBusy && !isRestoreRunning,
+                    enabled = !isBusy && !isBackupRunning && !isRestoreRunning,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text(stringResource(R.string.common_action_create_backup))
+                    Text(
+                        if (isBackupRunning) {
+                            stringResource(R.string.library_backing_up)
+                        } else {
+                            stringResource(R.string.common_action_create_backup)
+                        },
+                    )
                 }
                 Button(
                     onClick = onRestoreClick,
-                    enabled = !isBusy && !isRestoreRunning,
+                    enabled = !isBusy && !isBackupRunning && !isRestoreRunning,
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(
@@ -795,7 +825,10 @@ private fun RestoreConfirmationDialog(
 }
 
 @Composable
-private fun RestoreStatusBanner(status: RestoreStatusUi) {
+private fun ArchiveStatusBanner(
+    status: ArchiveStatusUi,
+    showProgress: Boolean = !status.isFinished && !status.isFailed,
+) {
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -807,18 +840,25 @@ private fun RestoreStatusBanner(status: RestoreStatusUi) {
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = stringResource(R.string.library_restore_id, status.restoreId),
+                text = status.idLabel.resolve(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (!status.isFinished && !status.isFailed) {
+            status.sizeBytes?.let { sizeBytes ->
+                Text(
+                    text = stringResource(R.string.library_backup_size_bytes, sizeBytes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (showProgress) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp))
                     Text(
-                        text = stringResource(R.string.library_restore_polling_status),
+                        text = status.pollingMessage.resolve(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

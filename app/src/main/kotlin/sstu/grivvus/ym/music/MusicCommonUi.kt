@@ -93,3 +93,13 @@ fun Context.queryDisplayName(uri: Uri): String {
         }
     return uri.lastPathSegment.orEmpty()
 }
+
+fun Context.queryDisplayNameWithoutExtension(uri: Uri): String {
+    val displayName = queryDisplayName(uri).trim()
+    val extensionSeparatorIndex = displayName.lastIndexOf('.')
+    return if (extensionSeparatorIndex > 0) {
+        displayName.substring(0, extensionSeparatorIndex)
+    } else {
+        displayName
+    }
+}

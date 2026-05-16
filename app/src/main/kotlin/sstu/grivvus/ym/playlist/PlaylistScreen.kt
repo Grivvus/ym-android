@@ -61,7 +61,7 @@ import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
-import sstu.grivvus.ym.music.queryDisplayName
+import sstu.grivvus.ym.music.queryDisplayNameWithoutExtension
 import sstu.grivvus.ym.playback.PlaybackViewModel
 import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
@@ -116,7 +116,7 @@ fun PlaylistScreen(
                 sessionId = System.nanoTime(),
                 playlistId = playlistId,
                 uri = uri,
-                initialTitle = context.queryDisplayName(uri),
+                initialTitle = context.queryDisplayNameWithoutExtension(uri),
             )
         }
     }

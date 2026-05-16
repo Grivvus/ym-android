@@ -52,7 +52,7 @@ import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
-import sstu.grivvus.ym.music.queryDisplayName
+import sstu.grivvus.ym.music.queryDisplayNameWithoutExtension
 import sstu.grivvus.ym.playback.PlaybackViewModel
 import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
@@ -100,7 +100,7 @@ fun AlbumScreen(
             uploadTrackRequest = UploadTrackModalRequest(
                 sessionId = System.nanoTime(),
                 uri = uri,
-                initialTitle = context.queryDisplayName(uri),
+                initialTitle = context.queryDisplayNameWithoutExtension(uri),
                 artistId = currentAlbum.artistId,
                 artistName = currentAlbum.artistName.resolve(context),
                 albumId = currentAlbum.id,
