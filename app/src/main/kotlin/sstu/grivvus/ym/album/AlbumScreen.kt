@@ -3,7 +3,9 @@ package sstu.grivvus.ym.album
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +22,7 @@ import androidx.compose.material.icons.sharp.Delete
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -36,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -54,6 +58,7 @@ import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
 import sstu.grivvus.ym.music.queryDisplayNameWithoutExtension
 import sstu.grivvus.ym.playback.PlaybackViewModel
+import sstu.grivvus.ym.library.LibraryTrackItemUi
 import sstu.grivvus.ym.ui.resolve
 import sstu.grivvus.ym.ui.theme.appIcons
 
@@ -82,6 +87,7 @@ fun AlbumScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val album = uiState.album
+    val pendingRemoveTrackIds = uiState.pendingRemoveTrackIds
     var showDeleteDialog by remember { mutableStateOf(false) }
     var uploadTrackRequest by remember { mutableStateOf<UploadTrackModalRequest?>(null) }
 
@@ -123,31 +129,58 @@ fun AlbumScreen(
         navigateToProfile = navigateToProfile,
         topBar = {
             TopAppBar(
-                title = { Text("") },
+                title = {
+                    Text(
+                        if (uiState.isSelectionMode) {
+                            pluralStringResource(
+                                R.plurals.selected_count,
+                                uiState.selectedTrackIds.size,
+                                uiState.selectedTrackIds.size,
+                            )
+                        } else {
+                            ""
+                        },
+                    )
+                },
                 navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text(stringResource(R.string.common_action_back))
+                    if (uiState.isSelectionMode) {
+                        TextButton(onClick = viewModel::clearSelection) {
+                            Text(stringResource(R.string.common_action_cancel))
+                        }
+                    } else {
+                        TextButton(onClick = onBack) {
+                            Text(stringResource(R.string.common_action_back))
+                        }
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = { viewModel.refresh() },
-                        enabled = !uiState.isMutating,
-                    ) {
-                        Icon(
-                            appIcons.Sync,
-                            contentDescription = stringResource(R.string.common_cd_fetch_data_from_server),
-                        )
-                    }
-                    if (album != null) {
+                    if (uiState.isSelectionMode) {
+                        TextButton(
+                            onClick = viewModel::requestRemoveSelectedTracks,
+                            enabled = !uiState.isMutating,
+                        ) {
+                            Text(stringResource(R.string.common_action_delete))
+                        }
+                    } else {
                         IconButton(
-                            onClick = { showDeleteDialog = true },
+                            onClick = { viewModel.refresh() },
                             enabled = !uiState.isMutating,
                         ) {
                             Icon(
-                                appIcons.Delete,
-                                contentDescription = stringResource(R.string.common_action_delete),
+                                appIcons.Sync,
+                                contentDescription = stringResource(R.string.common_cd_fetch_data_from_server),
                             )
+                        }
+                        if (album != null) {
+                            IconButton(
+                                onClick = { showDeleteDialog = true },
+                                enabled = !uiState.isMutating,
+                            ) {
+                                Icon(
+                                    appIcons.Delete,
+                                    contentDescription = stringResource(R.string.common_action_delete),
+                                )
+                            }
                         }
                     }
                 },
@@ -165,6 +198,8 @@ fun AlbumScreen(
                 AlbumDetails(
                     album = album,
                     isBusy = uiState.isRefreshing || uiState.isMutating,
+                    selectedTrackIds = uiState.selectedTrackIds,
+                    isSelectionMode = uiState.isSelectionMode,
                     onPlayAll = {
                         viewModel.playbackQueueFromStart()?.let { queue ->
                             playbackViewModel.play(queue)
@@ -176,11 +211,16 @@ fun AlbumScreen(
                     onUploadTrack = { audioPicker.launch("audio/*") },
                     onSelectCover = { coverPicker.launch("image/*") },
                     onTrackClick = { trackId ->
-                        viewModel.playbackQueueFor(trackId)?.let { queue ->
-                            playbackViewModel.play(queue)
-                            onOpenPlayer(trackId)
+                        if (uiState.isSelectionMode) {
+                            viewModel.toggleTrackSelection(trackId)
+                        } else {
+                            viewModel.playbackQueueFor(trackId)?.let { queue ->
+                                playbackViewModel.play(queue)
+                                onOpenPlayer(trackId)
+                            }
                         }
                     },
+                    onTrackLongClick = viewModel::onTrackLongPress,
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
@@ -226,6 +266,43 @@ fun AlbumScreen(
         )
     }
 
+    if (pendingRemoveTrackIds.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissRemoveTracksDialog,
+            title = {
+                Text(
+                    pluralStringResource(
+                        R.plurals.album_remove_tracks_title,
+                        pendingRemoveTrackIds.size,
+                        pendingRemoveTrackIds.size,
+                    ),
+                )
+            },
+            text = {
+                Text(
+                    pluralStringResource(
+                        R.plurals.album_remove_tracks_message,
+                        pendingRemoveTrackIds.size,
+                        pendingRemoveTrackIds.size,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::removePendingTracksFromAlbum,
+                    enabled = !uiState.isMutating,
+                ) {
+                    Text(stringResource(R.string.common_action_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissRemoveTracksDialog) {
+                    Text(stringResource(R.string.common_action_cancel))
+                }
+            },
+        )
+    }
+
     uploadTrackRequest?.let { request ->
         UploadTrackModal(
             sessionId = request.sessionId,
@@ -250,10 +327,13 @@ fun AlbumScreen(
 private fun AlbumDetails(
     album: AlbumDetailUi,
     isBusy: Boolean,
+    selectedTrackIds: Set<Long>,
+    isSelectionMode: Boolean,
     onPlayAll: () -> Unit,
     onUploadTrack: () -> Unit,
     onSelectCover: () -> Unit,
     onTrackClick: (Long) -> Unit,
+    onTrackLongClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -342,37 +422,75 @@ private fun AlbumDetails(
             }
         } else {
             items(album.tracks, key = { it.id }) { track ->
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onTrackClick(track.id) },
-                    shape = RoundedCornerShape(20.dp),
-                    tonalElevation = 2.dp,
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                    ) {
-                        Text(
-                            text = track.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = track.subtitle.resolve(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
+                AlbumTrackRow(
+                    track = track,
+                    isSelected = track.id in selectedTrackIds,
+                    isSelectionMode = isSelectionMode,
+                    isBusy = isBusy,
+                    onClick = { onTrackClick(track.id) },
+                    onLongClick = { onTrackLongClick(track.id) },
+                )
             }
         }
 
         item {
             Spacer(modifier = Modifier.height(80.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun AlbumTrackRow(
+    track: LibraryTrackItemUi,
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
+    isBusy: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                enabled = !isBusy,
+                onClick = onClick,
+                onLongClick = onLongClick,
+            ),
+        shape = RoundedCornerShape(20.dp),
+        tonalElevation = if (isSelected) 6.dp else 2.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (isSelectionMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onClick() },
+                    enabled = !isBusy,
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = if (isSelectionMode) 8.dp else 0.dp),
+            ) {
+                Text(
+                    text = track.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = track.subtitle.resolve(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

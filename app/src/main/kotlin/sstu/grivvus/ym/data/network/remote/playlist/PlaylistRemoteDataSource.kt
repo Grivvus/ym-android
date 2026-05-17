@@ -37,6 +37,8 @@ interface PlaylistRemoteDataSource {
 
     suspend fun addTrack(playlistId: Long, trackId: Long)
 
+    suspend fun deleteTrack(playlistId: Long, trackId: Long)
+
     suspend fun uploadCover(playlistId: Long, cover: UploadPart)
 
     suspend fun deleteCover(playlistId: Long)
@@ -147,6 +149,17 @@ class OpenApiPlaylistRemoteDataSource @Inject constructor(
                 api.addTrackToPlaylistWithHttpInfo(
                     playlistId = playlistId.toInt(),
                     addTrackToPlaylistRequest = AddTrackToPlaylistRequest(trackId = trackId.toInt()),
+                )
+            }
+        }
+    }
+
+    override suspend fun deleteTrack(playlistId: Long, trackId: Long) {
+        generatedApiProvider.withAuthorizedApi { api ->
+            apiExecutor.executeUnit {
+                api.deleteTrackFromPlaylistWithHttpInfo(
+                    playlistId = playlistId.toInt(),
+                    trackId = trackId.toInt(),
                 )
             }
         }

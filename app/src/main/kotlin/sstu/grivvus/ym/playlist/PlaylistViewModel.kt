@@ -73,9 +73,14 @@ data class PlaylistUiState(
     val isMutating: Boolean = false,
     val playlist: PlaylistDetailUi? = null,
     val libraryTracks: List<TrackItemUi> = emptyList(),
+    val selectedTrackIds: Set<Long> = emptySet(),
+    val pendingRemoveTrackIds: Set<Long> = emptySet(),
     val sharing: PlaylistSharingUiState = PlaylistSharingUiState(),
     val errorMessage: UiText? = null,
-)
+) {
+    val isSelectionMode: Boolean
+        get() = selectedTrackIds.isNotEmpty()
+}
 
 sealed interface PlaylistScreenEvent {
     data object NavigateBack : PlaylistScreenEvent
@@ -137,6 +142,64 @@ class PlaylistViewModel @Inject constructor(
 
     fun addTracksToPlaylist(trackIds: Collection<Long>) {
         mutate { repository.addTracksToPlaylist(playlistId, trackIds) }
+    }
+
+    fun toggleTrackSelection(trackId: Long) {
+        val state = _uiState.value
+        val playlist = state.playlist ?: return
+        if (!playlist.canEdit || playlist.tracks.none { track -> track.id == trackId }) {
+            return
+        }
+        val selectedTrackIds = if (trackId in state.selectedTrackIds) {
+            state.selectedTrackIds - trackId
+        } else {
+            state.selectedTrackIds + trackId
+        }
+        _uiState.value = state.copy(selectedTrackIds = selectedTrackIds)
+    }
+
+    fun onTrackLongPress(trackId: Long) {
+        toggleTrackSelection(trackId)
+    }
+
+    fun clearSelection() {
+        _uiState.value = _uiState.value.copy(selectedTrackIds = emptySet())
+    }
+
+    fun requestRemoveSelectedTracks() {
+        val selectedTrackIds = _uiState.value.selectedTrackIds
+        if (selectedTrackIds.isEmpty()) {
+            return
+        }
+        _uiState.value = _uiState.value.copy(pendingRemoveTrackIds = selectedTrackIds)
+    }
+
+    fun dismissRemoveTracksDialog() {
+        _uiState.value = _uiState.value.copy(pendingRemoveTrackIds = emptySet())
+    }
+
+    fun removePendingTracksFromPlaylist() {
+        val pendingRemoveTrackIds = _uiState.value.pendingRemoveTrackIds
+        if (pendingRemoveTrackIds.isEmpty()) {
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isMutating = true, errorMessage = null)
+            try {
+                applyLibraryData(repository.removeTracksFromPlaylist(playlistId, pendingRemoveTrackIds))
+                _uiState.value = _uiState.value.copy(
+                    pendingRemoveTrackIds = emptySet(),
+                    selectedTrackIds = emptySet(),
+                )
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (e: Exception) {
+                e.logHandledException("PlaylistViewModel.removePendingTracksFromPlaylist")
+                _uiState.value = _uiState.value.copy(errorMessage = e.toReadableMessage())
+            } finally {
+                _uiState.value = _uiState.value.copy(isMutating = false)
+            }
+        }
     }
 
     fun deletePlaylist() {
@@ -317,6 +380,12 @@ class PlaylistViewModel @Inject constructor(
         val ownerUsername = playlistBundle?.playlist?.ownerRemoteId?.let { ownerRemoteId ->
             resolveOwnerUsername(ownerRemoteId, currentUser.remoteId, currentUser.username)
         }
+        val currentState = _uiState.value
+        val availableTrackIds = playlistBundle?.tracks
+            ?.map { bundle -> bundle.track.remoteId }
+            ?.toSet()
+            .orEmpty()
+        val canSelectTracks = playlistBundle?.playlist?.canEdit == true
         _uiState.value = _uiState.value.copy(
             playlist = playlistBundle?.let { bundle ->
                 PlaylistDetailUi(
@@ -335,6 +404,16 @@ class PlaylistViewModel @Inject constructor(
             },
             libraryTracks = data.libraryTracks.map { track ->
                 toTrackUi(track, artistsById)
+            },
+            selectedTrackIds = if (canSelectTracks) {
+                currentState.selectedTrackIds.intersect(availableTrackIds)
+            } else {
+                emptySet()
+            },
+            pendingRemoveTrackIds = if (canSelectTracks) {
+                currentState.pendingRemoveTrackIds.intersect(availableTrackIds)
+            } else {
+                emptySet()
             },
             errorMessage = if (playlistBundle == null) {
                 UiText.StringResource(R.string.playlist_error_not_found)

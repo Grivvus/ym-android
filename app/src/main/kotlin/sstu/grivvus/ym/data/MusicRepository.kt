@@ -455,6 +455,41 @@ class MusicRepository @Inject constructor(
         buildLocalState()
     }
 
+    suspend fun removeTracksFromPlaylist(
+        playlistId: Long,
+        trackIds: Collection<Long>,
+    ): MusicLibraryData = withContext(dispatcher) {
+        val playlist = requireEditablePlaylist(playlistId)
+        val distinctTrackIds = trackIds.distinct()
+        if (distinctTrackIds.isEmpty()) {
+            return@withContext buildLocalState()
+        }
+        distinctTrackIds.forEach { trackId ->
+            playlistRemoteDataSource.deleteTrack(playlistId, trackId)
+        }
+        playlistTrackDao.deleteTracksFromPlaylist(playlistId, distinctTrackIds)
+        if (!playlist.tracksSeeded) {
+            playlistDao.upsert(playlist.copy(tracksSeeded = true))
+        }
+        buildLocalState()
+    }
+
+    suspend fun removeTracksFromAlbum(
+        albumId: Long,
+        trackIds: Collection<Long>,
+    ): MusicLibraryData = withContext(dispatcher) {
+        albumDao.getById(albumId) ?: throw IOException("Album was not found")
+        val distinctTrackIds = trackIds.distinct()
+        if (distinctTrackIds.isEmpty()) {
+            return@withContext buildLocalState()
+        }
+        distinctTrackIds.forEach { trackId ->
+            albumRemoteDataSource.deleteTrack(albumId, trackId)
+        }
+        trackAlbumDao.deleteTracksFromAlbum(albumId, distinctTrackIds)
+        buildLocalState()
+    }
+
     suspend fun uploadTrackToLibrary(
         trackUri: Uri,
         title: String,

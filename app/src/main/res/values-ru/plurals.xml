@@ -40,4 +40,32 @@
         <item quantity="many">Удалено %d треков</item>
         <item quantity="other">Удалено %d трека</item>
     </plurals>
+
+    <plurals name="playlist_remove_tracks_title">
+        <item quantity="one">Убрать трек из плейлиста</item>
+        <item quantity="few">Убрать треки из плейлиста</item>
+        <item quantity="many">Убрать треки из плейлиста</item>
+        <item quantity="other">Убрать треки из плейлиста</item>
+    </plurals>
+
+    <plurals name="playlist_remove_tracks_message">
+        <item quantity="one">Выбранный трек будет убран из этого плейлиста. В библиотеке он останется.</item>
+        <item quantity="few">Выбранные %d трека будут убраны из этого плейлиста. В библиотеке они останутся.</item>
+        <item quantity="many">Выбранные %d треков будут убраны из этого плейлиста. В библиотеке они останутся.</item>
+        <item quantity="other">Выбранные %d трека будут убраны из этого плейлиста. В библиотеке они останутся.</item>
+    </plurals>
+
+    <plurals name="album_remove_tracks_title">
+        <item quantity="one">Убрать трек из альбома</item>
+        <item quantity="few">Убрать треки из альбома</item>
+        <item quantity="many">Убрать треки из альбома</item>
+        <item quantity="other">Убрать треки из альбома</item>
+    </plurals>
+
+    <plurals name="album_remove_tracks_message">
+        <item quantity="one">Выбранный трек будет убран из этого альбома. В библиотеке он останется.</item>
+        <item quantity="few">Выбранные %d трека будут убраны из этого альбома. В библиотеке они останутся.</item>
+        <item quantity="many">Выбранные %d треков будут убраны из этого альбома. В библиотеке они останутся.</item>
+        <item quantity="other">Выбранные %d трека будут убраны из этого альбома. В библиотеке они останутся.</item>
+    </plurals>
 </resources>

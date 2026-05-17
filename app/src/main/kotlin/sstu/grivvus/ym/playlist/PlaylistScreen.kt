@@ -3,7 +3,9 @@ package sstu.grivvus.ym.playlist
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -92,6 +94,7 @@ fun PlaylistScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val playlist = uiState.playlist
+    val pendingRemoveTrackIds = uiState.pendingRemoveTrackIds
 
     var renameDraft by remember { mutableStateOf<RenamePlaylistDraft?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -136,22 +139,45 @@ fun PlaylistScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("")
+                    Text(
+                        if (uiState.isSelectionMode) {
+                            pluralStringResource(
+                                R.plurals.selected_count,
+                                uiState.selectedTrackIds.size,
+                                uiState.selectedTrackIds.size,
+                            )
+                        } else {
+                            ""
+                        },
+                    )
                 },
                 navigationIcon = {
-                    TextButton(onClick = onBack) {
-                        Text(stringResource(R.string.common_action_back))
+                    if (uiState.isSelectionMode) {
+                        TextButton(onClick = viewModel::clearSelection) {
+                            Text(stringResource(R.string.common_action_cancel))
+                        }
+                    } else {
+                        TextButton(onClick = onBack) {
+                            Text(stringResource(R.string.common_action_back))
+                        }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(
-                            appIcons.Sync,
-                            contentDescription = stringResource(R.string.common_cd_fetch_data_from_server),
-                        )
-                    }
-                    if (playlist != null) {
-                        if (playlist.canDelete) {
+                    if (uiState.isSelectionMode) {
+                        TextButton(
+                            onClick = viewModel::requestRemoveSelectedTracks,
+                            enabled = !uiState.isMutating,
+                        ) {
+                            Text(stringResource(R.string.common_action_delete))
+                        }
+                    } else {
+                        IconButton(onClick = { viewModel.refresh() }) {
+                            Icon(
+                                appIcons.Sync,
+                                contentDescription = stringResource(R.string.common_cd_fetch_data_from_server),
+                            )
+                        }
+                        if (playlist?.canDelete == true) {
                             IconButton(
                                 onClick = {
                                     showSharingDialog = true
@@ -165,8 +191,6 @@ fun PlaylistScreen(
                                     ),
                                 )
                             }
-                        }
-                        if (playlist.canDelete) {
                             IconButton(onClick = { showDeleteDialog = true }) {
                                 Icon(
                                     appIcons.Delete,
@@ -192,6 +216,8 @@ fun PlaylistScreen(
                 PlaylistDetails(
                     playlist = playlist,
                     isBusy = uiState.isMutating || uiState.isRefreshing,
+                    selectedTrackIds = uiState.selectedTrackIds,
+                    isSelectionMode = uiState.isSelectionMode,
                     onPlayAll = {
                         viewModel.playbackQueueFromStart()?.let { queue ->
                             playbackViewModel.play(queue)
@@ -207,11 +233,16 @@ fun PlaylistScreen(
                     },
                     onSelectCover = { coverPicker.launch("image/*") },
                     onTrackClick = { trackId ->
-                        viewModel.playbackQueueFor(trackId)?.let { queue ->
-                            playbackViewModel.play(queue)
-                            onOpenPlayer(trackId)
+                        if (uiState.isSelectionMode) {
+                            viewModel.toggleTrackSelection(trackId)
+                        } else {
+                            viewModel.playbackQueueFor(trackId)?.let { queue ->
+                                playbackViewModel.play(queue)
+                                onOpenPlayer(trackId)
+                            }
                         }
                     },
+                    onTrackLongClick = viewModel::onTrackLongPress,
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
@@ -260,6 +291,43 @@ fun PlaylistScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.common_action_cancel))
+                }
+            },
+        )
+    }
+
+    if (pendingRemoveTrackIds.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissRemoveTracksDialog,
+            title = {
+                Text(
+                    pluralStringResource(
+                        R.plurals.playlist_remove_tracks_title,
+                        pendingRemoveTrackIds.size,
+                        pendingRemoveTrackIds.size,
+                    ),
+                )
+            },
+            text = {
+                Text(
+                    pluralStringResource(
+                        R.plurals.playlist_remove_tracks_message,
+                        pendingRemoveTrackIds.size,
+                        pendingRemoveTrackIds.size,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::removePendingTracksFromPlaylist,
+                    enabled = !uiState.isMutating,
+                ) {
+                    Text(stringResource(R.string.common_action_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissRemoveTracksDialog) {
                     Text(stringResource(R.string.common_action_cancel))
                 }
             },
@@ -464,12 +532,15 @@ private fun AvailableUserRow(
 private fun PlaylistDetails(
     playlist: PlaylistDetailUi,
     isBusy: Boolean,
+    selectedTrackIds: Set<Long>,
+    isSelectionMode: Boolean,
     onPlayAll: () -> Unit,
     onAddExistingTrack: () -> Unit,
     onUploadTrack: () -> Unit,
     onRename: () -> Unit,
     onSelectCover: () -> Unit,
     onTrackClick: (Long) -> Unit,
+    onTrackLongClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -586,7 +657,11 @@ private fun PlaylistDetails(
             items(playlist.tracks, key = { it.id }) { track ->
                 TrackRow(
                     track = track,
+                    isSelected = track.id in selectedTrackIds,
+                    isSelectionMode = isSelectionMode,
+                    isBusy = isBusy,
                     onClick = { onTrackClick(track.id) },
+                    onLongClick = { onTrackLongClick(track.id) },
                 )
             }
         }
@@ -597,17 +672,26 @@ private fun PlaylistDetails(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TrackRow(
     track: TrackItemUi,
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
+    isBusy: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                enabled = !isBusy,
+                onClick = onClick,
+                onLongClick = onLongClick,
+            ),
         shape = RoundedCornerShape(20.dp),
-        tonalElevation = 2.dp,
+        tonalElevation = if (isSelected) 6.dp else 2.dp,
     ) {
         Row(
             modifier = Modifier
@@ -615,6 +699,13 @@ private fun TrackRow(
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (isSelectionMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onClick() },
+                    enabled = !isBusy,
+                )
+            }
             Artwork(
                 uri = track.coverUri,
                 modifier = Modifier.size(56.dp),

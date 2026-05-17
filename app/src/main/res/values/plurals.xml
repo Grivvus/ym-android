@@ -28,4 +28,24 @@
         <item quantity="one">Track deleted</item>
         <item quantity="other">%d tracks deleted</item>
     </plurals>
+
+    <plurals name="playlist_remove_tracks_title">
+        <item quantity="one">Remove track from playlist</item>
+        <item quantity="other">Remove tracks from playlist</item>
+    </plurals>
+
+    <plurals name="playlist_remove_tracks_message">
+        <item quantity="one">The selected track will be removed from this playlist. It will remain in the library.</item>
+        <item quantity="other">The selected %d tracks will be removed from this playlist. They will remain in the library.</item>
+    </plurals>
+
+    <plurals name="album_remove_tracks_title">
+        <item quantity="one">Remove track from album</item>
+        <item quantity="other">Remove tracks from album</item>
+    </plurals>
+
+    <plurals name="album_remove_tracks_message">
+        <item quantity="one">The selected track will be removed from this album. It will remain in the library.</item>
+        <item quantity="other">The selected %d tracks will be removed from this album. They will remain in the library.</item>
+    </plurals>
 </resources>

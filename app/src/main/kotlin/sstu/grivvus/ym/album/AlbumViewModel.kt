@@ -17,6 +17,7 @@ import sstu.grivvus.ym.RouteArguments
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
 import sstu.grivvus.ym.data.TrackBundle
+import sstu.grivvus.ym.data.UserRepository
 import sstu.grivvus.ym.data.local.Artist
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.library.LibraryTrackItemUi
@@ -39,6 +40,7 @@ data class AlbumDetailUi(
     val artistName: UiText,
     val coverUri: Uri? = null,
     val releaseYear: Int? = null,
+    val canRemoveTracks: Boolean = false,
     val tracks: List<LibraryTrackItemUi> = emptyList(),
 )
 
@@ -47,8 +49,13 @@ data class AlbumUiState(
     val isRefreshing: Boolean = false,
     val isMutating: Boolean = false,
     val album: AlbumDetailUi? = null,
+    val selectedTrackIds: Set<Long> = emptySet(),
+    val pendingRemoveTrackIds: Set<Long> = emptySet(),
     val errorMessage: UiText? = null,
-)
+) {
+    val isSelectionMode: Boolean
+        get() = selectedTrackIds.isNotEmpty()
+}
 
 sealed interface AlbumScreenEvent {
     data object NavigateBack : AlbumScreenEvent
@@ -57,6 +64,7 @@ sealed interface AlbumScreenEvent {
 @HiltViewModel
 class AlbumViewModel @Inject constructor(
     private val repository: MusicRepository,
+    private val userRepository: UserRepository,
     private val playbackQueueFactory: PlaybackQueueFactory,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -111,6 +119,64 @@ class AlbumViewModel @Inject constructor(
         mutate { repository.deleteAlbumCover(albumId) }
     }
 
+    fun toggleTrackSelection(trackId: Long) {
+        val state = _uiState.value
+        val album = state.album ?: return
+        if (!album.canRemoveTracks || album.tracks.none { track -> track.id == trackId }) {
+            return
+        }
+        val selectedTrackIds = if (trackId in state.selectedTrackIds) {
+            state.selectedTrackIds - trackId
+        } else {
+            state.selectedTrackIds + trackId
+        }
+        _uiState.value = state.copy(selectedTrackIds = selectedTrackIds)
+    }
+
+    fun onTrackLongPress(trackId: Long) {
+        toggleTrackSelection(trackId)
+    }
+
+    fun clearSelection() {
+        _uiState.value = _uiState.value.copy(selectedTrackIds = emptySet())
+    }
+
+    fun requestRemoveSelectedTracks() {
+        val selectedTrackIds = _uiState.value.selectedTrackIds
+        if (selectedTrackIds.isEmpty()) {
+            return
+        }
+        _uiState.value = _uiState.value.copy(pendingRemoveTrackIds = selectedTrackIds)
+    }
+
+    fun dismissRemoveTracksDialog() {
+        _uiState.value = _uiState.value.copy(pendingRemoveTrackIds = emptySet())
+    }
+
+    fun removePendingTracksFromAlbum() {
+        val pendingRemoveTrackIds = _uiState.value.pendingRemoveTrackIds
+        if (pendingRemoveTrackIds.isEmpty()) {
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isMutating = true, errorMessage = null)
+            try {
+                applyLibraryData(repository.removeTracksFromAlbum(albumId, pendingRemoveTrackIds))
+                _uiState.value = _uiState.value.copy(
+                    pendingRemoveTrackIds = emptySet(),
+                    selectedTrackIds = emptySet(),
+                )
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                error.logHandledException("AlbumViewModel.removePendingTracksFromAlbum")
+                _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
+            } finally {
+                _uiState.value = _uiState.value.copy(isMutating = false)
+            }
+        }
+    }
+
     fun deleteAlbum() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isMutating = true, errorMessage = null)
@@ -161,13 +227,18 @@ class AlbumViewModel @Inject constructor(
         )
     }
 
-    private fun applyLibraryData(data: MusicLibraryData) {
+    private suspend fun applyLibraryData(data: MusicLibraryData) {
         val artistsById = data.artists.associateBy { it.remoteId }
         currentArtistsById = artistsById
         val album = data.albums.firstOrNull { item -> item.remoteId == albumId }
         currentAlbumTracks = data.libraryTracks.filter { track ->
             track.albums.any { linkedAlbum -> linkedAlbum.remoteId == albumId }
         }
+        val canRemoveTracks = userRepository.getCurrentUser()?.isSuperuser == true
+        val currentState = _uiState.value
+        val availableTrackIds = currentAlbumTracks
+            .map { bundle -> bundle.track.remoteId }
+            .toSet()
         _uiState.value = _uiState.value.copy(
             album = album?.let { currentAlbum ->
                 AlbumDetailUi(
@@ -178,13 +249,24 @@ class AlbumViewModel @Inject constructor(
                         ?: UiText.StringResource(
                             R.string.common_placeholder_artist_id,
                             listOf(currentAlbum.artistId),
-                        ),
+                    ),
                     coverUri = currentAlbum.coverUri,
                     releaseYear = albumDisplayReleaseYear(currentAlbum),
+                    canRemoveTracks = canRemoveTracks,
                     tracks = currentAlbumTracks.map { track ->
                         track.toLibraryTrackItemUi(artistsById)
                     },
                 )
+            },
+            selectedTrackIds = if (canRemoveTracks) {
+                currentState.selectedTrackIds.intersect(availableTrackIds)
+            } else {
+                emptySet()
+            },
+            pendingRemoveTrackIds = if (canRemoveTracks) {
+                currentState.pendingRemoveTrackIds.intersect(availableTrackIds)
+            } else {
+                emptySet()
             },
             errorMessage = if (album == null) {
                 UiText.StringResource(R.string.album_error_not_found)
