@@ -1,6 +1,3 @@
-# for this porject it's build-artifact
-openapi/*
-
 .env
 # Gradle files
 .gradle/
