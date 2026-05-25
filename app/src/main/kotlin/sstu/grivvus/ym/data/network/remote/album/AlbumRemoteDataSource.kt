@@ -31,6 +31,8 @@ interface AlbumRemoteDataSource {
 
     suspend fun deleteAlbum(albumId: Long)
 
+    suspend fun addTrack(albumId: Long, trackId: Long)
+
     suspend fun deleteTrack(albumId: Long, trackId: Long)
 
     suspend fun uploadCover(
@@ -107,6 +109,17 @@ class OpenApiAlbumRemoteDataSource @Inject constructor(
                     )
                 },
             )
+        }
+    }
+
+    override suspend fun addTrack(albumId: Long, trackId: Long) {
+        generatedApiProvider.withAuthorizedApi { api ->
+            apiExecutor.executeUnit {
+                api.putTrackToAlbumWithHttpInfo(
+                    albumId = albumId.toInt(),
+                    trackId = trackId.toInt(),
+                )
+            }
         }
     }
 

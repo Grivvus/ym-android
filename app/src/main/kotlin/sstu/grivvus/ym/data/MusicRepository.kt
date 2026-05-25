@@ -560,6 +560,27 @@ class MusicRepository @Inject constructor(
         buildLocalState()
     }
 
+    suspend fun addTracksToAlbum(
+        albumId: Long,
+        trackIds: Collection<Long>,
+    ): MusicLibraryData = withContext(dispatcher) {
+        albumDao.getById(albumId) ?: throw IOException("Album was not found")
+        val distinctTrackIds = trackIds.distinct()
+        if (distinctTrackIds.isEmpty()) {
+            return@withContext buildLocalState()
+        }
+        distinctTrackIds.forEach { trackId ->
+            albumRemoteDataSource.addTrack(albumId, trackId)
+            trackAlbumDao.upsert(
+                TrackAlbumCrossRef(
+                    trackId = trackId,
+                    albumId = albumId,
+                ),
+            )
+        }
+        buildLocalState()
+    }
+
     suspend fun removeTracksFromAlbum(
         albumId: Long,
         trackIds: Collection<Long>,
