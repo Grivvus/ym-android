@@ -14,11 +14,14 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.sharp.Delete
+import androidx.compose.material.icons.sharp.Edit
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -29,6 +32,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -45,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -52,6 +57,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomNavScaffold
+import sstu.grivvus.ym.components.ErrorTooltip
 import sstu.grivvus.ym.components.ScreenStateHost
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
@@ -72,6 +78,12 @@ private data class UploadTrackModalRequest(
     val albumName: String,
 )
 
+private data class EditAlbumDraft(
+    val name: String,
+    val artistId: Long,
+    val releaseYear: String,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumScreen(
@@ -89,7 +101,9 @@ fun AlbumScreen(
     val album = uiState.album
     val pendingRemoveTrackIds = uiState.pendingRemoveTrackIds
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showAddTracksDialog by remember { mutableStateOf(false) }
     var uploadTrackRequest by remember { mutableStateOf<UploadTrackModalRequest?>(null) }
+    var editAlbumDraft by remember { mutableStateOf<EditAlbumDraft?>(null) }
 
     val coverPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -119,6 +133,9 @@ fun AlbumScreen(
         viewModel.events.collectLatest { event ->
             when (event) {
                 AlbumScreenEvent.NavigateBack -> onBack()
+                AlbumScreenEvent.AlbumUpdated -> {
+                    editAlbumDraft = null
+                }
             }
         }
     }
@@ -171,6 +188,23 @@ fun AlbumScreen(
                                 contentDescription = stringResource(R.string.common_cd_fetch_data_from_server),
                             )
                         }
+                        if (album?.canEdit == true) {
+                            IconButton(
+                                onClick = {
+                                    editAlbumDraft = EditAlbumDraft(
+                                        name = album.name.resolve(context),
+                                        artistId = album.artistId,
+                                        releaseYear = album.releaseYear?.toString().orEmpty(),
+                                    )
+                                },
+                                enabled = !uiState.isMutating,
+                            ) {
+                                Icon(
+                                    appIcons.Edit,
+                                    contentDescription = stringResource(R.string.common_action_edit),
+                                )
+                            }
+                        }
                         if (album != null) {
                             IconButton(
                                 onClick = { showDeleteDialog = true },
@@ -190,7 +224,7 @@ fun AlbumScreen(
     ) { innerPadding ->
         ScreenStateHost(
             isLoading = uiState.isLoading && album == null,
-            errorMessage = uiState.errorMessage,
+            errorMessage = if (editAlbumDraft != null) null else uiState.errorMessage,
             onDismissError = viewModel::dismissError,
             modifier = Modifier.padding(innerPadding),
         ) {
@@ -208,6 +242,7 @@ fun AlbumScreen(
                             onOpenPlayer(trackId)
                         }
                     },
+                    onAddExistingTrack = { showAddTracksDialog = true },
                     onUploadTrack = { audioPicker.launch("audio/*") },
                     onSelectCover = { coverPicker.launch("image/*") },
                     onTrackClick = { trackId ->
@@ -237,6 +272,36 @@ fun AlbumScreen(
                 }
             }
         }
+    }
+
+    editAlbumDraft?.let { draft ->
+        EditAlbumDialog(
+            draft = draft,
+            artists = uiState.artists,
+            isBusy = uiState.isMutating,
+            errorMessage = uiState.errorMessage?.resolve(),
+            onDismiss = {
+                editAlbumDraft = null
+                viewModel.dismissError()
+            },
+            onDismissError = viewModel::dismissError,
+            onNameChange = { value ->
+                editAlbumDraft = draft.copy(name = value)
+            },
+            onArtistSelected = { artistId ->
+                editAlbumDraft = draft.copy(artistId = artistId)
+            },
+            onReleaseYearChange = { value ->
+                editAlbumDraft = draft.copy(releaseYear = value)
+            },
+            onConfirm = {
+                viewModel.updateAlbumMetadata(
+                    name = draft.name,
+                    artistId = draft.artistId,
+                    releaseYearInput = draft.releaseYear,
+                )
+            },
+        )
     }
 
     if (showDeleteDialog) {
@@ -303,6 +368,19 @@ fun AlbumScreen(
         )
     }
 
+    if (showAddTracksDialog && album != null && album.canRemoveTracks) {
+        val selectedIds = album.tracks.map { it.id }.toSet()
+        AddTracksDialog(
+            tracks = uiState.libraryTracks.filterNot { it.id in selectedIds },
+            isBusy = uiState.isMutating,
+            onDismiss = { showAddTracksDialog = false },
+            onConfirm = { trackIds ->
+                viewModel.addTracksToAlbum(trackIds)
+                showAddTracksDialog = false
+            },
+        )
+    }
+
     uploadTrackRequest?.let { request ->
         UploadTrackModal(
             sessionId = request.sessionId,
@@ -324,12 +402,130 @@ fun AlbumScreen(
 }
 
 @Composable
+private fun EditAlbumDialog(
+    draft: EditAlbumDraft,
+    artists: List<AlbumArtistOptionUi>,
+    isBusy: Boolean,
+    errorMessage: String?,
+    onDismiss: () -> Unit,
+    onDismissError: () -> Unit,
+    onNameChange: (String) -> Unit,
+    onArtistSelected: (Long) -> Unit,
+    onReleaseYearChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.album_edit_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = draft.name,
+                    onValueChange = { value ->
+                        onDismissError()
+                        onNameChange(value)
+                    },
+                    label = { Text(stringResource(R.string.common_label_album_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = draft.releaseYear,
+                    onValueChange = { value ->
+                        if (value.length <= 4 && value.all(Char::isDigit)) {
+                            onDismissError()
+                            onReleaseYearChange(value)
+                        }
+                    },
+                    label = { Text(stringResource(R.string.common_label_release_year)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = stringResource(R.string.common_label_artist),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                if (artists.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.album_edit_no_artists),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 220.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(artists, key = { it.id }) { artist ->
+                            val isSelected = artist.id == draft.artistId
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onDismissError()
+                                        onArtistSelected(artist.id)
+                                    },
+                                shape = RoundedCornerShape(18.dp),
+                                tonalElevation = if (isSelected) 4.dp else 0.dp,
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Checkbox(
+                                        checked = isSelected,
+                                        onCheckedChange = {
+                                            onDismissError()
+                                            onArtistSelected(artist.id)
+                                        },
+                                        enabled = !isBusy,
+                                    )
+                                    Text(
+                                        text = artist.name.resolve(),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(start = 8.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                ErrorTooltip(
+                    message = errorMessage.orEmpty(),
+                    visible = errorMessage != null,
+                    onDismiss = onDismissError,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = draft.name.isNotBlank() && artists.any { it.id == draft.artistId } && !isBusy,
+            ) {
+                Text(stringResource(R.string.common_action_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_action_cancel))
+            }
+        },
+    )
+}
+
+@Composable
 private fun AlbumDetails(
     album: AlbumDetailUi,
     isBusy: Boolean,
     selectedTrackIds: Set<Long>,
     isSelectionMode: Boolean,
     onPlayAll: () -> Unit,
+    onAddExistingTrack: () -> Unit,
     onUploadTrack: () -> Unit,
     onSelectCover: () -> Unit,
     onTrackClick: (Long) -> Unit,
@@ -389,6 +585,14 @@ private fun AlbumDetails(
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (album.canRemoveTracks) {
+                            FilledTonalButton(
+                                onClick = onAddExistingTrack,
+                                enabled = !isBusy,
+                            ) {
+                                Text(stringResource(R.string.common_action_add_from_library))
+                            }
+                        }
                         Button(onClick = onUploadTrack, enabled = !isBusy) {
                             Text(stringResource(R.string.common_action_upload_track))
                         }
@@ -437,6 +641,70 @@ private fun AlbumDetails(
             Spacer(modifier = Modifier.height(80.dp))
         }
     }
+}
+
+@Composable
+private fun AddTracksDialog(
+    tracks: List<LibraryTrackItemUi>,
+    isBusy: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<Long>) -> Unit,
+) {
+    var selectedIds by remember(tracks) { mutableStateOf(emptySet<Long>()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.playlist_add_tracks_title)) },
+        text = {
+            if (tracks.isEmpty()) {
+                Text(stringResource(R.string.album_all_library_tracks_added))
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(tracks, key = { it.id }) { track ->
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedIds =
+                                        if (track.id in selectedIds) selectedIds - track.id
+                                        else selectedIds + track.id
+                                },
+                            shape = RoundedCornerShape(18.dp),
+                            tonalElevation = if (track.id in selectedIds) 4.dp else 0.dp,
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = track.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = track.subtitle.resolve(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(selectedIds) },
+                enabled = selectedIds.isNotEmpty() && !isBusy,
+            ) {
+                Text(stringResource(R.string.common_action_add))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_action_cancel))
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)

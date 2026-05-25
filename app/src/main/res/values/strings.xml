@@ -26,6 +26,7 @@
     <string name="common_action_play">Play</string>
     <string name="common_action_pause">Pause</string>
     <string name="common_action_open">Open</string>
+    <string name="common_action_edit">Edit</string>
     <string name="common_action_select_cover">Select cover</string>
     <string name="common_action_upload">Upload</string>
     <string name="common_action_upload_track">Upload track</string>
@@ -48,6 +49,7 @@
     <string name="common_label_server_host">Server host</string>
     <string name="common_label_server_port">Server port</string>
     <string name="common_label_playlist_name">Playlist name</string>
+    <string name="common_label_artist_name">Artist name</string>
     <string name="common_label_album_name">Album name</string>
     <string name="common_label_track_title">Track title</string>
     <string name="common_label_artist">Artist</string>
@@ -82,6 +84,7 @@
     <string name="common_validation_passwords_must_match">Passwords should match</string>
     <string name="common_validation_artist_name_required">Artist name is required</string>
     <string name="common_validation_album_name_required">Album name is required</string>
+    <string name="common_validation_release_year_invalid">Release year must be a number from 1 to 9999</string>
     <string name="common_validation_complete_required_fields">Complete all required fields</string>
     <string name="common_placeholder_single">Single</string>
     <string name="common_placeholder_artist_id">Artist #%1$d</string>
@@ -174,7 +177,10 @@
     <string name="album_status_applying_changes">Applying changes...</string>
     <string name="album_empty_title">Album is empty</string>
     <string name="album_empty_description">No tracks linked to this album are available in the local library.</string>
+    <string name="album_all_library_tracks_added">All library tracks are already in this album.</string>
     <string name="album_error_not_found">Album was not found</string>
+    <string name="album_edit_title">Edit album</string>
+    <string name="album_edit_no_artists">No artists are available.</string>
     <string name="album_delete_title">Delete album</string>
     <string name="album_delete_message">Album cover and metadata will be removed from the server and local storage. Tracks will remain in the library.</string>
 
@@ -182,6 +188,7 @@
     <string name="artist_unavailable_title">Artist unavailable</string>
     <string name="artist_unavailable_description">This artist could not be loaded from the current library state.</string>
     <string name="artist_status_refreshing">Refreshing artist...</string>
+    <string name="artist_edit_title">Edit artist</string>
     <string name="artist_empty_title">No albums</string>
     <string name="artist_empty_description">No albums for this artist are available in the local library.</string>
     <string name="artist_error_not_found">Artist was not found</string>

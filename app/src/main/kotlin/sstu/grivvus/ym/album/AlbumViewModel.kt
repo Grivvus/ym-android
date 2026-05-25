@@ -31,7 +31,13 @@ import sstu.grivvus.ym.playback.queue.PlaybackQueueFactory
 import sstu.grivvus.ym.ui.UiText
 import sstu.grivvus.ym.ui.asUiTextOrNull
 import java.io.IOException
+import java.time.LocalDate
 import javax.inject.Inject
+
+data class AlbumArtistOptionUi(
+    val id: Long,
+    val name: UiText,
+)
 
 data class AlbumDetailUi(
     val id: Long,
@@ -40,6 +46,8 @@ data class AlbumDetailUi(
     val artistName: UiText,
     val coverUri: Uri? = null,
     val releaseYear: Int? = null,
+    val releaseDate: LocalDate? = null,
+    val canEdit: Boolean = false,
     val canRemoveTracks: Boolean = false,
     val tracks: List<LibraryTrackItemUi> = emptyList(),
 )
@@ -49,6 +57,8 @@ data class AlbumUiState(
     val isRefreshing: Boolean = false,
     val isMutating: Boolean = false,
     val album: AlbumDetailUi? = null,
+    val artists: List<AlbumArtistOptionUi> = emptyList(),
+    val libraryTracks: List<LibraryTrackItemUi> = emptyList(),
     val selectedTrackIds: Set<Long> = emptySet(),
     val pendingRemoveTrackIds: Set<Long> = emptySet(),
     val errorMessage: UiText? = null,
@@ -59,6 +69,7 @@ data class AlbumUiState(
 
 sealed interface AlbumScreenEvent {
     data object NavigateBack : AlbumScreenEvent
+    data object AlbumUpdated : AlbumScreenEvent
 }
 
 @HiltViewModel
@@ -117,6 +128,66 @@ class AlbumViewModel @Inject constructor(
 
     fun deleteAlbumCover() {
         mutate { repository.deleteAlbumCover(albumId) }
+    }
+
+    fun addTracksToAlbum(trackIds: Collection<Long>) {
+        if (_uiState.value.album?.canRemoveTracks != true) {
+            return
+        }
+        mutate { repository.addTracksToAlbum(albumId, trackIds) }
+    }
+
+    fun updateAlbumMetadata(
+        name: String,
+        artistId: Long,
+        releaseYearInput: String,
+    ) {
+        val album = _uiState.value.album ?: return
+        if (!album.canEdit) {
+            return
+        }
+        val normalizedName = name.trim()
+        if (normalizedName.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = UiText.StringResource(R.string.common_validation_album_name_required),
+            )
+            return
+        }
+
+        val normalizedYearInput = releaseYearInput.trim()
+        val releaseYear = if (normalizedYearInput.isBlank()) {
+            null
+        } else {
+            normalizedYearInput.toIntOrNull()?.takeIf { year -> year in 1..9999 } ?: run {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = UiText.StringResource(R.string.common_validation_release_year_invalid),
+                )
+                return
+            }
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isMutating = true, errorMessage = null)
+            try {
+                applyLibraryData(
+                    repository.updateAlbumMetadata(
+                        albumId = albumId,
+                        artistId = artistId,
+                        name = normalizedName,
+                        releaseYear = releaseYear,
+                        releaseDate = album.releaseDate,
+                    ),
+                )
+                _events.emit(AlbumScreenEvent.AlbumUpdated)
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                error.logHandledException("AlbumViewModel.updateAlbumMetadata")
+                _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
+            } finally {
+                _uiState.value = _uiState.value.copy(isMutating = false)
+            }
+        }
     }
 
     fun toggleTrackSelection(trackId: Long) {
@@ -234,7 +305,7 @@ class AlbumViewModel @Inject constructor(
         currentAlbumTracks = data.libraryTracks.filter { track ->
             track.albums.any { linkedAlbum -> linkedAlbum.remoteId == albumId }
         }
-        val canRemoveTracks = userRepository.getCurrentUser()?.isSuperuser == true
+        val canEditAlbum = userRepository.getCurrentUser()?.isSuperuser == true
         val currentState = _uiState.value
         val availableTrackIds = currentAlbumTracks
             .map { bundle -> bundle.track.remoteId }
@@ -252,18 +323,31 @@ class AlbumViewModel @Inject constructor(
                     ),
                     coverUri = currentAlbum.coverUri,
                     releaseYear = albumDisplayReleaseYear(currentAlbum),
-                    canRemoveTracks = canRemoveTracks,
+                    releaseDate = currentAlbum.releaseDate,
+                    canEdit = canEditAlbum,
+                    canRemoveTracks = canEditAlbum,
                     tracks = currentAlbumTracks.map { track ->
                         track.toLibraryTrackItemUi(artistsById)
                     },
                 )
             },
-            selectedTrackIds = if (canRemoveTracks) {
+            artists = data.artists
+                .sortedWith(compareBy<Artist> { it.name.lowercase() }.thenBy { it.remoteId })
+                .map { artist ->
+                    AlbumArtistOptionUi(
+                        id = artist.remoteId,
+                        name = artistDisplayName(artist),
+                    )
+                },
+            libraryTracks = data.libraryTracks.map { track ->
+                track.toLibraryTrackItemUi(artistsById)
+            },
+            selectedTrackIds = if (canEditAlbum) {
                 currentState.selectedTrackIds.intersect(availableTrackIds)
             } else {
                 emptySet()
             },
-            pendingRemoveTrackIds = if (canRemoveTracks) {
+            pendingRemoveTrackIds = if (canEditAlbum) {
                 currentState.pendingRemoveTrackIds.intersect(availableTrackIds)
             } else {
                 emptySet()

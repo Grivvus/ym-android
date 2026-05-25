@@ -28,6 +28,7 @@ import sstu.grivvus.ym.data.network.model.NetworkArtist
 import sstu.grivvus.ym.data.network.model.NetworkPlaylist
 import sstu.grivvus.ym.data.network.model.NetworkPlaylistDetails
 import sstu.grivvus.ym.data.network.model.NetworkPlaylistEmpty
+import sstu.grivvus.ym.data.network.model.NetworkTrack
 import sstu.grivvus.ym.data.network.model.NetworkUser
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
 import sstu.grivvus.ym.data.network.remote.album.AlbumRemoteDataSource
@@ -208,6 +209,49 @@ class MusicRepositoryTest {
         assertThat(data.playlists).isEmpty()
         assertThat(database.playlistDao().getById(60L)).isNotNull()
         assertThat(database.playlistDao().getById(61L)).isNull()
+    }
+
+    @Test
+    fun loadLibrary_usesAlbumTrackListsForAlbumComposition() = runTest {
+        coEvery { artistRemoteDataSource.getAllArtists() } returns listOf(
+            NetworkArtist(
+                id = 1L,
+                name = "Artist",
+                albumIds = listOf(10L, 11L),
+            ),
+        )
+        coEvery { trackRemoteDataSource.getMyTracks() } returns listOf(
+            NetworkTrack(
+                id = 100L,
+                name = "Track",
+                artistId = 1L,
+                albumId = 10L,
+                durationMs = 1_000L,
+                isGloballyAvailable = true,
+            ),
+        )
+        coEvery { albumRemoteDataSource.getAlbum(10L) } returns NetworkAlbum(
+            id = 10L,
+            artistId = 1L,
+            name = "Primary Album",
+            trackIds = emptyList(),
+        )
+        coEvery { albumRemoteDataSource.getAlbum(11L) } returns NetworkAlbum(
+            id = 11L,
+            artistId = 1L,
+            name = "Compilation",
+            trackIds = listOf(100L),
+        )
+        coEvery { playlistRemoteDataSource.getAvailablePlaylists(PlaylistFilters()) } returns emptyList()
+        every { serverInfoRepository.albumCoverUri(any(), any()) } returns
+                Uri.parse("https://example.com/albums/0/cover")
+
+        val repository = createRepository()
+
+        val data = repository.loadLibrary(refreshFromNetwork = true)
+
+        assertThat(data.libraryTracks.single().albums.map { it.remoteId }).containsExactly(11L)
+        assertThat(database.trackAlbumDao().getAlbumIdsForTrack(100L)).containsExactly(11L)
     }
 
     @Test

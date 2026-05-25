@@ -100,6 +100,9 @@ interface TrackAlbumDao {
     @Query("DELETE FROM track_album_cross_ref WHERE track_id = :trackId")
     suspend fun deleteForTrack(trackId: Long)
 
+    @Query("DELETE FROM track_album_cross_ref WHERE album_id IN (:albumIds)")
+    suspend fun deleteForAlbums(albumIds: Collection<Long>)
+
     @Query("DELETE FROM track_album_cross_ref WHERE album_id = :albumId AND track_id IN (:trackIds)")
     suspend fun deleteTracksFromAlbum(albumId: Long, trackIds: Collection<Long>)
 

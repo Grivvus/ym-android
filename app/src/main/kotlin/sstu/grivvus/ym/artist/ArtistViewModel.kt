@@ -16,6 +16,7 @@ import sstu.grivvus.ym.R
 import sstu.grivvus.ym.RouteArguments
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
+import sstu.grivvus.ym.data.UserRepository
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.library.albumDisplayReleaseYear
 import sstu.grivvus.ym.library.albumDisplayName
@@ -38,6 +39,7 @@ data class ArtistDetailUi(
     val id: Long,
     val name: UiText,
     val imageUri: Uri? = null,
+    val canEdit: Boolean = false,
     val albums: List<ArtistAlbumItemUi> = emptyList(),
 )
 
@@ -51,11 +53,13 @@ data class ArtistUiState(
 
 sealed interface ArtistScreenEvent {
     data class AlbumCreated(val albumId: Long) : ArtistScreenEvent
+    data object ArtistUpdated : ArtistScreenEvent
 }
 
 @HiltViewModel
 class ArtistViewModel @Inject constructor(
     private val repository: MusicRepository,
+    private val userRepository: UserRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val artistId: Long = checkNotNull(savedStateHandle.get<Long>(RouteArguments.ARTIST_ID))
@@ -107,6 +111,35 @@ class ArtistViewModel @Inject constructor(
         mutate { repository.deleteArtistCover(artistId) }
     }
 
+    fun updateArtistName(name: String) {
+        val normalizedName = name.trim()
+        if (normalizedName.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = UiText.StringResource(R.string.common_validation_artist_name_required),
+            )
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isMutating = true, errorMessage = null)
+            try {
+                applyLibraryData(
+                    repository.updateArtistMetadata(
+                        artistId = artistId,
+                        name = normalizedName,
+                    ),
+                )
+                _events.emit(ArtistScreenEvent.ArtistUpdated)
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                error.logHandledException("ArtistViewModel.updateArtistName")
+                _uiState.value = _uiState.value.copy(errorMessage = error.toReadableMessage())
+            } finally {
+                _uiState.value = _uiState.value.copy(isMutating = false)
+            }
+        }
+    }
+
     fun createAlbum(name: String, releaseYearInput: String, coverUri: Uri?) {
         val normalizedName = name.trim()
         if (normalizedName.isBlank()) {
@@ -122,7 +155,7 @@ class ArtistViewModel @Inject constructor(
         } else {
             normalizedYearInput.toIntOrNull()?.takeIf { year -> year in 1..9999 } ?: run {
                 _uiState.value = _uiState.value.copy(
-                    errorMessage = UiText.StringResource(R.string.artist_error_invalid_release_year),
+                    errorMessage = UiText.StringResource(R.string.common_validation_release_year_invalid),
                 )
                 return
             }
@@ -150,14 +183,16 @@ class ArtistViewModel @Inject constructor(
         }
     }
 
-    private fun applyLibraryData(data: MusicLibraryData) {
+    private suspend fun applyLibraryData(data: MusicLibraryData) {
         val artist = data.artists.firstOrNull { item -> item.remoteId == artistId }
+        val canEdit = userRepository.getCurrentUser()?.isSuperuser == true
         _uiState.value = _uiState.value.copy(
             artist = artist?.let { currentArtist ->
                 ArtistDetailUi(
                     id = currentArtist.remoteId,
                     name = artistDisplayName(currentArtist),
                     imageUri = currentArtist.imageUri,
+                    canEdit = canEdit,
                     albums = data.albums
                         .filter { album -> album.artistId == artistId }
                         .map { album ->

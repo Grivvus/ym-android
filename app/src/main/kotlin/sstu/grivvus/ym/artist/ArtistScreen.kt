@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.sharp.Delete
+import androidx.compose.material.icons.sharp.Edit
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ElevatedCard
@@ -38,6 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -61,6 +63,10 @@ private data class CreateAlbumDraft(
     val coverUri: Uri? = null,
 )
 
+private data class EditArtistDraft(
+    val name: String,
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArtistScreen(
@@ -73,9 +79,11 @@ fun ArtistScreen(
     viewModel: ArtistViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val artist = uiState.artist
     var showCreateAlbumDialog by rememberSaveable { mutableStateOf(false) }
     var createAlbumDraft by remember { mutableStateOf(CreateAlbumDraft()) }
+    var editArtistDraft by remember { mutableStateOf<EditArtistDraft?>(null) }
 
     val albumCoverPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -97,6 +105,10 @@ fun ArtistScreen(
                     showCreateAlbumDialog = false
                     createAlbumDraft = CreateAlbumDraft()
                 }
+
+                ArtistScreenEvent.ArtistUpdated -> {
+                    editArtistDraft = null
+                }
             }
         }
     }
@@ -116,6 +128,21 @@ fun ArtistScreen(
                     }
                 },
                 actions = {
+                    if (artist?.canEdit == true) {
+                        IconButton(
+                            onClick = {
+                                editArtistDraft = EditArtistDraft(
+                                    name = artist.name.resolve(context),
+                                )
+                            },
+                            enabled = !uiState.isMutating,
+                        ) {
+                            Icon(
+                                appIcons.Edit,
+                                contentDescription = stringResource(R.string.common_action_edit),
+                            )
+                        }
+                    }
                     TextButton(
                         onClick = { showCreateAlbumDialog = true },
                         enabled = artist != null && !uiState.isMutating,
@@ -138,7 +165,11 @@ fun ArtistScreen(
     ) { innerPadding ->
         ScreenStateHost(
             isLoading = uiState.isLoading && artist == null,
-            errorMessage = if (showCreateAlbumDialog) null else uiState.errorMessage,
+            errorMessage = if (showCreateAlbumDialog || editArtistDraft != null) {
+                null
+            } else {
+                uiState.errorMessage
+            },
             onDismissError = viewModel::dismissError,
             modifier = Modifier.padding(innerPadding),
         ) {
@@ -166,6 +197,25 @@ fun ArtistScreen(
                 }
             }
         }
+    }
+
+    editArtistDraft?.let { draft ->
+        EditArtistDialog(
+            draft = draft,
+            isBusy = uiState.isMutating,
+            errorMessage = uiState.errorMessage?.resolve(),
+            onDismiss = {
+                editArtistDraft = null
+                viewModel.dismissError()
+            },
+            onDismissError = viewModel::dismissError,
+            onNameChange = { value ->
+                editArtistDraft = draft.copy(name = value)
+            },
+            onConfirm = {
+                viewModel.updateArtistName(draft.name)
+            },
+        )
     }
 
     if (showCreateAlbumDialog && artist != null) {
@@ -198,6 +248,54 @@ fun ArtistScreen(
             },
         )
     }
+}
+
+@Composable
+private fun EditArtistDialog(
+    draft: EditArtistDraft,
+    isBusy: Boolean,
+    errorMessage: String?,
+    onDismiss: () -> Unit,
+    onDismissError: () -> Unit,
+    onNameChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.artist_edit_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = draft.name,
+                    onValueChange = { value ->
+                        onDismissError()
+                        onNameChange(value)
+                    },
+                    label = { Text(stringResource(R.string.common_label_artist_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                ErrorTooltip(
+                    message = errorMessage.orEmpty(),
+                    visible = errorMessage != null,
+                    onDismiss = onDismissError,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = draft.name.isNotBlank() && !isBusy,
+            ) {
+                Text(stringResource(R.string.common_action_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_action_cancel))
+            }
+        },
+    )
 }
 
 @Composable

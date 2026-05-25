@@ -25,6 +25,7 @@
     <string name="common_action_play">Воспроизвести</string>
     <string name="common_action_pause">Пауза</string>
     <string name="common_action_open">Открыть</string>
+    <string name="common_action_edit">Редактировать</string>
     <string name="common_action_select_cover">Выбрать обложку</string>
     <string name="common_action_upload">Загрузить</string>
     <string name="common_action_upload_track">Загрузить трек</string>
@@ -47,6 +48,7 @@
     <string name="common_label_server_host">Хост сервера</string>
     <string name="common_label_server_port">Порт сервера</string>
     <string name="common_label_playlist_name">Название плейлиста</string>
+    <string name="common_label_artist_name">Имя исполнителя</string>
     <string name="common_label_album_name">Название альбома</string>
     <string name="common_label_track_title">Название трека</string>
     <string name="common_label_artist">Исполнитель</string>
@@ -81,6 +83,7 @@
     <string name="common_validation_passwords_must_match">Пароли должны совпадать</string>
     <string name="common_validation_artist_name_required">Необходимо указать имя исполнителя</string>
     <string name="common_validation_album_name_required">Необходимо указать название альбома</string>
+    <string name="common_validation_release_year_invalid">Год выпуска должен быть числом от 1 до 9999</string>
     <string name="common_validation_complete_required_fields">Заполните все обязательные поля</string>
     <string name="common_placeholder_single">Сингл</string>
     <string name="common_placeholder_artist_id">Исполнитель #%1$d</string>
@@ -173,7 +176,10 @@
     <string name="album_status_applying_changes">Применение изменений...</string>
     <string name="album_empty_title">Альбом пуст</string>
     <string name="album_empty_description">В локальной библиотеке нет треков, связанных с этим альбомом.</string>
+    <string name="album_all_library_tracks_added">Все треки из библиотеки уже добавлены в этот альбом.</string>
     <string name="album_error_not_found">Альбом не найден</string>
+    <string name="album_edit_title">Редактировать альбом</string>
+    <string name="album_edit_no_artists">Нет доступных исполнителей.</string>
     <string name="album_delete_title">Удалить альбом</string>
     <string name="album_delete_message">Обложка и метаданные альбома будут удалены с сервера и из локального хранилища. Треки останутся в библиотеке.</string>
 
@@ -181,6 +187,7 @@
     <string name="artist_unavailable_title">Исполнитель недоступен</string>
     <string name="artist_unavailable_description">Не удалось загрузить информацию об исполнителе</string>
     <string name="artist_status_refreshing">Обновление исполнителя...</string>
+    <string name="artist_edit_title">Редактировать исполнителя</string>
     <string name="artist_empty_title">Нет альбомов</string>
     <string name="artist_empty_description">В локальной библиотеке нет альбомов этого исполнителя.</string>
     <string name="artist_error_not_found">Исполнитель не найден</string>

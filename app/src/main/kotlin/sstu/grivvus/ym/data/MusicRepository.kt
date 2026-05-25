@@ -24,6 +24,7 @@ import sstu.grivvus.ym.data.local.TrackAlbumCrossRef
 import sstu.grivvus.ym.data.local.TrackAlbumDao
 import sstu.grivvus.ym.data.network.auth.AuthSessionManager
 import sstu.grivvus.ym.data.network.core.ConflictApiException
+import sstu.grivvus.ym.data.network.model.NetworkAlbum
 import sstu.grivvus.ym.data.network.model.TrackQuality
 import sstu.grivvus.ym.data.network.model.UploadPart
 import sstu.grivvus.ym.data.network.remote.album.AlbumRemoteDataSource
@@ -173,6 +174,7 @@ class MusicRepository @Inject constructor(
                 albumDao.upsertAll(
                     albumsToStore,
                 )
+                replaceAlbumTrackLinks(remoteAlbums)
             }
         }
 
@@ -841,11 +843,16 @@ class MusicRepository @Inject constructor(
         val downloadedTrackFiles = localTrackFileStore.findDownloadedFiles(remoteTrackIds)
 
         val existingAlbumsById = albumDao.getAll().associateBy { it.remoteId }
-        val albumIds = remoteTracks.map { it.albumId }.distinct()
+        val albumIds = (remoteTracks.map { it.albumId } +
+                existingArtists.flatMap { artist -> artist.albumIds } +
+                missingArtists.flatMap { artist -> artist.albumIds })
+            .distinct()
+        val fetchedRemoteAlbums = mutableListOf<NetworkAlbum>()
         val fetchedAlbums = mutableListOf<Album>()
         albumIds.forEach { albumId ->
             val album = runCatching { albumRemoteDataSource.getAlbum(albumId) }.getOrNull()
                 ?: return@forEach
+            fetchedRemoteAlbums += album
             val existingAlbum = existingAlbumsById[album.id]
             fetchedAlbums += Album(
                 remoteId = album.id,
@@ -893,18 +900,37 @@ class MusicRepository @Inject constructor(
             },
         )
         trackAlbumDao.clearAll()
-        trackAlbumDao.insertAll(
-            remoteTracks.mapNotNull { track ->
-                if (track.albumId !in availableAlbumIds) {
-                    null
-                } else {
-                    TrackAlbumCrossRef(
-                        trackId = track.id,
-                        albumId = track.albumId,
-                    )
-                }
-            },
-        )
+        val albumTrackRefs = fetchedRemoteAlbums
+            .filter { album -> album.id in availableAlbumIds }
+            .flatMap { album ->
+                album.trackIds
+                    .filter { trackId -> trackId in remoteTrackIds }
+                    .map { trackId ->
+                        TrackAlbumCrossRef(
+                            trackId = trackId,
+                            albumId = album.id,
+                        )
+                    }
+            }
+            .distinct()
+        if (albumTrackRefs.isNotEmpty()) {
+            trackAlbumDao.insertAll(albumTrackRefs)
+        }
+
+        val fetchedAlbumIds = fetchedRemoteAlbums.map { album -> album.id }.toSet()
+        val fallbackTrackAlbumRefs = remoteTracks.mapNotNull { track ->
+            if (track.albumId !in availableAlbumIds || track.albumId in fetchedAlbumIds) {
+                null
+            } else {
+                TrackAlbumCrossRef(
+                    trackId = track.id,
+                    albumId = track.albumId,
+                )
+            }
+        }
+        if (fallbackTrackAlbumRefs.isNotEmpty()) {
+            trackAlbumDao.insertAll(fallbackTrackAlbumRefs)
+        }
 
         val remotePlaylistSummaries =
             playlistRemoteDataSource.getAvailablePlaylists(playlistFilters)
@@ -997,6 +1023,30 @@ class MusicRepository @Inject constructor(
             artists = artists,
             albums = albums,
         )
+    }
+
+    private suspend fun replaceAlbumTrackLinks(remoteAlbums: List<NetworkAlbum>) {
+        val albumIds = remoteAlbums.map { album -> album.id }.distinct()
+        if (albumIds.isEmpty()) {
+            return
+        }
+        val availableTrackIds = audioTrackDao.getAll().map { track -> track.remoteId }.toSet()
+        val refs = remoteAlbums
+            .flatMap { album ->
+                album.trackIds
+                    .filter { trackId -> trackId in availableTrackIds }
+                    .map { trackId ->
+                        TrackAlbumCrossRef(
+                            trackId = trackId,
+                            albumId = album.id,
+                        )
+                    }
+            }
+            .distinct()
+        trackAlbumDao.deleteForAlbums(albumIds)
+        if (refs.isNotEmpty()) {
+            trackAlbumDao.insertAll(refs)
+        }
     }
 
     private suspend fun resolveLocalDownloadState(tracks: List<AudioTrack>): List<AudioTrack> {
