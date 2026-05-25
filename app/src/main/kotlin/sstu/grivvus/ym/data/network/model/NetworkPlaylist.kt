@@ -20,4 +20,5 @@ data class NetworkPlaylistDetails(
 data class NetworkPlaylistEmpty(
     val id: Long,
     val name: String,
+    val isPublic: Boolean? = null,
 )

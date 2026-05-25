@@ -4,6 +4,7 @@ import java.time.LocalDate
 
 data class NetworkAlbum(
     val id: Long,
+    val artistId: Long,
     val name: String,
     val releaseYear: Int? = null,
     val releaseFullDate: LocalDate? = null,

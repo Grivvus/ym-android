@@ -160,7 +160,7 @@ class MusicRepository @Inject constructor(
                     val existingAlbum = existingAlbumsById[album.id]
                     albumsToStore += Album(
                         remoteId = album.id,
-                        artistId = artistId,
+                        artistId = album.artistId,
                         name = album.name,
                         coverUri = resolveAlbumCoverUri(
                             albumId = album.id,
@@ -232,6 +232,66 @@ class MusicRepository @Inject constructor(
         } finally {
             preparedCover?.file?.delete()
         }
+    }
+
+    suspend fun updateArtistMetadata(
+        artistId: Long,
+        name: String,
+    ): MusicLibraryData = withContext(dispatcher) {
+        val normalizedName = name.trim()
+        if (normalizedName.isBlank()) {
+            throw IOException("Artist name is required")
+        }
+        val existingArtist = artistDao.getById(artistId)
+        val updatedArtist = artistRemoteDataSource.updateArtist(artistId, normalizedName)
+        artistDao.upsert(
+            Artist(
+                remoteId = updatedArtist.id,
+                name = updatedArtist.name,
+                imageUri = resolveArtistImageUri(
+                    artistId = updatedArtist.id,
+                    existingImageUri = updatedArtist.coverUrl?.toUri()
+                        ?: existingArtist?.imageUri,
+                ),
+            ),
+        )
+        buildLocalState()
+    }
+
+    suspend fun updateAlbumMetadata(
+        albumId: Long,
+        artistId: Long,
+        name: String,
+        releaseYear: Int?,
+        releaseDate: LocalDate?,
+    ): MusicLibraryData = withContext(dispatcher) {
+        val normalizedName = name.trim()
+        if (normalizedName.isBlank()) {
+            throw IOException("Album name is required")
+        }
+        val existingAlbum = albumDao.getById(albumId)
+        val updatedAlbum = albumRemoteDataSource.updateAlbum(
+            albumId = albumId,
+            artistId = artistId,
+            name = normalizedName,
+            releaseYear = releaseYear,
+            releaseFullDate = releaseDate,
+        )
+        ensureArtistCached(updatedAlbum.artistId)
+        albumDao.upsert(
+            Album(
+                remoteId = updatedAlbum.id,
+                artistId = updatedAlbum.artistId,
+                name = updatedAlbum.name,
+                coverUri = resolveAlbumCoverUri(
+                    albumId = updatedAlbum.id,
+                    existingCoverUri = existingAlbum?.coverUri,
+                ),
+                releaseYear = updatedAlbum.releaseYear,
+                releaseDate = updatedAlbum.releaseFullDate,
+            ),
+        )
+        buildLocalState()
     }
 
     suspend fun createPlaylist(name: String, coverUri: Uri?, isPublic: Boolean): MusicLibraryData =
@@ -394,7 +454,11 @@ class MusicRepository @Inject constructor(
     suspend fun renamePlaylist(playlistId: Long, newName: String): MusicLibraryData =
         withContext(dispatcher) {
             val currentPlaylist = requireEditablePlaylist(playlistId)
-            val updatedPlaylist = playlistRemoteDataSource.updatePlaylist(playlistId, newName)
+            val updatedPlaylist = playlistRemoteDataSource.updatePlaylist(
+                playlistId = playlistId,
+                name = newName,
+                isPublic = currentPlaylist.isPublicForUpdate(),
+            )
             playlistDao.upsert(
                 currentPlaylist.copy(
                     name = updatedPlaylist.name,
@@ -405,6 +469,28 @@ class MusicRepository @Inject constructor(
             )
             buildLocalState()
         }
+
+    suspend fun updatePlaylistMetadata(
+        playlistId: Long,
+        name: String,
+        isPublic: Boolean,
+    ): MusicLibraryData = withContext(dispatcher) {
+        val currentPlaylist = requireEditablePlaylist(playlistId)
+        val updatedPlaylist = playlistRemoteDataSource.updatePlaylist(
+            playlistId = playlistId,
+            name = name,
+            isPublic = isPublic,
+        )
+        playlistDao.upsert(
+            currentPlaylist.copy(
+                name = updatedPlaylist.name,
+                coverUri = currentPlaylist.coverUri,
+                nameIsLocalOverride = false,
+                tracksSeeded = true,
+            ),
+        )
+        buildLocalState()
+    }
 
     suspend fun uploadPlaylistCover(playlistId: Long, coverUri: Uri): MusicLibraryData =
         withContext(dispatcher) {
@@ -540,6 +626,70 @@ class MusicRepository @Inject constructor(
         buildLocalState()
     }
 
+    suspend fun updateTrackMetadata(
+        trackId: Long,
+        name: String,
+        artistId: Long,
+        albumId: Long,
+        isGloballyAvailable: Boolean,
+    ): MusicLibraryData = withContext(dispatcher) {
+        val normalizedName = name.trim()
+        if (normalizedName.isBlank()) {
+            throw IOException("Track name is required")
+        }
+        val existingTrack = audioTrackDao.getById(trackId)
+        val updatedTrack = trackRemoteDataSource.updateTrack(
+            trackId = trackId,
+            name = normalizedName,
+            artistId = artistId,
+            albumId = albumId,
+            isGloballyAvailable = isGloballyAvailable,
+        )
+        ensureArtistCached(updatedTrack.artistId)
+        val existingAlbum = albumDao.getById(updatedTrack.albumId)
+        val remoteAlbumMetadata = loadRemoteAlbumMetadata(
+            albumId = updatedTrack.albumId,
+            existingCoverUri = existingAlbum?.coverUri,
+        )
+        albumDao.upsert(
+            Album(
+                remoteId = updatedTrack.albumId,
+                artistId = updatedTrack.artistId,
+                name = remoteAlbumMetadata?.name?.takeIf { it.isNotBlank() }
+                    ?: existingAlbum?.name.orEmpty(),
+                coverUri = remoteAlbumMetadata?.coverUri ?: existingAlbum?.coverUri,
+                releaseYear = remoteAlbumMetadata?.releaseYear ?: existingAlbum?.releaseYear,
+                releaseDate = remoteAlbumMetadata?.releaseDate ?: existingAlbum?.releaseDate,
+            ),
+        )
+        audioTrackDao.upsert(
+            AudioTrack(
+                remoteId = updatedTrack.id,
+                name = updatedTrack.name,
+                artistId = updatedTrack.artistId,
+                durationMs = updatedTrack.durationMs,
+                uriFast = updatedTrack.qualityPresets[TrackQuality.FAST]?.toUri()
+                    ?: existingTrack?.uriFast,
+                uriStandard = updatedTrack.qualityPresets[TrackQuality.STANDARD]?.toUri()
+                    ?: existingTrack?.uriStandard,
+                uriHigh = updatedTrack.qualityPresets[TrackQuality.HIGH]?.toUri()
+                    ?: existingTrack?.uriHigh,
+                uriLossless = updatedTrack.qualityPresets[TrackQuality.LOSSLESS]?.toUri()
+                    ?: existingTrack?.uriLossless,
+                localPath = existingTrack?.localPath,
+                isDownloaded = existingTrack?.isDownloaded ?: false,
+            ),
+        )
+        trackAlbumDao.deleteForTrack(updatedTrack.id)
+        trackAlbumDao.upsert(
+            TrackAlbumCrossRef(
+                trackId = updatedTrack.id,
+                albumId = updatedTrack.albumId,
+            ),
+        )
+        buildLocalState()
+    }
+
     suspend fun deleteTrack(trackId: Long): MusicLibraryData = withContext(dispatcher) {
         deleteTracks(trackIds = listOf(trackId))
     }
@@ -575,6 +725,26 @@ class MusicRepository @Inject constructor(
             throw PlaylistAccessDenied("Only playlist owner can delete this playlist")
         }
         return playlist
+    }
+
+    private fun Playlist.isPublicForUpdate(): Boolean {
+        return playlistType == PlaylistType.PUBLIC
+    }
+
+    private suspend fun ensureArtistCached(artistId: Long) {
+        val existingArtist = artistDao.getById(artistId)
+        val remoteArtistMetadata = loadRemoteArtistMetadata(artistId)
+        artistDao.upsert(
+            Artist(
+                remoteId = artistId,
+                name = remoteArtistMetadata?.name?.takeIf { it.isNotBlank() }
+                    ?: existingArtist?.name.orEmpty(),
+                imageUri = remoteArtistMetadata?.imageUri ?: resolveArtistImageUri(
+                    artistId = artistId,
+                    existingImageUri = existingArtist?.imageUri,
+                ),
+            ),
+        )
     }
 
     private suspend fun buildPlaylistSharingInfo(playlist: Playlist): PlaylistSharingInfo {
@@ -648,7 +818,6 @@ class MusicRepository @Inject constructor(
         val existingTracks = audioTrackDao.getAll().associateBy { it.remoteId }
         val remoteTrackIds = remoteTracks.map { it.id }.toSet()
         val downloadedTrackFiles = localTrackFileStore.findDownloadedFiles(remoteTrackIds)
-        val artistIdsByAlbumId = remoteTracks.associate { track -> track.albumId to track.artistId }
 
         val existingAlbumsById = albumDao.getAll().associateBy { it.remoteId }
         val albumIds = remoteTracks.map { it.albumId }.distinct()
@@ -656,11 +825,10 @@ class MusicRepository @Inject constructor(
         albumIds.forEach { albumId ->
             val album = runCatching { albumRemoteDataSource.getAlbum(albumId) }.getOrNull()
                 ?: return@forEach
-            val artistId = artistIdsByAlbumId[album.id] ?: return@forEach
             val existingAlbum = existingAlbumsById[album.id]
             fetchedAlbums += Album(
                 remoteId = album.id,
-                artistId = artistId,
+                artistId = album.artistId,
                 name = album.name,
                 coverUri = resolveAlbumCoverUri(
                     albumId = album.id,

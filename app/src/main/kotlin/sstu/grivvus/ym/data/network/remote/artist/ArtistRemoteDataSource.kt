@@ -5,6 +5,7 @@ import sstu.grivvus.ym.data.network.core.GeneratedApiProvider
 import sstu.grivvus.ym.data.network.mapper.ArtistApiMapper
 import sstu.grivvus.ym.data.network.model.NetworkArtist
 import sstu.grivvus.ym.data.network.model.UploadPart
+import sstu.grivvus.ym.openapi.models.ArtistUpdateRequest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,6 +18,8 @@ interface ArtistRemoteDataSource {
         name: String,
         image: UploadPart? = null,
     ): Long
+
+    suspend fun updateArtist(artistId: Long, name: String): NetworkArtist
 
     suspend fun deleteArtist(artistId: Long)
 
@@ -74,6 +77,19 @@ class OpenApiArtistRemoteDataSource @Inject constructor(
             apiExecutor.execute {
                 api.deleteArtistWithHttpInfo(artistId.toInt())
             }
+        }
+    }
+
+    override suspend fun updateArtist(artistId: Long, name: String): NetworkArtist {
+        return generatedApiProvider.withAuthorizedApi { api ->
+            artistApiMapper.mapArtist(
+                apiExecutor.execute {
+                    api.updateArtistWithHttpInfo(
+                        artistId = artistId.toInt(),
+                        artistUpdateRequest = ArtistUpdateRequest(artistName = name),
+                    )
+                },
+            )
         }
     }
 

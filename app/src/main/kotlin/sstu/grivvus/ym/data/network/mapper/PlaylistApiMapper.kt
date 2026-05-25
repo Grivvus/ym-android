@@ -14,7 +14,11 @@ import javax.inject.Singleton
 class PlaylistApiMapper @Inject constructor() {
 
     fun mapEmptyPlaylist(response: PlaylistResponse): NetworkPlaylistEmpty {
-        return NetworkPlaylistEmpty(id = response.playlistId.toLong(), name = response.playlistName)
+        return NetworkPlaylistEmpty(
+            id = response.playlistId.toLong(),
+            name = response.playlistName,
+            isPublic = response.isPublic,
+        )
     }
 
     fun mapPlaylist(response: PlaylistWithTracksResponse): NetworkPlaylistDetails {

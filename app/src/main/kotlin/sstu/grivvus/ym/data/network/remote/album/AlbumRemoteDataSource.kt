@@ -5,6 +5,7 @@ import sstu.grivvus.ym.data.network.core.GeneratedApiProvider
 import sstu.grivvus.ym.data.network.mapper.AlbumApiMapper
 import sstu.grivvus.ym.data.network.model.NetworkAlbum
 import sstu.grivvus.ym.data.network.model.UploadPart
+import sstu.grivvus.ym.openapi.models.AlbumUpdateRequest
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,6 +20,14 @@ interface AlbumRemoteDataSource {
         releaseYear: Int? = null,
         releaseFullDate: LocalDate? = null,
     ): Long
+
+    suspend fun updateAlbum(
+        albumId: Long,
+        artistId: Long,
+        name: String,
+        releaseYear: Int? = null,
+        releaseFullDate: LocalDate? = null,
+    ): NetworkAlbum
 
     suspend fun deleteAlbum(albumId: Long)
 
@@ -74,6 +83,30 @@ class OpenApiAlbumRemoteDataSource @Inject constructor(
             apiExecutor.execute {
                 api.deleteAlbumWithHttpInfo(albumId.toInt())
             }
+        }
+    }
+
+    override suspend fun updateAlbum(
+        albumId: Long,
+        artistId: Long,
+        name: String,
+        releaseYear: Int?,
+        releaseFullDate: LocalDate?,
+    ): NetworkAlbum {
+        return generatedApiProvider.withAuthorizedApi { api ->
+            albumApiMapper.mapAlbum(
+                apiExecutor.execute {
+                    api.updateAlbumWithHttpInfo(
+                        albumId = albumId.toInt(),
+                        albumUpdateRequest = AlbumUpdateRequest(
+                            artistId = artistId.toInt(),
+                            albumName = name,
+                            releaseYear = releaseYear,
+                            releaseFullDate = releaseFullDate,
+                        ),
+                    )
+                },
+            )
         }
     }
 

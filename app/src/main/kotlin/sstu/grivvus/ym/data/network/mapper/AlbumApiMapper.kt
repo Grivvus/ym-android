@@ -10,6 +10,7 @@ class AlbumApiMapper @Inject constructor() {
     fun mapAlbum(response: AlbumInfoResponse): NetworkAlbum {
         return NetworkAlbum(
             id = response.albumId.toLong(),
+            artistId = response.artistId.toLong(),
             name = response.albumName,
             releaseYear = response.releaseYear,
             releaseFullDate = response.releaseFullDate,

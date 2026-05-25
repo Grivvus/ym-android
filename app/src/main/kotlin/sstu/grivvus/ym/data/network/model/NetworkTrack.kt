@@ -32,5 +32,6 @@ data class NetworkTrack(
     val artistId: Long,
     val albumId: Long,
     val durationMs: Long,
+    val isGloballyAvailable: Boolean,
     val qualityPresets: Map<TrackQuality, String> = emptyMap(),
 )

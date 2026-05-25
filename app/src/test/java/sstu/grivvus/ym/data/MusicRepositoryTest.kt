@@ -229,7 +229,7 @@ class MusicRepositoryTest {
         }
 
         assertThat(error).hasMessageThat().isEqualTo("Playlist cannot be edited")
-        coVerify(exactly = 0) { playlistRemoteDataSource.updatePlaylist(any(), any()) }
+        coVerify(exactly = 0) { playlistRemoteDataSource.updatePlaylist(any(), any(), any()) }
     }
 
     @Test
@@ -244,7 +244,7 @@ class MusicRepositoryTest {
             ),
         )
         coEvery {
-            playlistRemoteDataSource.updatePlaylist(40L, "New shared name")
+            playlistRemoteDataSource.updatePlaylist(40L, "New shared name", false)
         } returns NetworkPlaylistEmpty(id = 40L, name = "New shared name")
 
         val repository = createRepository()
@@ -253,7 +253,7 @@ class MusicRepositoryTest {
 
         assertThat(database.playlistDao().getById(40L)?.name).isEqualTo("New shared name")
         coVerify(exactly = 1) {
-            playlistRemoteDataSource.updatePlaylist(40L, "New shared name")
+            playlistRemoteDataSource.updatePlaylist(40L, "New shared name", false)
         }
     }
 
@@ -403,6 +403,7 @@ class MusicRepositoryTest {
         } returns 70L
         coEvery { albumRemoteDataSource.getAlbum(70L) } returns NetworkAlbum(
             id = 70L,
+            artistId = 7L,
             name = "Future Album",
             releaseYear = 2025,
             releaseFullDate = releaseDate,
@@ -438,6 +439,7 @@ class MusicRepositoryTest {
         )
         coEvery { albumRemoteDataSource.getAlbum(90L) } returns NetworkAlbum(
             id = 90L,
+            artistId = 9L,
             name = "Loaded Album",
             releaseYear = 2024,
             releaseFullDate = releaseDate,

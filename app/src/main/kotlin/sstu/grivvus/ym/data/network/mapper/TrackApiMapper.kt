@@ -13,6 +13,7 @@ class TrackApiMapper @Inject constructor() {
             id = response.trackId.toLong(), name = response.name,
             artistId = response.artistId.toLong(), albumId = response.albumId.toLong(),
             durationMs = response.durationMs.toLong(),
+            isGloballyAvailable = response.isGloballyAvailable,
             qualityPresets = response.toQualityPresets(),
         )
     }

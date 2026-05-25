@@ -8,6 +8,7 @@ import sstu.grivvus.ym.data.network.model.NetworkTrack
 import sstu.grivvus.ym.data.network.model.UploadPart
 import sstu.grivvus.ym.di.TrackUploadHttpClient
 import sstu.grivvus.ym.openapi.apis.DefaultApi
+import sstu.grivvus.ym.openapi.models.TrackUpdateRequest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,6 +25,14 @@ interface TrackRemoteDataSource {
         track: UploadPart,
         isGloballyAvailable: Boolean? = null,
     ): Long
+
+    suspend fun updateTrack(
+        trackId: Long,
+        name: String,
+        artistId: Long,
+        albumId: Long,
+        isGloballyAvailable: Boolean,
+    ): NetworkTrack
 
     suspend fun deleteTrack(trackId: Long)
 }
@@ -83,6 +92,30 @@ class OpenApiTrackRemoteDataSource @Inject constructor(
             apiExecutor.executeUnit {
                 api.deleteTrackWithHttpInfo(trackId.toInt())
             }
+        }
+    }
+
+    override suspend fun updateTrack(
+        trackId: Long,
+        name: String,
+        artistId: Long,
+        albumId: Long,
+        isGloballyAvailable: Boolean,
+    ): NetworkTrack {
+        return generatedApiProvider.withAuthorizedApi { api ->
+            trackApiMapper.mapTrack(
+                apiExecutor.execute {
+                    api.updateTrackWithHttpInfo(
+                        trackId = trackId.toInt(),
+                        trackUpdateRequest = TrackUpdateRequest(
+                            name = name,
+                            artistId = artistId.toInt(),
+                            albumId = albumId.toInt(),
+                            isGloballyAvailable = isGloballyAvailable,
+                        ),
+                    )
+                },
+            )
         }
     }
 }

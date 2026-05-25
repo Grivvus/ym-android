@@ -9,7 +9,6 @@ import sstu.grivvus.ym.data.network.model.NetworkPlaylist
 import sstu.grivvus.ym.data.network.model.NetworkPlaylistDetails
 import sstu.grivvus.ym.data.network.model.NetworkPlaylistEmpty
 import sstu.grivvus.ym.data.network.model.UploadPart
-import sstu.grivvus.ym.openapi.models.AddTrackToPlaylistRequest
 import sstu.grivvus.ym.openapi.models.PlaylistRevokeAccessRequest
 import sstu.grivvus.ym.openapi.models.PlaylistShareRequest
 import sstu.grivvus.ym.openapi.models.PlaylistUpdateRequest
@@ -23,7 +22,11 @@ interface PlaylistRemoteDataSource {
 
     suspend fun createPlaylist(name: String, isPublic: Boolean, cover: UploadPart?): Long
 
-    suspend fun updatePlaylist(playlistId: Long, name: String): NetworkPlaylistEmpty
+    suspend fun updatePlaylist(
+        playlistId: Long,
+        name: String,
+        isPublic: Boolean,
+    ): NetworkPlaylistEmpty
 
     suspend fun deletePlaylist(playlistId: Long)
 
@@ -89,7 +92,11 @@ class OpenApiPlaylistRemoteDataSource @Inject constructor(
         }
     }
 
-    override suspend fun updatePlaylist(playlistId: Long, name: String): NetworkPlaylistEmpty {
+    override suspend fun updatePlaylist(
+        playlistId: Long,
+        name: String,
+        isPublic: Boolean,
+    ): NetworkPlaylistEmpty {
         return generatedApiProvider.withAuthorizedApi { api ->
             playlistApiMapper.mapEmptyPlaylist(
                 apiExecutor.execute {
@@ -97,6 +104,7 @@ class OpenApiPlaylistRemoteDataSource @Inject constructor(
                         playlistId = playlistId.toInt(),
                         playlistUpdateRequest = PlaylistUpdateRequest(
                             playlistName = name,
+                            isPublic = isPublic,
                         ),
                     )
                 },
@@ -146,9 +154,9 @@ class OpenApiPlaylistRemoteDataSource @Inject constructor(
     override suspend fun addTrack(playlistId: Long, trackId: Long) {
         generatedApiProvider.withAuthorizedApi { api ->
             apiExecutor.executeUnit {
-                api.addTrackToPlaylistWithHttpInfo(
+                api.putTrackToPlaylistWithHttpInfo(
                     playlistId = playlistId.toInt(),
-                    addTrackToPlaylistRequest = AddTrackToPlaylistRequest(trackId = trackId.toInt()),
+                    trackId = trackId.toInt(),
                 )
             }
         }
