@@ -128,21 +128,6 @@ fun ArtistScreen(
                     }
                 },
                 actions = {
-                    if (artist?.canEdit == true) {
-                        IconButton(
-                            onClick = {
-                                editArtistDraft = EditArtistDraft(
-                                    name = artist.name.resolve(context),
-                                )
-                            },
-                            enabled = !uiState.isMutating,
-                        ) {
-                            Icon(
-                                appIcons.Edit,
-                                contentDescription = stringResource(R.string.common_action_edit),
-                            )
-                        }
-                    }
                     TextButton(
                         onClick = { showCreateAlbumDialog = true },
                         enabled = artist != null && !uiState.isMutating,
@@ -179,6 +164,11 @@ fun ArtistScreen(
                     isRefreshing = uiState.isRefreshing,
                     isBusy = uiState.isRefreshing || uiState.isMutating,
                     onAlbumClick = navigateToAlbum,
+                    onEditArtist = {
+                        editArtistDraft = EditArtistDraft(
+                            name = artist.name.resolve(context),
+                        )
+                    },
                     onSelectCover = { artistImagePicker.launch("image/*") },
                     onDeleteCover = viewModel::deleteArtistCover,
                     modifier = Modifier.fillMaxSize(),
@@ -304,6 +294,7 @@ private fun ArtistDetails(
     isRefreshing: Boolean,
     isBusy: Boolean,
     onAlbumClick: (Long) -> Unit,
+    onEditArtist: () -> Unit,
     onSelectCover: () -> Unit,
     onDeleteCover: () -> Unit,
     modifier: Modifier = Modifier,
@@ -342,11 +333,28 @@ private fun ArtistDetails(
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = artist.name.resolve(),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = artist.name.resolve(),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (artist.canEdit) {
+                            IconButton(
+                                onClick = onEditArtist,
+                                enabled = !isBusy,
+                            ) {
+                                Icon(
+                                    appIcons.Edit,
+                                    contentDescription = stringResource(R.string.common_action_edit),
+                                )
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = pluralStringResource(

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -80,7 +79,6 @@ private data class UploadTrackModalRequest(
 
 private data class EditAlbumDraft(
     val name: String,
-    val artistId: Long,
     val releaseYear: String,
 )
 
@@ -193,7 +191,6 @@ fun AlbumScreen(
                                 onClick = {
                                     editAlbumDraft = EditAlbumDraft(
                                         name = album.name.resolve(context),
-                                        artistId = album.artistId,
                                         releaseYear = album.releaseYear?.toString().orEmpty(),
                                     )
                                 },
@@ -277,7 +274,6 @@ fun AlbumScreen(
     editAlbumDraft?.let { draft ->
         EditAlbumDialog(
             draft = draft,
-            artists = uiState.artists,
             isBusy = uiState.isMutating,
             errorMessage = uiState.errorMessage?.resolve(),
             onDismiss = {
@@ -288,16 +284,12 @@ fun AlbumScreen(
             onNameChange = { value ->
                 editAlbumDraft = draft.copy(name = value)
             },
-            onArtistSelected = { artistId ->
-                editAlbumDraft = draft.copy(artistId = artistId)
-            },
             onReleaseYearChange = { value ->
                 editAlbumDraft = draft.copy(releaseYear = value)
             },
             onConfirm = {
                 viewModel.updateAlbumMetadata(
                     name = draft.name,
-                    artistId = draft.artistId,
                     releaseYearInput = draft.releaseYear,
                 )
             },
@@ -404,13 +396,11 @@ fun AlbumScreen(
 @Composable
 private fun EditAlbumDialog(
     draft: EditAlbumDraft,
-    artists: List<AlbumArtistOptionUi>,
     isBusy: Boolean,
     errorMessage: String?,
     onDismiss: () -> Unit,
     onDismissError: () -> Unit,
     onNameChange: (String) -> Unit,
-    onArtistSelected: (Long) -> Unit,
     onReleaseYearChange: (String) -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -442,59 +432,6 @@ private fun EditAlbumDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Text(
-                    text = stringResource(R.string.common_label_artist),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                if (artists.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.album_edit_no_artists),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 220.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        items(artists, key = { it.id }) { artist ->
-                            val isSelected = artist.id == draft.artistId
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onDismissError()
-                                        onArtistSelected(artist.id)
-                                    },
-                                shape = RoundedCornerShape(18.dp),
-                                tonalElevation = if (isSelected) 4.dp else 0.dp,
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Checkbox(
-                                        checked = isSelected,
-                                        onCheckedChange = {
-                                            onDismissError()
-                                            onArtistSelected(artist.id)
-                                        },
-                                        enabled = !isBusy,
-                                    )
-                                    Text(
-                                        text = artist.name.resolve(),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(start = 8.dp),
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
                 ErrorTooltip(
                     message = errorMessage.orEmpty(),
                     visible = errorMessage != null,
@@ -505,7 +442,7 @@ private fun EditAlbumDialog(
         confirmButton = {
             TextButton(
                 onClick = onConfirm,
-                enabled = draft.name.isNotBlank() && artists.any { it.id == draft.artistId } && !isBusy,
+                enabled = draft.name.isNotBlank() && !isBusy,
             ) {
                 Text(stringResource(R.string.common_action_save))
             }

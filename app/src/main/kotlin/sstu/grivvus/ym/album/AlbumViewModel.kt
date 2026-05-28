@@ -34,11 +34,6 @@ import java.io.IOException
 import java.time.LocalDate
 import javax.inject.Inject
 
-data class AlbumArtistOptionUi(
-    val id: Long,
-    val name: UiText,
-)
-
 data class AlbumDetailUi(
     val id: Long,
     val name: UiText,
@@ -57,7 +52,6 @@ data class AlbumUiState(
     val isRefreshing: Boolean = false,
     val isMutating: Boolean = false,
     val album: AlbumDetailUi? = null,
-    val artists: List<AlbumArtistOptionUi> = emptyList(),
     val libraryTracks: List<LibraryTrackItemUi> = emptyList(),
     val selectedTrackIds: Set<Long> = emptySet(),
     val pendingRemoveTrackIds: Set<Long> = emptySet(),
@@ -139,7 +133,6 @@ class AlbumViewModel @Inject constructor(
 
     fun updateAlbumMetadata(
         name: String,
-        artistId: Long,
         releaseYearInput: String,
     ) {
         val album = _uiState.value.album ?: return
@@ -172,7 +165,7 @@ class AlbumViewModel @Inject constructor(
                 applyLibraryData(
                     repository.updateAlbumMetadata(
                         albumId = albumId,
-                        artistId = artistId,
+                        artistId = album.artistId,
                         name = normalizedName,
                         releaseYear = releaseYear,
                         releaseDate = album.releaseDate,
@@ -331,14 +324,6 @@ class AlbumViewModel @Inject constructor(
                     },
                 )
             },
-            artists = data.artists
-                .sortedWith(compareBy<Artist> { it.name.lowercase() }.thenBy { it.remoteId })
-                .map { artist ->
-                    AlbumArtistOptionUi(
-                        id = artist.remoteId,
-                        name = artistDisplayName(artist),
-                    )
-                },
             libraryTracks = data.libraryTracks.map { track ->
                 track.toLibraryTrackItemUi(artistsById)
             },
