@@ -213,6 +213,8 @@
     <string name="library_backup_id">Backup ID: %1$s</string>
     <string name="library_backup_polling_status">The app is polling the server for the latest backup status.</string>
     <string name="library_backup_download_status">The app is downloading the finished backup archive.</string>
+    <string name="library_backup_download_progress_bytes">Downloaded %1$d of %2$d bytes (%3$d%%)</string>
+    <string name="library_backup_download_progress_unknown_size">Downloaded %1$d bytes</string>
     <string name="library_backup_size_bytes">Archive size: %1$d bytes</string>
     <string name="library_restore_from_backup_title">Restore from backup</string>
     <string name="library_restore_confirmation_message">Start restore from the selected archive?</string>

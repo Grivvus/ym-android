@@ -25,6 +25,11 @@ data class DownloadedBackupArchive(
     val suggestedFileName: String,
 )
 
+data class BackupDownloadProgress(
+    val downloadedBytes: Long,
+    val totalBytes: Long?,
+)
+
 enum class ArchiveOperationState {
     PENDING,
     STARTED,
@@ -69,13 +74,17 @@ class BackupRestoreRepository @Inject constructor(
         return remoteDataSource.getBackupStatus(backupId)
     }
 
-    suspend fun downloadBackupArchive(backupId: String): DownloadedBackupArchive {
+    suspend fun downloadBackupArchive(
+        backupId: String,
+        onProgress: (BackupDownloadProgress) -> Unit = {},
+    ): DownloadedBackupArchive {
         return withContext(ioDispatcher) {
             val tempFile = File.createTempFile("ym_backup_", ".zip", context.cacheDir)
             try {
                 val suggestedFileName = remoteDataSource.downloadBackupArchive(
                     backupId = backupId,
                     destinationFile = tempFile,
+                    onProgress = onProgress,
                 )
                 DownloadedBackupArchive(
                     file = tempFile,

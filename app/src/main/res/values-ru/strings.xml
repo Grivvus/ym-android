@@ -212,6 +212,8 @@
     <string name="library_backup_id">ID резервной копии: %1$s</string>
     <string name="library_backup_polling_status">Приложение запрашивает у сервера актуальный статус резервной копии.</string>
     <string name="library_backup_download_status">Приложение скачивает готовый архив резервной копии.</string>
+    <string name="library_backup_download_progress_bytes">Скачано %1$d из %2$d байт (%3$d%%)</string>
+    <string name="library_backup_download_progress_unknown_size">Скачано %1$d байт</string>
     <string name="library_backup_size_bytes">Размер архива: %1$d байт</string>
     <string name="library_restore_from_backup_title">Восстановить из резервной копии</string>
     <string name="library_restore_confirmation_message">Начать восстановление из выбранного архива?</string>

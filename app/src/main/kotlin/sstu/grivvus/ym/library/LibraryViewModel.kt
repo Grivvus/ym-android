@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.data.ArchiveOperationState
 import sstu.grivvus.ym.data.BackupCreationOptions
+import sstu.grivvus.ym.data.BackupDownloadProgress
 import sstu.grivvus.ym.data.BackupOperationStatus
 import sstu.grivvus.ym.data.BackupRestoreRepository
 import sstu.grivvus.ym.data.DownloadedBackupArchive
@@ -31,6 +32,7 @@ import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.data.network.core.ApiException
 import sstu.grivvus.ym.data.network.core.ClientApiException
 import sstu.grivvus.ym.data.network.core.ConflictApiException
+import sstu.grivvus.ym.data.network.core.NetworkUnavailableException
 import sstu.grivvus.ym.data.network.core.UnauthorizedApiException
 import sstu.grivvus.ym.logHandledException
 import sstu.grivvus.ym.ui.UiText
@@ -49,6 +51,29 @@ data class ArchiveStatusUi(
     val errorMessage: UiText? = null,
 )
 
+data class BackupDownloadProgressUi(
+    val downloadedBytes: Long,
+    val totalBytes: Long?,
+) {
+    val fraction: Float?
+        get() = totalBytes
+            ?.takeIf { it > 0L }
+            ?.let { total ->
+                (downloadedBytes.toDouble() / total.toDouble())
+                    .coerceIn(0.0, 1.0)
+                    .toFloat()
+            }
+
+    val percentage: Int?
+        get() = totalBytes
+            ?.takeIf { it > 0L }
+            ?.let { total ->
+                ((downloadedBytes.toDouble() / total.toDouble()) * 100.0)
+                    .coerceIn(0.0, 100.0)
+                    .toInt()
+            }
+}
+
 data class LibraryUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
@@ -65,6 +90,7 @@ data class LibraryUiState(
     val isSavingBackup: Boolean = false,
     val isStartingRestore: Boolean = false,
     val backupStatus: ArchiveStatusUi? = null,
+    val backupDownloadProgress: BackupDownloadProgressUi? = null,
     val restoreStatus: ArchiveStatusUi? = null,
     val errorMessage: UiText? = null,
     val infoMessage: UiText? = null,
@@ -350,7 +376,12 @@ class LibraryViewModel @Inject constructor(
             viewModelScope.launch {
                 backupRestoreRepository.discardBackupArchive(archive)
                 pendingBackupArchive = null
-                _uiState.update { it.copy(backupStatus = null) }
+                _uiState.update {
+                    it.copy(
+                        backupStatus = null,
+                        backupDownloadProgress = null,
+                    )
+                }
             }
             return
         }
@@ -539,12 +570,25 @@ class LibraryViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 isDownloadingBackup = true,
+                backupDownloadProgress = BackupDownloadProgressUi(
+                    downloadedBytes = 0L,
+                    totalBytes = it.backupStatus?.sizeBytes,
+                ),
                 errorMessage = null,
                 infoMessage = null
             )
         }
         try {
-            val archive = backupRestoreRepository.downloadBackupArchive(backupId)
+            val archive = backupRestoreRepository.downloadBackupArchive(backupId) { progress ->
+                _uiState.update { state ->
+                    state.copy(
+                        backupDownloadProgress = progress.toUi(
+                            fallbackTotalBytes = state.backupDownloadProgress?.totalBytes
+                                ?: state.backupStatus?.sizeBytes,
+                        ),
+                    )
+                }
+            }
             pendingBackupArchive = archive
             _events.emit(
                 LibraryScreenEvent.RequestBackupSaveLocation(
@@ -559,7 +603,12 @@ class LibraryViewModel @Inject constructor(
                 state.copy(errorMessage = error.toReadableMessage())
             }
         } finally {
-            _uiState.update { it.copy(isDownloadingBackup = false) }
+            _uiState.update {
+                it.copy(
+                    isDownloadingBackup = false,
+                    backupDownloadProgress = null,
+                )
+            }
         }
     }
 
@@ -767,6 +816,15 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    private fun BackupDownloadProgress.toUi(
+        fallbackTotalBytes: Long?,
+    ): BackupDownloadProgressUi {
+        return BackupDownloadProgressUi(
+            downloadedBytes = downloadedBytes,
+            totalBytes = totalBytes ?: fallbackTotalBytes,
+        )
+    }
+
     private fun Throwable.toReadableMessage(): UiText {
         return when (this) {
             is UnauthorizedApiException ->
@@ -775,9 +833,13 @@ class LibraryViewModel @Inject constructor(
             is ConflictApiException ->
                 UiText.StringResource(R.string.library_error_archive_operation_already_running)
 
+            is NetworkUnavailableException ->
+                UiText.StringResource(R.string.common_error_network_request_failed)
+
             is ClientApiException -> when (statusCode) {
                 403 -> UiText.StringResource(R.string.common_error_superuser_access_required)
                 409 -> UiText.StringResource(R.string.library_error_archive_operation_already_running)
+                416 -> UiText.StringResource(R.string.common_error_request_failed)
                 else -> message.asUiTextOrNull()
                     ?: UiText.StringResource(R.string.common_error_request_failed)
             }

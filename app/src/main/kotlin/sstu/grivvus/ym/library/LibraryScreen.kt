@@ -38,6 +38,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -283,6 +284,7 @@ fun LibraryScreen(
                                     status = status,
                                     showProgress = !status.isFailed &&
                                         (!status.isFinished || uiState.isDownloadingBackup),
+                                    downloadProgress = uiState.backupDownloadProgress,
                                 )
                             }
                         }
@@ -828,6 +830,7 @@ private fun RestoreConfirmationDialog(
 private fun ArchiveStatusBanner(
     status: ArchiveStatusUi,
     showProgress: Boolean = !status.isFinished && !status.isFailed,
+    downloadProgress: BackupDownloadProgressUi? = null,
 ) {
     ElevatedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -852,19 +855,62 @@ private fun ArchiveStatusBanner(
                 )
             }
             if (showProgress) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                if (downloadProgress != null) {
                     Text(
                         text = status.pollingMessage.resolve(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    val fraction = downloadProgress.fraction
+                    if (fraction != null) {
+                        LinearProgressIndicator(
+                            progress = { fraction },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                    Text(
+                        text = backupDownloadProgressText(downloadProgress),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                        Text(
+                            text = status.pollingMessage.resolve(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun backupDownloadProgressText(
+    progress: BackupDownloadProgressUi,
+): String {
+    val totalBytes = progress.totalBytes
+    val percentage = progress.percentage
+    return if (totalBytes != null && percentage != null) {
+        stringResource(
+            R.string.library_backup_download_progress_bytes,
+            progress.downloadedBytes.coerceAtMost(totalBytes),
+            totalBytes,
+            percentage,
+        )
+    } else {
+        stringResource(
+            R.string.library_backup_download_progress_unknown_size,
+            progress.downloadedBytes,
+        )
     }
 }
 
