@@ -110,9 +110,9 @@ fun LibraryScreen(
         restoreStatus != null && !restoreStatus.isFinished && !restoreStatus.isFailed
     val isArchiveOperationInProgress =
         uiState.isCreatingBackup ||
-            uiState.isDownloadingBackup ||
-            uiState.isSavingBackup ||
-            uiState.isStartingRestore
+                uiState.isDownloadingBackup ||
+                uiState.isSavingBackup ||
+                uiState.isStartingRestore
     val pendingDeleteTrackIds = uiState.pendingDeleteTrackIds
     var showBackupDialog by rememberSaveable { mutableStateOf(false) }
     var uploadTrackRequest by remember { mutableStateOf<UploadTrackModalRequest?>(null) }
@@ -283,7 +283,7 @@ fun LibraryScreen(
                                 ArchiveStatusBanner(
                                     status = status,
                                     showProgress = !status.isFailed &&
-                                        (!status.isFinished || uiState.isDownloadingBackup),
+                                            (!status.isFinished || uiState.isDownloadingBackup),
                                     downloadProgress = uiState.backupDownloadProgress,
                                 )
                             }
@@ -870,11 +870,6 @@ private fun ArchiveStatusBanner(
                     } else {
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     }
-                    Text(
-                        text = backupDownloadProgressText(downloadProgress),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 } else {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
