@@ -7,6 +7,7 @@
 
     <string name="common_title_tracks">Tracks</string>
     <string name="common_title_albums">Albums</string>
+    <string name="common_title_artists">Artists</string>
 
     <string name="common_action_back">Back</string>
     <string name="common_action_cancel">Cancel</string>
@@ -71,6 +72,8 @@
     <string name="common_cd_resume_playback">resume playback</string>
     <string name="common_cd_open_full_player">open full player</string>
     <string name="common_cd_close_mini_player">close mini player</string>
+    <string name="search_cd_open">Open search</string>
+    <string name="search_cd_play_track">Play track</string>
     <string name="common_error_network_request_failed">Network request failed</string>
     <string name="common_error_unexpected">Unexpected error</string>
     <string name="common_error_server_try_again_later">Server error. Please try again later</string>
@@ -198,6 +201,15 @@
     <string name="artist_action_add_album">Add album</string>
     <string name="artist_create_album_title">Create album</string>
     <string name="artist_error_invalid_release_year">Release year must be a number from 1 to 9999</string>
+
+    <string name="search_title">Search</string>
+    <string name="search_query_label">Search library</string>
+    <string name="search_filter_all">All</string>
+    <string name="search_empty_title">Search the library</string>
+    <string name="search_empty_description">Find tracks, albums, and artists available on the server.</string>
+    <string name="search_no_results_title">Nothing found</string>
+    <string name="search_no_results_description">Try another track, album, or artist name.</string>
+    <string name="search_error_track_unavailable">This track is not available in the local playback catalog yet.</string>
 
     <string name="library_default_title">Library</string>
     <string name="library_empty_title">No tracks yet</string>

@@ -72,6 +72,7 @@ class NavGraphTest {
             AppDestinations.PLAYLIST_ROUTE,
             AppDestinations.PROFILE_ROUTE,
             AppDestinations.LIBRARY_ROUTE,
+            AppDestinations.SEARCH_ROUTE,
             AppDestinations.UPLOAD_ROUTE,
             AppDestinations.PLAYER_ROUTE,
         )

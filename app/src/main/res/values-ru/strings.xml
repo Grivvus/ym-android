@@ -6,6 +6,7 @@
 
     <string name="common_title_tracks">Треки</string>
     <string name="common_title_albums">Альбомы</string>
+    <string name="common_title_artists">Исполнители</string>
 
     <string name="common_action_back">Назад</string>
     <string name="common_action_cancel">Отмена</string>
@@ -70,6 +71,8 @@
     <string name="common_cd_resume_playback">Продолжить воспроизведение</string>
     <string name="common_cd_open_full_player">Открыть полный плеер</string>
     <string name="common_cd_close_mini_player">Закрыть мини-плеер</string>
+    <string name="search_cd_open">Открыть поиск</string>
+    <string name="search_cd_play_track">Воспроизвести трек</string>
     <string name="common_error_network_request_failed">Ошибка сетевого запроса</string>
     <string name="common_error_unexpected">Непредвиденная ошибка</string>
     <string name="common_error_server_try_again_later">Ошибка сервера. Попробуйте позже</string>
@@ -197,6 +200,15 @@
     <string name="artist_action_add_album">Добавить альбом</string>
     <string name="artist_create_album_title">Создать альбом</string>
     <string name="artist_error_invalid_release_year">Год выпуска должен быть числом от 1 до 9999</string>
+
+    <string name="search_title">Поиск</string>
+    <string name="search_query_label">Поиск по библиотеке</string>
+    <string name="search_filter_all">Все</string>
+    <string name="search_empty_title">Поиск по библиотеке</string>
+    <string name="search_empty_description">Ищите треки, альбомы и исполнителей, доступных на сервере.</string>
+    <string name="search_no_results_title">Ничего не найдено</string>
+    <string name="search_no_results_description">Попробуйте другое название трека, альбома или исполнителя.</string>
+    <string name="search_error_track_unavailable">Этот трек пока недоступен в локальном каталоге воспроизведения.</string>
 
     <string name="library_default_title">Библиотека</string>
     <string name="library_empty_title">Треков пока нет</string>

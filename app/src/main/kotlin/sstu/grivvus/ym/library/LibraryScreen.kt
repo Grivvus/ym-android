@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -94,6 +95,7 @@ fun LibraryScreen(
     navigateToMusic: () -> Unit,
     navigateToLibrary: () -> Unit,
     navigateToProfile: () -> Unit,
+    navigateToSearch: () -> Unit,
     navigateToArtist: (Long) -> Unit,
     navigateToAlbum: (Long) -> Unit,
     miniPlayer: @Composable () -> Unit = {},
@@ -201,6 +203,12 @@ fun LibraryScreen(
                             Text(stringResource(R.string.common_action_delete))
                         }
                     } else {
+                        IconButton(onClick = navigateToSearch) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = stringResource(R.string.search_cd_open),
+                            )
+                        }
                         IconButton(onClick = { viewModel.refresh() }) {
                             Icon(
                                 appIcons.Sync,

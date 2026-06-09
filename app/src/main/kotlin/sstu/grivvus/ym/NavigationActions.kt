@@ -12,6 +12,7 @@ import sstu.grivvus.ym.AppScreens.PLAYLIST_SCREEN
 import sstu.grivvus.ym.AppScreens.PLAYER_SCREEN
 import sstu.grivvus.ym.AppScreens.PROFILE_SCREEN
 import sstu.grivvus.ym.AppScreens.REGISTRATION_SCREEN
+import sstu.grivvus.ym.AppScreens.SEARCH_SCREEN
 import sstu.grivvus.ym.AppScreens.SERVER_SETUP_SCREEN
 import sstu.grivvus.ym.AppScreens.STARTUP_SCREEN
 import sstu.grivvus.ym.AppScreens.UPLOAD_SCREEN
@@ -33,6 +34,7 @@ object AppScreens {
     const val PLAYLIST_SCREEN = "playlist"
     const val PLAYER_SCREEN = "player"
     const val LIBRARY_SCREEN = "library"
+    const val SEARCH_SCREEN = "search"
     const val UPLOAD_SCREEN = "upload"
 }
 
@@ -58,6 +60,7 @@ object AppDestinations {
     const val MAIN_START_ROUTE = MUSIC_ROUTE
     const val PLAYER_ROUTE = "$PLAYER_SCREEN/{$PLAYER_TRACK_ID}"
     const val LIBRARY_ROUTE = LIBRARY_SCREEN
+    const val SEARCH_ROUTE = SEARCH_SCREEN
     const val UPLOAD_ROUTE = UPLOAD_SCREEN
 
     fun playerRoute(trackId: Long): String = "$PLAYER_SCREEN/$trackId"
@@ -140,6 +143,10 @@ class NavigationActions(private val navController: NavController) {
 
     fun navigateToLibrary() {
         navController.navigateToTopLevel(AppDestinations.LIBRARY_ROUTE)
+    }
+
+    fun navigateToSearch() {
+        navController.navigateSingleTopTo(AppDestinations.SEARCH_ROUTE)
     }
 
     fun popBackStack() {

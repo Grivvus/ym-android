@@ -17,4 +17,9 @@ interface PlaybackQueueFactory {
         artistsById: Map<Long, Artist>,
         startTrackId: Long,
     ): PlaybackQueue
+
+    fun singleTrackQueue(
+        track: TrackBundle,
+        artistsById: Map<Long, Artist>,
+    ): PlaybackQueue
 }

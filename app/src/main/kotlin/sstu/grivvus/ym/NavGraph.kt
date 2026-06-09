@@ -34,6 +34,7 @@ import sstu.grivvus.ym.playback.PlayerScreen
 import sstu.grivvus.ym.playlist.PlaylistScreen
 import sstu.grivvus.ym.profile.ProfileScreen
 import sstu.grivvus.ym.register.RegistrationScreen
+import sstu.grivvus.ym.search.SearchScreen
 import sstu.grivvus.ym.serverSetup.ServerSetup
 import sstu.grivvus.ym.startup.StartupScreen
 
@@ -44,6 +45,7 @@ internal fun appProtectedRoutes(): Set<String> = setOf(
     AppDestinations.PLAYLIST_ROUTE,
     AppDestinations.PROFILE_ROUTE,
     AppDestinations.LIBRARY_ROUTE,
+    AppDestinations.SEARCH_ROUTE,
     AppDestinations.UPLOAD_ROUTE,
     AppDestinations.PLAYER_ROUTE,
 )
@@ -201,8 +203,22 @@ fun YMNavGraph(
                 navigateToMusic = { navActions.navigateToMusic() },
                 navigateToLibrary = { navActions.navigateToLibrary() },
                 navigateToProfile = { navActions.navigateToProfile() },
+                navigateToSearch = { navActions.navigateToSearch() },
                 navigateToArtist = { artistId -> navActions.navigateToArtist(artistId) },
                 navigateToAlbum = { albumId -> navActions.navigateToAlbum(albumId) },
+                miniPlayer = miniPlayer,
+            )
+        }
+
+        composable(AppDestinations.SEARCH_ROUTE) {
+            SearchScreen(
+                navigateToMusic = { navActions.navigateToMusic() },
+                navigateToLibrary = { navActions.navigateToLibrary() },
+                navigateToProfile = { navActions.navigateToProfile() },
+                navigateToAlbum = { albumId -> navActions.navigateToAlbum(albumId) },
+                navigateToArtist = { artistId -> navActions.navigateToArtist(artistId) },
+                onOpenPlayer = { trackId -> navActions.navigateToPlayer(trackId) },
+                onBack = navActions::popBackStack,
                 miniPlayer = miniPlayer,
             )
         }

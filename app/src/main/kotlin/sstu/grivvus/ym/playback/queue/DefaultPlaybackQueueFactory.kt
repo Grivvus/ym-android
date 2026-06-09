@@ -38,6 +38,18 @@ class DefaultPlaybackQueueFactory @Inject constructor() : PlaybackQueueFactory {
         )
     }
 
+    override fun singleTrackQueue(
+        track: TrackBundle,
+        artistsById: Map<Long, Artist>,
+    ): PlaybackQueue {
+        val playableTrack = toPlayableTrack(track, artistsById)
+        return PlaybackQueue(
+            source = PlaybackSource.SingleTrack(track.track.remoteId),
+            items = listOf(playableTrack),
+            startIndex = 0,
+        )
+    }
+
     private fun toPlayableTrack(
         track: TrackBundle,
         artistsById: Map<Long, Artist>,
