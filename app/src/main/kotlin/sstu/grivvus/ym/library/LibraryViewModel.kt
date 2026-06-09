@@ -28,6 +28,7 @@ import sstu.grivvus.ym.data.UserRepository
 import sstu.grivvus.ym.data.download.TrackDownloadEvent
 import sstu.grivvus.ym.data.download.TrackDownloadManager
 import sstu.grivvus.ym.data.download.TrackDownloadOperation
+import sstu.grivvus.ym.data.local.Artist
 import sstu.grivvus.ym.data.network.auth.SessionExpiredException
 import sstu.grivvus.ym.data.network.core.ApiException
 import sstu.grivvus.ym.data.network.core.ClientApiException
@@ -79,6 +80,8 @@ data class LibraryUiState(
     val isRefreshing: Boolean = false,
     val isSuperuser: Boolean = false,
     val tracks: List<LibraryTrackItemUi> = emptyList(),
+    val artistGroups: List<LibraryArtistGroupUi> = emptyList(),
+    val expandedArtistIds: Set<Long> = emptySet(),
     val selectedTrackIds: Set<Long> = emptySet(),
     val pendingDeleteTrackIds: Set<Long> = emptySet(),
     val downloadingTrackIds: Set<Long> = emptySet(),
@@ -226,6 +229,18 @@ class LibraryViewModel @Inject constructor(
 
     fun onTrackLongPress(trackId: Long) {
         toggleTrackSelection(trackId)
+    }
+
+    fun toggleArtistExpanded(artistId: Long) {
+        _uiState.update { state ->
+            state.copy(
+                expandedArtistIds = if (artistId in state.expandedArtistIds) {
+                    state.expandedArtistIds - artistId
+                } else {
+                    state.expandedArtistIds + artistId
+                },
+            )
+        }
     }
 
     fun clearSelection() {
@@ -719,15 +734,58 @@ class LibraryViewModel @Inject constructor(
         val tracks = data.libraryTracks.map { track ->
             track.toLibraryTrackItemUi(artistsById)
         }
+        val artistGroups = tracks.toArtistGroups(artistsById)
+        val artistIds = artistGroups.mapTo(linkedSetOf()) { group -> group.artistId }
         val trackIds = tracks.mapTo(linkedSetOf()) { track -> track.id }
         _uiState.update { state ->
+            val retainedExpandedArtistIds =
+                state.expandedArtistIds.filterTo(linkedSetOf()) { artistId -> artistId in artistIds }
+            val expandedArtistIds = if (
+                state.artistGroups.isEmpty() &&
+                state.expandedArtistIds.isEmpty() &&
+                artistGroups.size == 1
+            ) {
+                artistIds
+            } else {
+                retainedExpandedArtistIds
+            }
             state.copy(
                 tracks = tracks,
+                artistGroups = artistGroups,
+                expandedArtistIds = expandedArtistIds,
                 selectedTrackIds = state.selectedTrackIds.filterTo(linkedSetOf()) { it in trackIds },
                 pendingDeleteTrackIds = state.pendingDeleteTrackIds.filterTo(linkedSetOf()) { it in trackIds },
                 errorMessage = null,
             )
         }
+    }
+
+    private fun List<LibraryTrackItemUi>.toArtistGroups(
+        artistsById: Map<Long, Artist>,
+    ): List<LibraryArtistGroupUi> {
+        return groupBy { track -> track.artistId }
+            .map { (artistId, artistTracks) ->
+                val artist = artistsById[artistId]
+                LibraryArtistGroupUi(
+                    artistId = artistId,
+                    artistName = artist?.let(::artistDisplayName)
+                        ?: UiText.StringResource(
+                            R.string.common_placeholder_artist_id,
+                            listOf(artistId),
+                        ),
+                    imageUri = artist?.imageUri,
+                    tracks = artistTracks.sortedWith(
+                        compareBy(String.CASE_INSENSITIVE_ORDER) { track -> track.name },
+                    ),
+                )
+            }
+            .sortedWith(
+                compareBy(String.CASE_INSENSITIVE_ORDER) { group ->
+                    artistsById[group.artistId]?.name
+                        ?.takeIf { name -> name.isNotBlank() }
+                        ?: group.artistId.toString()
+                },
+            )
     }
 
     private fun BackupOperationStatus.toUi(): ArchiveStatusUi {

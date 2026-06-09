@@ -221,6 +221,8 @@
     <string name="library_restore_polling_status">Приложение запрашивает у сервера актуальный статус.</string>
     <string name="library_cd_track_actions">Действия с треком</string>
     <string name="library_cd_track_available_offline">Трек доступен офлайн</string>
+    <string name="library_cd_expand_artist_group">Показать треки исполнителя</string>
+    <string name="library_cd_collapse_artist_group">Скрыть треки исполнителя</string>
     <string name="library_action_download_track">Скачать</string>
     <string name="library_action_downloading_track">Скачивается...</string>
     <string name="library_action_delete_local_track_copy">Удалить локальную копию</string>

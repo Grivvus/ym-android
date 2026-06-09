@@ -222,6 +222,8 @@
     <string name="library_restore_polling_status">The app is polling the server for the latest status.</string>
     <string name="library_cd_track_actions">Track actions</string>
     <string name="library_cd_track_available_offline">Track is available offline</string>
+    <string name="library_cd_expand_artist_group">Expand artist tracks</string>
+    <string name="library_cd_collapse_artist_group">Collapse artist tracks</string>
     <string name="library_action_download_track">Download</string>
     <string name="library_action_downloading_track">Downloading...</string>
     <string name="library_action_delete_local_track_copy">Delete local copy</string>

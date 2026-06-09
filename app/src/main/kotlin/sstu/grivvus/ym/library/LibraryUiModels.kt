@@ -1,5 +1,6 @@
 package sstu.grivvus.ym.library
 
+import android.net.Uri
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.data.TrackBundle
 import sstu.grivvus.ym.data.local.Album
@@ -14,6 +15,13 @@ data class LibraryTrackItemUi(
     val artistId: Long,
     val albumId: Long?,
     val isDownloaded: Boolean,
+)
+
+data class LibraryArtistGroupUi(
+    val artistId: Long,
+    val artistName: UiText,
+    val imageUri: Uri?,
+    val tracks: List<LibraryTrackItemUi>,
 )
 
 internal fun TrackBundle.toLibraryTrackItemUi(

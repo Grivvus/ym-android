@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,10 +21,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
@@ -70,6 +73,7 @@ import kotlinx.coroutines.flow.collectLatest
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomNavScaffold
 import sstu.grivvus.ym.components.ScreenStateHost
+import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
 import sstu.grivvus.ym.music.queryDisplayName
@@ -301,7 +305,7 @@ fun LibraryScreen(
                     TrackSectionHeader()
                 }
 
-                if (uiState.tracks.isEmpty()) {
+                if (uiState.artistGroups.isEmpty()) {
                     item {
                         EmptyStateCard(
                             title = stringResource(R.string.library_empty_title),
@@ -309,21 +313,44 @@ fun LibraryScreen(
                         )
                     }
                 } else {
-                    items(uiState.tracks, key = { it.id }) { track ->
-                        LibraryTrackRow(
-                            track = track,
-                            isSelected = track.id in uiState.selectedTrackIds,
-                            isSelectionMode = uiState.isSelectionMode,
-                            isBusy = uiState.isTrackMutating,
-                            isDownloading = track.id in uiState.downloadingTrackIds,
-                            onClick = { viewModel.onTrackClick(track.id) },
-                            onLongClick = { viewModel.onTrackLongPress(track.id) },
-                            onDelete = { viewModel.requestDeleteTrack(track.id) },
-                            onDownload = { viewModel.downloadTrack(track.id) },
-                            onDeleteLocalCopy = { viewModel.deleteLocalTrackCopy(track.id) },
-                            onGoToArtist = { viewModel.openArtist(track.id) },
-                            onGoToAlbum = { viewModel.openAlbum(track.id) },
-                        )
+                    uiState.artistGroups.forEach { artistGroup ->
+                        val isExpanded = artistGroup.artistId in uiState.expandedArtistIds
+                        val selectedTrackCount =
+                            artistGroup.tracks.count { track -> track.id in uiState.selectedTrackIds }
+                        item(key = "artist-${artistGroup.artistId}") {
+                            LibraryArtistGroupHeader(
+                                artistGroup = artistGroup,
+                                isExpanded = isExpanded,
+                                selectedTrackCount = selectedTrackCount,
+                                onOpenArtist = {
+                                    navigateToArtist(artistGroup.artistId)
+                                },
+                                onToggle = {
+                                    viewModel.toggleArtistExpanded(artistGroup.artistId)
+                                },
+                            )
+                        }
+                        if (isExpanded) {
+                            items(
+                                items = artistGroup.tracks,
+                                key = { track -> "track-${track.id}" },
+                            ) { track ->
+                                LibraryTrackRow(
+                                    track = track,
+                                    isSelected = track.id in uiState.selectedTrackIds,
+                                    isSelectionMode = uiState.isSelectionMode,
+                                    isBusy = uiState.isTrackMutating,
+                                    isDownloading = track.id in uiState.downloadingTrackIds,
+                                    onClick = { viewModel.onTrackClick(track.id) },
+                                    onLongClick = { viewModel.onTrackLongPress(track.id) },
+                                    onDelete = { viewModel.requestDeleteTrack(track.id) },
+                                    onDownload = { viewModel.downloadTrack(track.id) },
+                                    onDeleteLocalCopy = { viewModel.deleteLocalTrackCopy(track.id) },
+                                    onGoToArtist = { viewModel.openArtist(track.id) },
+                                    onGoToAlbum = { viewModel.openAlbum(track.id) },
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -416,6 +443,88 @@ private fun TrackSectionHeader() {
         thickness = 5.dp,
         modifier = Modifier.padding(vertical = 8.dp)
     )
+}
+
+@Composable
+private fun LibraryArtistGroupHeader(
+    artistGroup: LibraryArtistGroupUi,
+    isExpanded: Boolean,
+    selectedTrackCount: Int,
+    onOpenArtist: () -> Unit,
+    onToggle: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 3.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onOpenArtist),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Artwork(
+                    uri = artistGroup.imageUri,
+                    modifier = Modifier.size(48.dp),
+                    cornerRadius = 12.dp,
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = artistGroup.artistName.resolve(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = pluralStringResource(
+                            R.plurals.track_count,
+                            artistGroup.tracks.size,
+                            artistGroup.tracks.size,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (selectedTrackCount > 0) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = pluralStringResource(
+                                R.plurals.selected_count,
+                                selectedTrackCount,
+                                selectedTrackCount,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+            IconButton(onClick = onToggle) {
+                Icon(
+                    imageVector = if (isExpanded) {
+                        Icons.Default.KeyboardArrowDown
+                    } else {
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight
+                    },
+                    contentDescription = stringResource(
+                        if (isExpanded) {
+                            R.string.library_cd_collapse_artist_group
+                        } else {
+                            R.string.library_cd_expand_artist_group
+                        },
+                    ),
+                )
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
