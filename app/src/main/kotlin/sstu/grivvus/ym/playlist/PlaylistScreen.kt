@@ -3,9 +3,7 @@ package sstu.grivvus.ym.playlist
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -60,6 +58,7 @@ import kotlinx.coroutines.flow.collectLatest
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomNavScaffold
 import sstu.grivvus.ym.components.ScreenStateHost
+import sstu.grivvus.ym.library.TrackListItemRow
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
@@ -655,11 +654,14 @@ private fun PlaylistDetails(
             }
         } else {
             items(playlist.tracks, key = { it.id }) { track ->
-                TrackRow(
-                    track = track,
+                TrackListItemRow(
+                    name = track.name,
+                    subtitle = track.subtitle,
+                    coverUri = track.coverUri,
                     isSelected = track.id in selectedTrackIds,
                     isSelectionMode = isSelectionMode,
                     isBusy = isBusy,
+                    isDownloaded = track.isDownloaded,
                     onClick = { onTrackClick(track.id) },
                     onLongClick = { onTrackLongClick(track.id) },
                 )
@@ -668,66 +670,6 @@ private fun PlaylistDetails(
 
         item {
             Spacer(modifier = Modifier.height(80.dp))
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun TrackRow(
-    track: TrackItemUi,
-    isSelected: Boolean,
-    isSelectionMode: Boolean,
-    isBusy: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                enabled = !isBusy,
-                onClick = onClick,
-                onLongClick = onLongClick,
-            ),
-        shape = RoundedCornerShape(20.dp),
-        tonalElevation = if (isSelected) 6.dp else 2.dp,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (isSelectionMode) {
-                Checkbox(
-                    checked = isSelected,
-                    onCheckedChange = { onClick() },
-                    enabled = !isBusy,
-                )
-            }
-            Artwork(
-                uri = track.coverUri,
-                modifier = Modifier.size(56.dp),
-            )
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 14.dp),
-            ) {
-                Text(
-                    text = track.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = track.subtitle.resolve(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }

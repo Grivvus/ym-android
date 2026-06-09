@@ -3,11 +3,8 @@ package sstu.grivvus.ym.library
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -25,16 +22,12 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.sharp.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -527,7 +520,6 @@ private fun LibraryArtistGroupHeader(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LibraryTrackRow(
     track: LibraryTrackItemUi,
@@ -543,156 +535,26 @@ private fun LibraryTrackRow(
     onGoToArtist: () -> Unit,
     onGoToAlbum: () -> Unit,
 ) {
-    var menuExpanded by rememberSaveable(track.id) { mutableStateOf(false) }
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                enabled = !isBusy,
-                onClick = onClick,
-                onLongClick = onLongClick,
-            ),
-        shape = RoundedCornerShape(20.dp),
-        tonalElevation = if (isSelected) 6.dp else 2.dp,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (isSelectionMode) {
-                Checkbox(
-                    checked = isSelected,
-                    onCheckedChange = { onClick() },
-                    enabled = !isBusy,
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = if (isSelectionMode) 8.dp else 0.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = track.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (track.isDownloaded) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = stringResource(
-                                R.string.library_cd_track_available_offline,
-                            ),
-                            tint = OfflineAvailableColor,
-                            modifier = Modifier
-                                .padding(start = 6.dp)
-                                .size(16.dp),
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = track.subtitle.resolve(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Box {
-                IconButton(
-                    onClick = { menuExpanded = true },
-                    enabled = !isBusy,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = stringResource(R.string.library_cd_track_actions),
-                    )
-                }
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false },
-                ) {
-                    when {
-                        isDownloading -> {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.library_action_downloading_track)) },
-                                enabled = false,
-                                onClick = {},
-                                leadingIcon = {
-                                    CircularProgressIndicator(modifier = Modifier.size(18.dp))
-                                },
-                            )
-                        }
-
-                        track.isDownloaded -> {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(stringResource(R.string.library_action_delete_local_track_copy))
-                                },
-                                onClick = {
-                                    menuExpanded = false
-                                    onDeleteLocalCopy()
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = null,
-                                    )
-                                },
-                            )
-                        }
-
-                        else -> {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.library_action_download_track)) },
-                                onClick = {
-                                    menuExpanded = false
-                                    onDownload()
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Download,
-                                        contentDescription = null,
-                                    )
-                                },
-                            )
-                        }
-                    }
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.common_action_delete)) },
-                        onClick = {
-                            menuExpanded = false
-                            onDelete()
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.common_action_go_to_artist)) },
-                        onClick = {
-                            menuExpanded = false
-                            onGoToArtist()
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.common_action_go_to_album)) },
-                        enabled = track.albumId != null,
-                        onClick = {
-                            menuExpanded = false
-                            onGoToAlbum()
-                        },
-                    )
-                }
-            }
-        }
-    }
+    TrackListItemRow(
+        name = track.name,
+        subtitle = track.subtitle,
+        coverUri = track.albumCoverUri,
+        isSelected = isSelected,
+        isSelectionMode = isSelectionMode,
+        isBusy = isBusy,
+        isDownloaded = track.isDownloaded,
+        isDownloading = isDownloading,
+        onClick = onClick,
+        onLongClick = onLongClick,
+        onDelete = onDelete,
+        onDownload = onDownload,
+        onDeleteLocalCopy = onDeleteLocalCopy,
+        onGoToArtist = onGoToArtist,
+        onGoToAlbum = track.albumId?.let { onGoToAlbum },
+    )
 }
-
-private val OfflineAvailableColor = Color(0xFF2E7D32)
 private val DownloadResultSnackbarFabClearance = 88.dp
+private val DownloadResultSuccessColor = Color(0xFF2E7D32)
 
 @Composable
 private fun DownloadResultSnackbarHost(
@@ -725,7 +587,7 @@ private fun DownloadResultSnackbarHost(
                     contentDescription = null,
                     tint = when (visuals?.kind) {
                         LibraryDownloadResultKind.LOCAL_COPY_DELETED -> MaterialTheme.colorScheme.error
-                        else -> OfflineAvailableColor
+                        else -> DownloadResultSuccessColor
                     },
                     modifier = Modifier.size(20.dp),
                 )

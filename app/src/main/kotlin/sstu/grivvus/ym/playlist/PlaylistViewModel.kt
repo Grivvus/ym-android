@@ -39,6 +39,7 @@ data class TrackItemUi(
     val name: String,
     val subtitle: UiText,
     val coverUri: Uri? = null,
+    val isDownloaded: Boolean = false,
 )
 
 data class PlaylistDetailUi(
@@ -463,6 +464,7 @@ class PlaylistViewModel @Inject constructor(
                 ?.let(UiText::Joined)
                 ?: UiText.StringResource(R.string.common_placeholder_single),
             coverUri = primaryAlbum?.coverUri,
+            isDownloaded = track.track.isDownloaded,
         )
     }
 
