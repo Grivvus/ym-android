@@ -40,6 +40,7 @@
     <string name="common_action_go_to_artist">Перейти к исполнителю</string>
     <string name="common_action_go_to_album">Перейти к альбому</string>
     <string name="common_action_add_track">Добавить трек</string>
+    <string name="common_action_add_to_playlists">Добавить в плейлисты</string>
 
     <string name="common_label_password">Пароль</string>
     <string name="common_label_confirm_password">Подтвердите пароль</string>
@@ -227,6 +228,9 @@
     <string name="library_action_downloading_track">Скачивается...</string>
     <string name="library_action_delete_local_track_copy">Удалить локальную копию</string>
     <string name="library_error_album_unavailable_for_track">Для этого трека недоступен альбом</string>
+    <string name="library_track_playlists_title">Добавить в плейлисты</string>
+    <string name="library_track_playlists_empty">Нет плейлистов, доступных для редактирования.</string>
+    <string name="library_track_playlists_description">Выберите плейлисты, в которых должен быть этот трек.</string>
     <string name="library_info_backup_saved_successfully">Резервная копия успешно сохранена</string>
     <string name="library_info_track_downloaded">Трек скачан</string>
     <string name="library_info_local_track_copy_deleted">Локальная копия трека удалена</string>

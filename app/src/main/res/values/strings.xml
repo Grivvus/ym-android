@@ -41,6 +41,7 @@
     <string name="common_action_go_to_artist">Go to artist</string>
     <string name="common_action_go_to_album">Go to album</string>
     <string name="common_action_add_track">Add track</string>
+    <string name="common_action_add_to_playlists">Add to playlists</string>
 
     <string name="common_label_password">Password</string>
     <string name="common_label_confirm_password">Confirm Password</string>
@@ -228,6 +229,9 @@
     <string name="library_action_downloading_track">Downloading...</string>
     <string name="library_action_delete_local_track_copy">Delete local copy</string>
     <string name="library_error_album_unavailable_for_track">Album is unavailable for this track</string>
+    <string name="library_track_playlists_title">Add to playlists</string>
+    <string name="library_track_playlists_empty">No editable playlists are available.</string>
+    <string name="library_track_playlists_description">Choose playlists that should contain this track.</string>
     <string name="library_info_backup_saved_successfully">Backup saved successfully</string>
     <string name="library_info_track_downloaded">Track downloaded</string>
     <string name="library_info_local_track_copy_deleted">Local track copy deleted</string>

@@ -59,6 +59,7 @@ fun TrackListItemRow(
     onDelete: (() -> Unit)? = null,
     onDownload: (() -> Unit)? = null,
     onDeleteLocalCopy: (() -> Unit)? = null,
+    onAddToPlaylists: (() -> Unit)? = null,
     onGoToArtist: (() -> Unit)? = null,
     onGoToAlbum: (() -> Unit)? = null,
 ) {
@@ -133,6 +134,7 @@ fun TrackListItemRow(
                 onDelete != null ||
                 onDownload != null ||
                 onDeleteLocalCopy != null ||
+                onAddToPlaylists != null ||
                 onGoToArtist != null ||
                 onGoToAlbum != null
             ) {
@@ -146,6 +148,7 @@ fun TrackListItemRow(
                     onDelete = onDelete,
                     onDownload = onDownload,
                     onDeleteLocalCopy = onDeleteLocalCopy,
+                    onAddToPlaylists = onAddToPlaylists,
                     onGoToArtist = onGoToArtist,
                     onGoToAlbum = onGoToAlbum,
                 )
@@ -165,6 +168,7 @@ private fun TrackOverflowMenu(
     onDelete: (() -> Unit)?,
     onDownload: (() -> Unit)?,
     onDeleteLocalCopy: (() -> Unit)?,
+    onAddToPlaylists: (() -> Unit)?,
     onGoToArtist: (() -> Unit)?,
     onGoToAlbum: (() -> Unit)?,
 ) {
@@ -234,6 +238,15 @@ private fun TrackOverflowMenu(
                     onClick = {
                         onExpandedChange(false)
                         delete()
+                    },
+                )
+            }
+            onAddToPlaylists?.let { addToPlaylists ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.common_action_add_to_playlists)) },
+                    onClick = {
+                        onExpandedChange(false)
+                        addToPlaylists()
                     },
                 )
             }

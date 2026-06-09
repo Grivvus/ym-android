@@ -23,6 +23,7 @@ import sstu.grivvus.ym.data.BackupRestoreRepository
 import sstu.grivvus.ym.data.DownloadedBackupArchive
 import sstu.grivvus.ym.data.MusicLibraryData
 import sstu.grivvus.ym.data.MusicRepository
+import sstu.grivvus.ym.data.PlaylistType
 import sstu.grivvus.ym.data.RestoreOperationStatus
 import sstu.grivvus.ym.data.UserRepository
 import sstu.grivvus.ym.data.download.TrackDownloadEvent
@@ -75,17 +76,44 @@ data class BackupDownloadProgressUi(
             }
 }
 
+data class EditablePlaylistMembershipUi(
+    val id: Long,
+    val name: String,
+    val playlistType: PlaylistType,
+    val trackIds: Set<Long>,
+)
+
+data class TrackPlaylistMembershipItemUi(
+    val id: Long,
+    val name: String,
+    val playlistType: PlaylistType,
+)
+
+data class TrackPlaylistMembershipDialogUi(
+    val trackId: Long,
+    val trackName: String,
+    val playlists: List<TrackPlaylistMembershipItemUi>,
+    val initialPlaylistIds: Set<Long>,
+    val selectedPlaylistIds: Set<Long>,
+) {
+    val hasChanges: Boolean
+        get() = initialPlaylistIds != selectedPlaylistIds
+}
+
 data class LibraryUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val isSuperuser: Boolean = false,
     val tracks: List<LibraryTrackItemUi> = emptyList(),
     val artistGroups: List<LibraryArtistGroupUi> = emptyList(),
+    val editablePlaylists: List<EditablePlaylistMembershipUi> = emptyList(),
     val expandedArtistIds: Set<Long> = emptySet(),
     val selectedTrackIds: Set<Long> = emptySet(),
     val pendingDeleteTrackIds: Set<Long> = emptySet(),
     val downloadingTrackIds: Set<Long> = emptySet(),
     val isTrackMutating: Boolean = false,
+    val trackPlaylistDialog: TrackPlaylistMembershipDialogUi? = null,
+    val isPlaylistMembershipMutating: Boolean = false,
     val includeImages: Boolean = true,
     val includeTranscodedTracks: Boolean = true,
     val isCreatingBackup: Boolean = false,
@@ -335,6 +363,91 @@ class LibraryViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _events.emit(LibraryScreenEvent.NavigateToAlbum(albumId))
+        }
+    }
+
+    fun openTrackPlaylistDialog(trackId: Long) {
+        val state = _uiState.value
+        val track = state.tracks.firstOrNull { item -> item.id == trackId } ?: return
+        val selectedPlaylistIds = state.editablePlaylists
+            .filter { playlist -> trackId in playlist.trackIds }
+            .mapTo(linkedSetOf()) { playlist -> playlist.id }
+        _uiState.update {
+            it.copy(
+                trackPlaylistDialog = TrackPlaylistMembershipDialogUi(
+                    trackId = trackId,
+                    trackName = track.name,
+                    playlists = state.editablePlaylists.map { playlist ->
+                        TrackPlaylistMembershipItemUi(
+                            id = playlist.id,
+                            name = playlist.name,
+                            playlistType = playlist.playlistType,
+                        )
+                    },
+                    initialPlaylistIds = selectedPlaylistIds,
+                    selectedPlaylistIds = selectedPlaylistIds,
+                ),
+                errorMessage = null,
+                infoMessage = null,
+            )
+        }
+    }
+
+    fun dismissTrackPlaylistDialog() {
+        if (_uiState.value.isPlaylistMembershipMutating) {
+            return
+        }
+        _uiState.update { it.copy(trackPlaylistDialog = null) }
+    }
+
+    fun setTrackPlaylistSelection(playlistId: Long, checked: Boolean) {
+        _uiState.update { state ->
+            val dialog = state.trackPlaylistDialog ?: return@update state
+            state.copy(
+                trackPlaylistDialog = dialog.copy(
+                    selectedPlaylistIds = if (checked) {
+                        dialog.selectedPlaylistIds + playlistId
+                    } else {
+                        dialog.selectedPlaylistIds - playlistId
+                    },
+                ),
+            )
+        }
+    }
+
+    fun saveTrackPlaylistMemberships() {
+        val dialog = _uiState.value.trackPlaylistDialog ?: return
+        if (!dialog.hasChanges) {
+            _uiState.update { it.copy(trackPlaylistDialog = null) }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isPlaylistMembershipMutating = true,
+                    errorMessage = null,
+                    infoMessage = null,
+                )
+            }
+            try {
+                val updatedLibrary = musicRepository.setTrackEditablePlaylistMemberships(
+                    trackId = dialog.trackId,
+                    targetPlaylistIds = dialog.selectedPlaylistIds,
+                )
+                applyLibraryData(updatedLibrary)
+                _uiState.update { state ->
+                    state.copy(trackPlaylistDialog = null)
+                }
+            } catch (_: SessionExpiredException) {
+                return@launch
+            } catch (error: Exception) {
+                error.logHandledException("LibraryViewModel.saveTrackPlaylistMemberships")
+                _uiState.update { state ->
+                    state.copy(errorMessage = error.toReadableMessage())
+                }
+            } finally {
+                _uiState.update { it.copy(isPlaylistMembershipMutating = false) }
+            }
         }
     }
 
@@ -734,6 +847,18 @@ class LibraryViewModel @Inject constructor(
         val tracks = data.libraryTracks.map { track ->
             track.toLibraryTrackItemUi(artistsById)
         }
+        val editablePlaylists = data.playlists
+            .filter { playlistBundle -> playlistBundle.playlist.canEdit }
+            .map { playlistBundle ->
+                EditablePlaylistMembershipUi(
+                    id = playlistBundle.playlist.remoteId,
+                    name = playlistBundle.playlist.name,
+                    playlistType = playlistBundle.playlist.playlistType,
+                    trackIds = playlistBundle.tracks.mapTo(linkedSetOf()) { track ->
+                        track.track.remoteId
+                    },
+                )
+            }
         val artistGroups = tracks.toArtistGroups(artistsById)
         val artistIds = artistGroups.mapTo(linkedSetOf()) { group -> group.artistId }
         val trackIds = tracks.mapTo(linkedSetOf()) { track -> track.id }
@@ -752,12 +877,35 @@ class LibraryViewModel @Inject constructor(
             state.copy(
                 tracks = tracks,
                 artistGroups = artistGroups,
+                editablePlaylists = editablePlaylists,
                 expandedArtistIds = expandedArtistIds,
                 selectedTrackIds = state.selectedTrackIds.filterTo(linkedSetOf()) { it in trackIds },
                 pendingDeleteTrackIds = state.pendingDeleteTrackIds.filterTo(linkedSetOf()) { it in trackIds },
+                trackPlaylistDialog = state.trackPlaylistDialog
+                    ?.takeIf { dialog -> dialog.trackId in trackIds }
+                    ?.refreshFrom(editablePlaylists),
                 errorMessage = null,
             )
         }
+    }
+
+    private fun TrackPlaylistMembershipDialogUi.refreshFrom(
+        editablePlaylists: List<EditablePlaylistMembershipUi>,
+    ): TrackPlaylistMembershipDialogUi {
+        val selectedPlaylistIds = editablePlaylists
+            .filter { playlist -> trackId in playlist.trackIds }
+            .mapTo(linkedSetOf()) { playlist -> playlist.id }
+        return copy(
+            playlists = editablePlaylists.map { playlist ->
+                TrackPlaylistMembershipItemUi(
+                    id = playlist.id,
+                    name = playlist.name,
+                    playlistType = playlist.playlistType,
+                )
+            },
+            initialPlaylistIds = selectedPlaylistIds,
+            selectedPlaylistIds = selectedPlaylistIds,
+        )
     }
 
     private fun List<LibraryTrackItemUi>.toArtistGroups(

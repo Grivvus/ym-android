@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -66,6 +67,7 @@ import kotlinx.coroutines.flow.collectLatest
 import sstu.grivvus.ym.R
 import sstu.grivvus.ym.components.BottomNavScaffold
 import sstu.grivvus.ym.components.ScreenStateHost
+import sstu.grivvus.ym.data.PlaylistType
 import sstu.grivvus.ym.music.Artwork
 import sstu.grivvus.ym.music.EmptyStateCard
 import sstu.grivvus.ym.music.UploadTrackModal
@@ -339,6 +341,9 @@ fun LibraryScreen(
                                     onDelete = { viewModel.requestDeleteTrack(track.id) },
                                     onDownload = { viewModel.downloadTrack(track.id) },
                                     onDeleteLocalCopy = { viewModel.deleteLocalTrackCopy(track.id) },
+                                    onAddToPlaylists = {
+                                        viewModel.openTrackPlaylistDialog(track.id)
+                                    },
                                     onGoToArtist = { viewModel.openArtist(track.id) },
                                     onGoToAlbum = { viewModel.openAlbum(track.id) },
                                 )
@@ -411,6 +416,16 @@ fun LibraryScreen(
                 pendingRestoreRequest = null
                 viewModel.restoreFromArchive(request.uri)
             },
+        )
+    }
+
+    uiState.trackPlaylistDialog?.let { dialog ->
+        TrackPlaylistMembershipDialog(
+            dialog = dialog,
+            isBusy = uiState.isPlaylistMembershipMutating,
+            onDismiss = viewModel::dismissTrackPlaylistDialog,
+            onPlaylistCheckedChange = viewModel::setTrackPlaylistSelection,
+            onConfirm = viewModel::saveTrackPlaylistMemberships,
         )
     }
 
@@ -532,6 +547,7 @@ private fun LibraryTrackRow(
     onDelete: () -> Unit,
     onDownload: () -> Unit,
     onDeleteLocalCopy: () -> Unit,
+    onAddToPlaylists: () -> Unit,
     onGoToArtist: () -> Unit,
     onGoToAlbum: () -> Unit,
 ) {
@@ -549,10 +565,139 @@ private fun LibraryTrackRow(
         onDelete = onDelete,
         onDownload = onDownload,
         onDeleteLocalCopy = onDeleteLocalCopy,
+        onAddToPlaylists = onAddToPlaylists,
         onGoToArtist = onGoToArtist,
         onGoToAlbum = track.albumId?.let { onGoToAlbum },
     )
 }
+
+@Composable
+private fun TrackPlaylistMembershipDialog(
+    dialog: TrackPlaylistMembershipDialogUi,
+    isBusy: Boolean,
+    onDismiss: () -> Unit,
+    onPlaylistCheckedChange: (Long, Boolean) -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = {
+            if (!isBusy) {
+                onDismiss()
+            }
+        },
+        title = { Text(stringResource(R.string.library_track_playlists_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = dialog.trackName,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = stringResource(R.string.library_track_playlists_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (dialog.playlists.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.library_track_playlists_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 360.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(dialog.playlists, key = { playlist -> playlist.id }) { playlist ->
+                            val checked = playlist.id in dialog.selectedPlaylistIds
+                            TrackPlaylistMembershipRow(
+                                playlist = playlist,
+                                checked = checked,
+                                enabled = !isBusy,
+                                onCheckedChange = { isChecked ->
+                                    onPlaylistCheckedChange(playlist.id, isChecked)
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = dialog.hasChanges && !isBusy,
+            ) {
+                Text(stringResource(R.string.common_action_save))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isBusy,
+            ) {
+                Text(stringResource(R.string.common_action_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun TrackPlaylistMembershipRow(
+    playlist: TrackPlaylistMembershipItemUi,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onCheckedChange(!checked) },
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = if (checked) 4.dp else 0.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Checkbox(
+                checked = checked,
+                enabled = enabled,
+                onCheckedChange = onCheckedChange,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = playlist.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = playlist.playlistType.label(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlaylistType.label(): String {
+    return stringResource(
+        when (this) {
+            PlaylistType.OWNED -> R.string.playlist_filter_owned
+            PlaylistType.SHARED -> R.string.playlist_filter_shared
+            PlaylistType.PUBLIC -> R.string.playlist_filter_public
+        },
+    )
+}
+
 private val DownloadResultSnackbarFabClearance = 88.dp
 private val DownloadResultSuccessColor = Color(0xFF2E7D32)
 

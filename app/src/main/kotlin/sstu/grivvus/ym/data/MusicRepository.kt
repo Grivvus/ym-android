@@ -562,6 +562,58 @@ class MusicRepository @Inject constructor(
         buildLocalState()
     }
 
+    suspend fun setTrackEditablePlaylistMemberships(
+        trackId: Long,
+        targetPlaylistIds: Set<Long>,
+    ): MusicLibraryData = withContext(dispatcher) {
+        audioTrackDao.getById(trackId) ?: throw IOException("Track was not found")
+        val editablePlaylists = playlistDao.getAll().filter { playlist -> playlist.canEdit }
+        val editablePlaylistIds = editablePlaylists.mapTo(linkedSetOf()) { playlist ->
+            playlist.remoteId
+        }
+        if (!editablePlaylistIds.containsAll(targetPlaylistIds)) {
+            throw PlaylistAccessDenied("Playlist cannot be edited")
+        }
+
+        val currentPlaylistIds = editablePlaylists
+            .filter { playlist ->
+                trackId in playlistTrackDao.getTrackIdsForPlaylist(playlist.remoteId)
+            }
+            .mapTo(linkedSetOf()) { playlist -> playlist.remoteId }
+        val playlistsToAdd = targetPlaylistIds - currentPlaylistIds
+        val playlistsToRemove = currentPlaylistIds - targetPlaylistIds
+
+        playlistsToAdd.forEach { playlistId ->
+            playlistRemoteDataSource.addTrack(playlistId, trackId)
+        }
+        playlistTrackDao.insertAll(
+            playlistsToAdd.map { playlistId ->
+                PlaylistTrackCrossRef(
+                    playlistId = playlistId,
+                    trackId = trackId,
+                )
+            },
+        )
+
+        playlistsToRemove.forEach { playlistId ->
+            playlistRemoteDataSource.deleteTrack(playlistId, trackId)
+            playlistTrackDao.deleteTracksFromPlaylist(playlistId, listOf(trackId))
+        }
+
+        val changedPlaylistIds = playlistsToAdd + playlistsToRemove
+        if (changedPlaylistIds.isNotEmpty()) {
+            val playlistsToMarkSeeded = editablePlaylists
+                .filter { playlist ->
+                    playlist.remoteId in changedPlaylistIds && !playlist.tracksSeeded
+                }
+                .map { playlist -> playlist.copy(tracksSeeded = true) }
+            if (playlistsToMarkSeeded.isNotEmpty()) {
+                playlistDao.upsertAll(playlistsToMarkSeeded)
+            }
+        }
+        buildLocalState()
+    }
+
     suspend fun addTracksToAlbum(
         albumId: Long,
         trackIds: Collection<Long>,
