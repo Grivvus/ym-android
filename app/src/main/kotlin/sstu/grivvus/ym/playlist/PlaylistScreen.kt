@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.sharp.Delete
 import androidx.compose.material.icons.sharp.Edit
 import androidx.compose.material.icons.sharp.Share
@@ -717,6 +719,15 @@ private fun AddTracksDialog(
     onConfirm: (Set<Long>) -> Unit,
 ) {
     var selectedIds by remember(tracks) { mutableStateOf(emptySet<Long>()) }
+    var searchQuery by remember(tracks) { mutableStateOf("") }
+    val filteredTracks = remember(tracks, searchQuery) {
+        val query = searchQuery.trim()
+        if (query.isBlank()) {
+            tracks
+        } else {
+            tracks.filter { track -> track.name.contains(query, ignoreCase = true) }
+        }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.playlist_add_tracks_title)) },
@@ -724,33 +735,58 @@ private fun AddTracksDialog(
             if (tracks.isEmpty()) {
                 Text(stringResource(R.string.playlist_all_library_tracks_added))
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(tracks, key = { it.id }) { track ->
-                        Surface(
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        label = { Text(stringResource(R.string.playlist_search_tracks_label)) },
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (filteredTracks.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.playlist_no_tracks_match_search),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
-                                    selectedIds =
-                                        if (track.id in selectedIds) selectedIds - track.id
-                                        else selectedIds + track.id
-                                },
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
-                            tonalElevation = if (track.id in selectedIds) 4.dp else 0.dp,
+                                .heightIn(max = 360.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    text = track.name,
-                                    style = MaterialTheme.typography.titleMedium,
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = track.subtitle.resolve(),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                            items(filteredTracks, key = { it.id }) { track ->
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedIds =
+                                                if (track.id in selectedIds) selectedIds - track.id
+                                                else selectedIds + track.id
+                                        },
+                                    shape = RoundedCornerShape(18.dp),
+                                    tonalElevation = if (track.id in selectedIds) 4.dp else 0.dp,
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text(
+                                            text = track.name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = track.subtitle.resolve(),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

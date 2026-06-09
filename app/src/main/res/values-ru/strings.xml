@@ -158,6 +158,8 @@
     <string name="playlist_empty_read_only_description">В этом плейлисте пока нет треков</string>
     <string name="playlist_rename_title">Переименовать плейлист</string>
     <string name="playlist_add_tracks_title">Добавить треки</string>
+    <string name="playlist_search_tracks_label">Поиск треков</string>
+    <string name="playlist_no_tracks_match_search">Нет треков, подходящих под поиск.</string>
     <string name="playlist_all_library_tracks_added">Все треки из библиотеки уже добавлены в этот плейлист.</string>
     <string name="playlist_error_not_found">Плейлист не найден</string>
     <string name="playlist_share_title">Доступ к плейлисту</string>

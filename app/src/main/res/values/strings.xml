@@ -159,6 +159,8 @@
     <string name="playlist_empty_read_only_description">No tracks are available in this playlist yet.</string>
     <string name="playlist_rename_title">Rename playlist</string>
     <string name="playlist_add_tracks_title">Add tracks</string>
+    <string name="playlist_search_tracks_label">Search tracks</string>
+    <string name="playlist_no_tracks_match_search">No tracks match this search.</string>
     <string name="playlist_all_library_tracks_added">All library tracks are already in this playlist.</string>
     <string name="playlist_error_not_found">Playlist was not found</string>
     <string name="playlist_share_title">Playlist access</string>
